@@ -19,6 +19,7 @@ export interface ServiceItem {
   endTime: string;
   duration: number;
   amount: number;
+  originalAmount?: number;  // Pre-discount price
   _id?: string;
   addOns?: Array<{
     _id: string;

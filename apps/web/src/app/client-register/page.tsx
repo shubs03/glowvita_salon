@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Eye, EyeOff, Map as MapIcon, Gift, MapPin, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Calendar, Eye, EyeOff, Map as MapIcon, Gift, MapPin, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_registration.jpg';
@@ -31,9 +31,6 @@ function ClientRegisterForm() {
   const [mobileNo, setMobileNo] = useState('');
   const [gender, setGender] = useState('');
   const [birthdayDate, setBirthdayDate] = useState('');
-  const [birthDay, setBirthDay] = useState('');
-  const [birthMonth, setBirthMonth] = useState('');
-  const [birthYear, setBirthYear] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [address, setAddress] = useState('');
   const [state, setState] = useState('');
@@ -44,15 +41,6 @@ function ClientRegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Sync individual birth date parts to the single birthdayDate string
-  useEffect(() => {
-    if (birthDay && birthMonth && birthYear) {
-      setBirthdayDate(`${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`);
-    } else {
-      setBirthdayDate('');
-    }
-  }, [birthDay, birthMonth, birthYear]);
 
   // Extract referral code from URL on component mount
   useEffect(() => {
@@ -832,48 +820,19 @@ function ClientRegisterForm() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="birthdayDate" className="block text-sm font-medium text-gray-700 mb-1">
                       Birthday <span className="font-normal text-gray-400">(Optional)</span>
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* Day Select */}
-                      <select
-                        value={birthDay}
-                        onChange={(e) => setBirthDay(e.target.value)}
-                        className="h-11 px-3 text-sm font-medium bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:outline-none"
-                      >
-                        <option value="">Day</option>
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-
-                      {/* Month Select */}
-                      <select
-                        value={birthMonth}
-                        onChange={(e) => setBirthMonth(e.target.value)}
-                        className="h-11 px-3 text-sm font-medium bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:outline-none"
-                      >
-                        <option value="">Month</option>
-                        {[
-                          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-                        ].map((m, i) => (
-                          <option key={m} value={i + 1}>{m}</option>
-                        ))}
-                      </select>
-
-                      {/* Year Select */}
-                      <select
-                        value={birthYear}
-                        onChange={(e) => setBirthYear(e.target.value)}
-                        className="h-11 px-3 text-sm font-medium bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:outline-none"
-                      >
-                        <option value="">Year</option>
-                        {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
+                    <div className="relative">
+                      <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                      <Input
+                        id="birthdayDate"
+                        type="date"
+                        value={birthdayDate}
+                        max={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setBirthdayDate(e.target.value)}
+                        className="h-11 w-full rounded-lg border-gray-300 bg-gray-50 pl-10 pr-3 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:border-gray-400 hover:bg-white hover:shadow-md focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      />
                     </div>
                   </div>
                 </div>

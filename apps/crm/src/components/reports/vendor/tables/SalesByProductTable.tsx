@@ -136,7 +136,7 @@ export const SalesByProductTable = ({ product, category, brand, status, isActive
 
   // Aggregated Totals for Summary Cards
   const aggregatedTotals = useMemo(() => {
-    return searchedProducts.reduce((acc, curr) => {
+    return searchedProducts.reduce((acc: any, curr: any) => {
       acc.totalSales += curr.totalSales || 0;
       acc.unitsSold += curr.quantitySold || 0;
       acc.grossProfit += curr.grossProfit || 0;

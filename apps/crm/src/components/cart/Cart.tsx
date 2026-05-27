@@ -8,13 +8,14 @@ import Image from 'next/image';
 import { useGetCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation, useCreateCrmOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useDispatch } from 'react-redux';
 import { clearCart } from '@repo/store/slices/cartSlice';
 import { useRouter } from 'next/navigation';
+import { getMarketplaceProductImage, MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE } from '@/app/marketplace/components/productImage';
 
 interface CartItem {
   _id: string;
@@ -54,6 +55,25 @@ const loadRazorpayScript = (): Promise<boolean> =>
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
+
+function CartItemImage({ item }: { item: CartItem }) {
+  const [imageSrc, setImageSrc] = useState(getMarketplaceProductImage(item.productImage));
+
+  useEffect(() => {
+    setImageSrc(getMarketplaceProductImage(item.productImage));
+  }, [item.productImage]);
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={item.productName}
+      width={60}
+      height={60}
+      className="rounded-lg object-cover border border-border sm:w-[72px] sm:h-[72px]"
+      onError={() => setImageSrc(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE)}
+    />
+  );
+}
 
 export function Cart({ isOpen, onOpenChange }: CartProps) {
   const { user, isCrmAuthenticated } = useCrmAuth();
@@ -361,13 +381,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div className="relative flex-shrink-0">
-                        <Image
-                          src={item.productImage || 'https://placehold.co/80x80.png'}
-                          alt={item.productName}
-                          width={60}
-                          height={60}
-                          className="rounded-lg object-cover border border-border sm:w-[72px] sm:h-[72px]"
-                        />
+                        <CartItemImage item={item} />
                         <div className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 w-4 h-4 sm:w-5 sm:h-5 bg-primary text-primary-foreground text-[10px] sm:text-xs font-medium rounded-full flex items-center justify-center">
                           {item.quantity}
                         </div>

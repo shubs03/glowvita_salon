@@ -8,6 +8,7 @@ import { Appointment, ServiceItem } from '@repo/types';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useGetVendorProfileQuery } from '@repo/store/services/api';
+import { glowvitaApi } from '@repo/store/api';
 import { AppointmentInvoice } from '@/components/AppointmentInvoice';
 
 interface AppointmentDetailCardProps {
@@ -21,6 +22,30 @@ interface AppointmentDetailCardProps {
 export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPaymentCollect, onClose }: AppointmentDetailCardProps) {
   const [showInvoice, setShowInvoice] = useState(false);
   const { data: vendorProfile, isLoading: isVendorLoading } = useGetVendorProfileQuery({});
+
+  // Get vendor ID from profile to fetch vendor-specific services (same IDs stored in appointments)
+  const vendorId = (vendorProfile as any)?.data?._id || (vendorProfile as any)?._id || '';
+  const { data: vendorServicesResponse } = glowvitaApi.useGetVendorServicesQuery(
+    { vendorId, page: 1, limit: 200 },
+    { skip: !vendorId }
+  );
+
+  // Build a lookup map: serviceId -> catalog price (original/MRP)
+  const catalogPriceMap = useMemo(() => {
+    // Handle all possible response shapes from /crm/services
+    let servicesArr: any[] = [];
+    if (vendorServicesResponse?.data?.services) servicesArr = vendorServicesResponse.data.services;
+    else if (vendorServicesResponse?.services) servicesArr = vendorServicesResponse.services;
+    else if (Array.isArray(vendorServicesResponse?.data)) servicesArr = vendorServicesResponse.data;
+    else if (Array.isArray(vendorServicesResponse)) servicesArr = vendorServicesResponse;
+
+    const map: Record<string, number> = {};
+    servicesArr.forEach((s: any) => {
+      const id = s._id || s.id;
+      if (id && s.price != null) map[id] = Number(s.price);
+    });
+    return map;
+  }, [vendorServicesResponse]);
 
   const statusColors = {
     scheduled: 'bg-yellow-100 text-yellow-800',
@@ -52,20 +77,31 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
   const paymentStatus = (appointment as any).paymentStatus ?? (appointment as any).payment?.paymentStatus ?? null;
 
   // Calculate totals for services and add-ons
-  const { totalBaseAmount, totalAddOnsAmount } = useMemo(() => {
+  const { totalBaseAmount, originalTotalBaseAmount, totalAddOnsAmount } = useMemo(() => {
     if (appointment.serviceItems && appointment.serviceItems.length > 0) {
       const base = appointment.serviceItems.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
+      const originalBase = appointment.serviceItems.reduce((sum: number, item: any) => {
+        const catalogPrice = catalogPriceMap[item.service] ?? null;
+        const originalPrice = item.originalAmount ?? (item as any).price ?? catalogPrice;
+        return sum + (originalPrice !== null ? Number(originalPrice) : (Number(item.amount) || 0));
+      }, 0);
       const addOns = appointment.serviceItems.reduce((sum: number, item: any) => {
         const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
         return sum + itemAddOns.reduce((aSum: number, a: any) => aSum + (Number(a.price) || 0), 0);
       }, 0);
-      return { totalBaseAmount: base, totalAddOnsAmount: addOns };
+      return { totalBaseAmount: base, originalTotalBaseAmount: originalBase, totalAddOnsAmount: addOns };
     }
+    
+    const catalogPrice = catalogPriceMap[appointment.service] ?? null;
+    const singleOriginal = (appointment as any).originalAmount ?? (appointment as any).price ?? catalogPrice;
+    const originalBase = singleOriginal !== null ? Number(singleOriginal) : (Number(appointment.amount) || 0);
+
     return {
       totalBaseAmount: Number(appointment.amount) || 0,
+      originalTotalBaseAmount: originalBase,
       totalAddOnsAmount: Number((appointment as any).addOnsAmount) || 0
     };
-  }, [appointment]);
+  }, [appointment, catalogPriceMap]);
 
   // Invoice Data Memo (Consistently calculated as in AppointmentDetailView)
   const invoiceData = useMemo(() => {
@@ -330,21 +366,47 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
               <div className="space-y-4">
                 {appointment.serviceItems.map((item: ServiceItem, index: number) => (
                   <div key={item._id || index} className="border-b pb-3 last:border-b-0 last:pb-0 last:mb-0">
-                    <div className="flex items-center text-sm">
-                      <Scissors className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                      <div>
-                        <div className="font-medium">{item.serviceName}</div>
-                        <div className="text-gray-600 text-xs mt-1">
-                          {item.startTime} - {item.endTime} • {item.duration} min
+                    <div className="flex items-start justify-between text-sm">
+                      <div className="flex items-center">
+                        <Scissors className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-medium">{item.serviceName}</div>
+                          <div className="text-gray-600 text-xs mt-1">
+                            {item.startTime} - {item.endTime} • {item.duration} min
+                          </div>
                         </div>
+                      </div>
+                      {/* Price: show catalog/original (strikethrough) + charged if different */}
+                      <div className="text-right ml-4 flex-shrink-0">
+                        {(() => {
+                          // Priority: stored originalAmount > item.price field > catalog lookup
+                          const catalogPrice = catalogPriceMap[item.service] ?? null;
+                          const originalPrice =
+                            item.originalAmount ??
+                            (item as any).price ??
+                            catalogPrice;
+                          const chargedAmount = Number(item.amount);
+                          const hasDiscount =
+                            originalPrice !== null &&
+                            Number(originalPrice) > chargedAmount;
+                          return hasDiscount ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-xs text-gray-400 line-through leading-none">
+                                ₹{Number(originalPrice).toFixed(0)}
+                              </span>
+                              <span className="text-sm font-semibold text-green-700 leading-none">
+                                ₹{chargedAmount.toFixed(0)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-medium">₹{chargedAmount.toFixed(2)}</span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center text-sm mt-2 ml-6">
                       <User className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                       <span className="text-gray-700">{item.staffName}</span>
-                    </div>
-                    <div className="text-right text-sm font-medium mt-1">
-                      ₹{item.amount.toFixed(2)}
                     </div>
 
                     {/* Add-ons for current service */}
@@ -387,7 +449,14 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
           <CardContent className="flex-1">
             <div className="flex justify-between text-sm">
               <span>Service Amount:</span>
-              <span>₹{Number(totalBaseAmount).toFixed(2)}</span>
+              <div className="flex items-center gap-2">
+                {originalTotalBaseAmount > totalBaseAmount ? (
+                  <span className="text-xs text-gray-400 line-through">₹{Number(originalTotalBaseAmount).toFixed(2)}</span>
+                ) : null}
+                <span className={originalTotalBaseAmount > totalBaseAmount ? "text-green-700 font-medium" : ""}>
+                  ₹{Number(totalBaseAmount).toFixed(2)}
+                </span>
+              </div>
             </div>
             <div className="flex justify-between text-sm">
               <span>Add-on Amount:</span>

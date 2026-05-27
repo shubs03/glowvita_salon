@@ -51,23 +51,33 @@ const InvoiceFiltersToolbar = ({
   const getExportColumns = () => {
     if (activeTab === 'billing') {
       return [
-        { header: 'Invoice Number', key: 'invoiceNumber' },
-        { header: 'Client Name', key: 'clientInfo.fullName' },
-        { header: 'Client Phone', key: 'clientInfo.phone' },
-        { header: 'Total Amount', key: 'totalAmount' },
-        { header: 'Payment Status', key: 'paymentStatus' },
-        { header: 'Payment Method', key: 'paymentMethod' },
-        { header: 'Created At', key: 'createdAt' }
+        { header: 'Invoice\nNumber', key: 'invoiceNumber', width: 25 },
+        { header: 'Client\nName', key: 'clientInfo.fullName', width: 34 },
+        { header: 'Client\nPhone', key: 'clientInfo.phone', width: 25 },
+        { header: 'Total\nAmount', key: 'totalAmount', width: 24, align: 'right' as const },
+        { header: 'Payment\nStatus', key: 'paymentStatus', width: 25 },
+        { header: 'Payment\nMethod', key: 'paymentMethod', width: 28 },
+        {
+          header: 'Created\nAt',
+          key: 'createdAt',
+          width: 32,
+          transform: (value: string) => value ? new Date(value).toLocaleString() : '-'
+        }
       ];
     } else {
       return [
-        { header: 'Invoice Number', key: 'invoiceNumber' },
-        { header: 'Client Name', key: 'clientName' },
-        { header: 'Date', key: 'date' },
-        { header: 'Total Amount', key: 'finalAmount' },
-        { header: 'Status', key: 'status' },
-        { header: 'Payment Method', key: 'paymentMethod' },
-        { header: 'Mode', key: 'mode' }
+        { header: 'Invoice\nNumber', key: 'invoiceNumber', width: 28 },
+        { header: 'Client\nName', key: 'clientName', width: 36 },
+        {
+          header: 'Date',
+          key: 'date',
+          width: 26,
+          transform: (value: string) => value ? new Date(value).toLocaleDateString() : '-'
+        },
+        { header: 'Total\nAmount', key: 'finalAmount', width: 24, align: 'right' as const },
+        { header: 'Status', key: 'status', width: 24 },
+        { header: 'Payment\nMethod', key: 'paymentMethod', width: 28 },
+        { header: 'Mode', key: 'mode', width: 18 }
       ];
     }
   };

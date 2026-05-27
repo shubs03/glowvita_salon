@@ -8,7 +8,8 @@ import { Badge } from "@repo/ui/badge";
 import { Separator } from "@repo/ui/separator";
 import Image from "next/image";
 import StatusBadge from "./StatusBadge";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getSupplierProductImage, SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE } from "./productImage";
 
 interface Category {
     _id: string;
@@ -54,21 +55,25 @@ const ProductViewModal = ({
     product,
     categories,
 }: ProductViewModalProps) => {
-    if (!product) return null;
+    const [mainImageSrc, setMainImageSrc] = useState(SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE);
+    const [thumbnailErrorIndexes, setThumbnailErrorIndexes] = useState<number[]>([]);
 
-    const calculateDiscountPercentage = () => {
-        if (product.salePrice > 0 && product.price > product.salePrice) {
-            return Math.round(
-                ((product.price - product.salePrice) / product.price) * 100
-            );
-        }
-        return 0;
-    };
-
-    const discountPercentage = calculateDiscountPercentage();
+    useEffect(() => {
+        setMainImageSrc(getSupplierProductImage(product?.productImages?.[0]));
+        setThumbnailErrorIndexes([]);
+    }, [product?.productImages]);
 
     // GST Calculation Logic matching ProductFormFields
     const gstDetails = useMemo(() => {
+        if (!product) {
+            return {
+                gstType: "none",
+                gstValue: 0,
+                gstAmount: 0,
+                finalPrice: 0,
+            };
+        }
+
         const selectedCategory = categories.find((cat) => cat.name === product.category);
         const regularPrice = Number(product.price) || 0;
         const salePrice = (Number(product.salePrice) || 0) || regularPrice;
@@ -99,6 +104,19 @@ const ProductViewModal = ({
         };
     }, [product, categories]);
 
+    if (!product) return null;
+
+    const calculateDiscountPercentage = () => {
+        if (product.salePrice > 0 && product.price > product.salePrice) {
+            return Math.round(
+                ((product.price - product.salePrice) / product.price) * 100
+            );
+        }
+        return 0;
+    };
+
+    const discountPercentage = calculateDiscountPercentage();
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide">
@@ -112,13 +130,11 @@ const ProductViewModal = ({
                         <div className="max-w-[280px] mx-auto w-full">
                             <div className="relative aspect-square rounded-2xl overflow-hidden border border-border bg-muted/20 shadow-inner">
                                 <Image
-                                    src={
-                                        product.productImages?.[0] ||
-                                        "https://placehold.co/600x600.png"
-                                    }
+                                    src={mainImageSrc}
                                     alt={product.productName}
                                     fill
                                     className="object-cover"
+                                    onError={() => setMainImageSrc(SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE)}
                                 />
                                 {discountPercentage > 0 && (
                                     <div className="absolute top-4 right-4 bg-primary text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
@@ -137,10 +153,11 @@ const ProductViewModal = ({
                                             className="relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors cursor-pointer shadow-sm"
                                         >
                                             <Image
-                                                src={img}
+                                                src={thumbnailErrorIndexes.includes(idx) ? SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE : getSupplierProductImage(img)}
                                                 alt={`${product.productName} ${idx + 2}`}
                                                 fill
                                                 className="object-cover"
+                                                onError={() => setThumbnailErrorIndexes((indexes) => [...indexes, idx])}
                                             />
                                         </div>
                                     ))}
