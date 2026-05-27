@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,22 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Badge } from "@repo/ui/badge";
-import { Plus, Minus, X, Upload, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  X,
+  Upload,
+  Loader2,
+  Sparkles,
+  Percent,
+  Users,
+  ClipboardList,
+  Info,
+  Tag,
+  DollarSign,
+  Clock,
+  Check,
+} from "lucide-react";
 import Image from "next/image";
 
 interface Service {
@@ -100,422 +116,741 @@ export function PackageModal({
   isCreating,
   isUpdating,
 }: PackageModalProps) {
+  // Local state for the percentage discount
+  const [discountPercent, setDiscountPercent] = useState<number | "">("");
+
+  // Initialize the discount percent when the modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      if (formData.totalPrice > 0 && formData.discountedPrice !== null) {
+        const pct = Math.round(
+          ((formData.totalPrice - formData.discountedPrice) / formData.totalPrice) * 100
+        );
+        setDiscountPercent(Math.min(100, Math.max(0, pct)));
+      } else {
+        setDiscountPercent("");
+      }
+    }
+  }, [isOpen, formData.discountedPrice, formData.totalPrice]);
+
+  // Keep discountedPrice reactively in sync with totalPrice and discountPercent changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (discountPercent !== "" && discountPercent > 0) {
+      const calculatedDiscountedPrice = Math.round(
+        formData.totalPrice * (1 - discountPercent / 100)
+      );
+      if (formData.discountedPrice !== calculatedDiscountedPrice) {
+        onFormDataChange(prev => ({
+          ...prev,
+          discountedPrice: calculatedDiscountedPrice,
+        }));
+      }
+    } else if (discountPercent === 0 || discountPercent === "") {
+      if (formData.discountedPrice !== null) {
+        onFormDataChange(prev => ({
+          ...prev,
+          discountedPrice: null,
+        }));
+      }
+    }
+  }, [formData.totalPrice, discountPercent, isOpen, onFormDataChange]);
+
+  const handleDiscountPercentChange = (val: string) => {
+    if (val === "") {
+      setDiscountPercent("");
+      onFormDataChange(prev => ({
+        ...prev,
+        discountedPrice: null,
+      }));
+      return;
+    }
+
+    const numericVal = parseFloat(val);
+    if (!isNaN(numericVal)) {
+      const clampedVal = Math.min(100, Math.max(0, numericVal));
+      setDiscountPercent(clampedVal);
+      if (clampedVal > 0) {
+        const calculatedDiscountedPrice = Math.round(
+          formData.totalPrice * (1 - clampedVal / 100)
+        );
+        onFormDataChange(prev => ({
+          ...prev,
+          discountedPrice: calculatedDiscountedPrice,
+        }));
+      } else {
+        onFormDataChange(prev => ({
+          ...prev,
+          discountedPrice: null,
+        }));
+      }
+    }
+  };
+
+  // Helper: Get initials for avatar placeholders
+  const getInitials = (name: string) => {
+    return name
+      ? name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2)
+      : "ST";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-full max-h-[85vh] overflow-y-auto my-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        className="max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-full max-h-[90vh] overflow-y-auto my-4 rounded-xl border border-muted p-4 sm:p-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shadow-2xl transition-all duration-300"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle>
+        <DialogHeader className="border-b border-muted pb-4">
+          <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2 text-foreground">
+            {modalType === "create" && <Sparkles className="h-5 w-5 text-primary animate-pulse" />}
+            {modalType === "edit" && <ClipboardList className="h-5 w-5 text-primary" />}
+            {modalType === "view" && <Info className="h-5 w-5 text-primary" />}
             {modalType === "create" ? "Create Wedding Package" :
-              modalType === "edit" ? "Edit Wedding Package" : "View Wedding Package"}
+              modalType === "edit" ? "Edit Wedding Package" : "Wedding Package Details"}
           </DialogTitle>
-          <DialogDescription>
-            {modalType === "create" ? "Create a new wedding package for your clients" :
-              modalType === "edit" ? "Edit the details of your wedding package" : "View package details"}
+          <DialogDescription className="text-muted-foreground text-xs sm:text-sm mt-1">
+            {modalType === "create" ? "Design an exclusive wedding package with custom services, staffing, and pricing." :
+              modalType === "edit" ? "Modify your premium wedding package details and update rates." : "Detailed breakdown of the selected wedding package services, logistics, and pricing."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* Left Column */}
-            <div className="space-y-3 sm:space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Package Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Bridal Glam Package"
-                  value={formData.name}
-                  onChange={(e) => onFormDataChange(prev => ({ ...prev, name: e.target.value }))}
-                  disabled={modalType === "view"}
-                  required
+        {modalType === "view" ? (
+          /* ======================================================================= */
+          /* PREMIUM READ-ONLY VIEW                                                  */
+          /* ======================================================================= */
+          <div className="space-y-6 py-4">
+            {/* Banner/Hero section */}
+            <div className="relative w-full h-[180px] sm:h-[220px] rounded-xl overflow-hidden shadow-inner border border-muted">
+              {formData.image ? (
+                <Image
+                  src={formData.image}
+                  alt={formData.name || "Wedding package preview"}
+                  fill
+                  className="object-cover"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe your wedding package..."
-                  value={formData.description}
-                  onChange={(e) => onFormDataChange(prev => ({ ...prev, description: e.target.value }))}
-                  disabled={modalType === "view"}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Package Image</Label>
-                {formData.image ? (
-                  <div className="relative w-full max-w-[200px]">
-                    <Image
-                      src={formData.image}
-                      alt="Package preview"
-                      width={200}
-                      height={200}
-                      className="rounded-md object-cover w-full h-auto"
-                    />
-                    {modalType !== "view" && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={() => onFormDataChange(prev => ({ ...prev, image: null }))}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ) : modalType !== "view" ? (
-                  <div className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center">
-                    <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-600">
-                      <label htmlFor="image-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80">
-                        <span>Upload an image</span>
-                        <input
-                          id="image-upload"
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={onImageUpload}
-                        />
-                      </label>
-                    </p>
-                    <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No image uploaded</p>
-                )}
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-rose-100/55 via-amber-50/40 to-pink-100/55 dark:from-rose-950/20 dark:via-neutral-900 dark:to-pink-950/20 flex flex-col items-center justify-center p-4 text-center">
+                  <Sparkles className="h-10 w-10 text-primary/40 mb-2 animate-pulse" />
+                  <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Premium Salon Package</span>
+                </div>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 sm:p-5 flex flex-col justify-end">
+                <span className="text-white text-xs font-semibold tracking-wider uppercase bg-primary/80 px-2 py-0.5 rounded-full w-fit mb-1">Wedding Collection</span>
+                <h3 className="text-white text-lg sm:text-2xl font-bold">{formData.name || "Unnamed Package"}</h3>
               </div>
             </div>
 
-            {/* Right Column */}
-            <div className="space-y-3 sm:space-y-4">
-              <div className="space-y-2">
-                <Label>Package Details</Label>
-                <div className="space-y-2 p-3 sm:p-4 bg-muted rounded-lg text-sm">
-                  <div className="flex justify-between">
-                    <span>Total Services:</span>
-                    <span className="font-medium">{formData.services.length}</span>
+            {/* Quick Metrics Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3 bg-muted/30 border border-muted rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <ClipboardList className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Services</div>
+                  <div className="text-sm sm:text-base font-bold text-foreground">{formData.services.length} Added</div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-muted/30 border border-muted rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Duration</div>
+                  <div className="text-sm sm:text-base font-bold text-foreground">
+                    {Math.floor(formData.duration / 60)}h {formData.duration % 60}m
                   </div>
-                  <div className="flex justify-between">
-                    <span>Total Duration:</span>
-                    <span className="font-medium">
-                      {Math.floor(formData.duration / 60)}h {formData.duration % 60}m
-                    </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-muted/30 border border-muted rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Staff Count</div>
+                  <div className="text-sm sm:text-base font-bold text-foreground">
+                    {formData.staffCount} {formData.staffCount === 1 ? 'Expert' : 'Experts'}
                   </div>
-                  <div className="flex justify-between">
-                    <span>Staff Required:</span>
-                    <span className="font-medium">
-                      {formData.staffCount} {formData.staffCount === 1 ? 'Professional' : 'Professionals'}
-                    </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-green-500/5 dark:bg-green-500/10 border border-green-500/25 rounded-xl flex items-center gap-3 hover:bg-green-500/10 transition-colors">
+                <div className="p-2 bg-green-500/10 rounded-lg text-green-600 dark:text-green-400">
+                  <Tag className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-green-600 dark:text-green-400 uppercase tracking-wider">Rate</div>
+                  <div className="text-sm sm:text-base font-bold text-green-700 dark:text-green-300">
+                    ₹{(formData.discountedPrice || formData.totalPrice).toFixed(2)}
                   </div>
-                  <div className="flex justify-between">
-                    <span>Total Price:</span>
-                    <span className="font-medium">₹{formData.totalPrice.toFixed(2)}</span>
-                  </div>
-                  {formData.discountedPrice && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Discounted Price:</span>
-                      <span className="font-medium">₹{formData.discountedPrice.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Description & Staff Section */}
+              <div className="md:col-span-2 space-y-4">
+                <div className="bg-background border border-muted rounded-xl p-4 sm:p-5 space-y-2">
+                  <h4 className="text-sm font-semibold tracking-wide text-foreground uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                    <Info className="h-4 w-4 text-primary" /> Package Description
+                  </h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {formData.description || "No description provided for this package."}
+                  </p>
+                </div>
+
+                <div className="bg-background border border-muted rounded-xl p-4 sm:p-5 space-y-3">
+                  <h4 className="text-sm font-semibold tracking-wide text-foreground uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                    <Users className="h-4 w-4 text-primary" /> Assigned Professionals
+                  </h4>
+                  {formData.assignedStaff.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {formData.assignedStaff.map((staffId) => {
+                        const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
+                        const nameStr = staffMember ? (staffMember.fullName || staffMember.name) : "Professional";
+                        return staffMember ? (
+                          <div key={staffId} className="flex items-center gap-2 bg-muted/40 border border-muted py-1.5 px-3 rounded-full hover:bg-muted transition-colors">
+                            <div className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
+                              {getInitials(nameStr)}
+                            </div>
+                            <span className="text-xs font-semibold text-foreground">{nameStr}</span>
+                          </div>
+                        ) : null;
+                      })}
                     </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                      <HelpCircle className="h-3.5 w-3.5" /> No specific staff assigned to this package yet.
+                    </p>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="staffCount">Staff Required</Label>
-                <Input
-                  id="staffCount"
-                  type="number"
-                  min="1"
-                  placeholder="e.g., 2"
-                  value={formData.staffCount}
-                  onChange={(e) => onFormDataChange(prev => ({
-                    ...prev,
-                    staffCount: parseInt(e.target.value) || 1
-                  }))}
-                  disabled={modalType === "view"}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Number of professionals needed to perform this package
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Assign Staff</Label>
-                {staffLoading ? (
-                  <div className="flex items-center justify-center p-4 border rounded-lg">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    <span className="text-sm text-muted-foreground">Loading staff...</span>
-                  </div>
-                ) : staffError ? (
-                  <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                    <p className="text-sm text-red-600">Error loading staff. Please try again.</p>
-                  </div>
-                ) : modalType === "view" ? (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.assignedStaff.length > 0 ? (
-                      formData.assignedStaff.map((staffId) => {
-                        const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
-                        return staffMember ? (
-                          <Badge key={staffId} variant="secondary">
-                            {staffMember.fullName || staffMember.name}
-                          </Badge>
-                        ) : null;
-                      })
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No staff assigned</p>
-                    )}
-                  </div>
-                ) : staff.length === 0 ? (
-                  <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
-                    <p className="text-sm text-yellow-800">
-                      No staff members available. Please add staff members first.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <Select
-                      value={selectedStaffForAdd}
-                      onValueChange={(value) => {
-                        console.log('Selected staff value:', value);
-                        console.log('Current assignedStaff:', formData.assignedStaff);
-                        console.log('All staff:', staff);
-
-                        if (value && value !== "no-staff" && !formData.assignedStaff.includes(value)) {
-                          onFormDataChange(prev => ({
-                            ...prev,
-                            assignedStaff: [...prev.assignedStaff, value]
-                          }));
-                          setTimeout(() => {
-                            onSelectedStaffChange("");
-                          }, 100);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select staff members" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staff.length > 0 ? (
-                          staff.map((staffMember: any) => (
-                            <SelectItem
-                              key={staffMember.id || staffMember._id}
-                              value={staffMember.id || staffMember._id}
-                              disabled={formData.assignedStaff.includes(staffMember.id || staffMember._id)}
-                            >
-                              {staffMember.fullName || staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-staff" disabled>
-                            No staff available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.assignedStaff.map((staffId) => {
-                        const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
-                        return staffMember ? (
-                          <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
-                            {staffMember.fullName || staffMember.name}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onFormDataChange(prev => ({
-                                  ...prev,
-                                  assignedStaff: prev.assignedStaff.filter(id => id !== staffId)
-                                }));
-                              }}
-                              className="ml-1 hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ) : null;
-                      })}
+              {/* pricing details card & services listing */}
+              <div className="space-y-4">
+                <div className="bg-primary/[0.03] border border-primary/20 rounded-xl p-5 space-y-4 shadow-sm">
+                  <h4 className="text-sm font-bold text-foreground tracking-wide uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                    <DollarSign className="h-4 w-4 text-primary" /> Billing Breakdown
+                  </h4>
+                  <div className="space-y-2.5 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Base Services Total:</span>
+                      <span className="font-semibold text-foreground">₹{formData.totalPrice.toFixed(2)}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {staff.length} staff member{staff.length !== 1 ? 's' : ''} available. Select those who can perform this package.
-                    </p>
-                  </>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="discountedPrice">Discounted Price</Label>
-                <Input
-                  id="discountedPrice"
-                  type="number"
-                  placeholder="e.g., 4500"
-                  value={formData.discountedPrice || ""}
-                  onChange={(e) => onFormDataChange(prev => ({
-                    ...prev,
-                    discountedPrice: e.target.value ? parseFloat(e.target.value) : null
-                  }))}
-                  disabled={modalType === "view"}
-                />
+                    {formData.discountedPrice !== null && formData.discountedPrice < formData.totalPrice && (
+                      <>
+                        <div className="flex justify-between text-green-600 dark:text-green-400">
+                          <span>Discount Applied:</span>
+                          <span className="font-semibold flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            {discountPercent}% Off
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-green-600 dark:text-green-400">
+                          <span>Your Savings:</span>
+                          <span className="font-semibold">
+                            - ₹{(formData.totalPrice - formData.discountedPrice).toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="border-t border-dashed border-muted my-2 pt-3 flex justify-between items-center">
+                      <span className="font-bold text-foreground text-sm uppercase">Total Package Price</span>
+                      <div className="text-right">
+                        {formData.discountedPrice !== null && formData.discountedPrice < formData.totalPrice ? (
+                          <>
+                            <div className="text-xs text-muted-foreground line-through">₹{formData.totalPrice.toFixed(2)}</div>
+                            <div className="text-xl sm:text-2xl font-extrabold text-green-600 dark:text-green-400">
+                              ₹{formData.discountedPrice.toFixed(2)}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-xl sm:text-2xl font-extrabold text-foreground">
+                            ₹{formData.totalPrice.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Add Services Section */}
-          {modalType !== "view" && (
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <Label>Add Services to Package</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onAddService}
-                  disabled={!newService.serviceId}
-                  className="w-full sm:w-auto"
-                >
-                  Add Service
-                </Button>
+            {/* List of included services */}
+            <div className="bg-background border border-muted rounded-xl p-4 sm:p-5 space-y-3">
+              <h4 className="text-sm font-semibold tracking-wide text-foreground uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                <ClipboardList className="h-4 w-4 text-primary" /> Package Services Directory
+              </h4>
+              {formData.services.length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {formData.services.map((pkgService: PackageService) => {
+                    const service = services.find((s: Service) => s._id === pkgService.serviceId);
+                    return (
+                      <div
+                        key={pkgService.serviceId}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-muted hover:border-primary/20 rounded-xl bg-muted/10 hover:bg-muted/20 transition-all gap-2"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="font-semibold text-sm text-foreground">{service?.name || pkgService.serviceName}</div>
+                          <Badge variant="secondary" className="w-fit text-[10px] font-semibold bg-primary/10 text-primary border-none">
+                            {service?.categoryName || "Salon"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                          <div className="text-xs text-muted-foreground flex items-center gap-3">
+                            <span className="bg-muted px-2 py-0.5 rounded font-medium border border-muted">Qty: {pkgService.quantity}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {service ? service.duration * pkgService.quantity : 0} min</span>
+                          </div>
+                          <div className="text-sm font-bold text-foreground min-w-[70px] text-right">
+                            ₹{service ? (service.price * pkgService.quantity).toFixed(2) : "0.00"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic flex items-center gap-1">
+                  <HelpCircle className="h-3.5 w-3.5" /> No services added to this package yet.
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="pt-2 border-t border-muted">
+              <Button type="button" onClick={onClose} className="w-full sm:w-auto font-semibold px-6">
+                Close Details
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          /* ======================================================================= */
+          /* PREMIUM EDIT & CREATE FORM                                              */
+          /* ======================================================================= */
+          <form onSubmit={onSubmit} className="space-y-6 py-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - Package Identity & Images */}
+              <div className="space-y-4">
+                <div className="bg-background border border-muted rounded-xl p-4 sm:p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
+                  <h4 className="text-sm font-bold tracking-wide text-foreground uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-primary" /> Package Identity
+                  </h4>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name" className="text-xs font-bold text-foreground">Package Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., Ultimate Bridal Glow & Makeup Package"
+                      value={formData.name}
+                      onChange={(e) => onFormDataChange(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                      className="border-muted focus-visible:ring-primary rounded-lg text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description" className="text-xs font-bold text-foreground">Package Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Detail the package contents, who it's for, and the experience they will enjoy..."
+                      value={formData.description}
+                      onChange={(e) => onFormDataChange(prev => ({ ...prev, description: e.target.value }))}
+                      required
+                      className="min-h-[100px] border-muted focus-visible:ring-primary rounded-lg text-sm resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground">Cover Image</Label>
+                    {formData.image ? (
+                      <div className="relative w-full h-[140px] rounded-lg overflow-hidden border border-muted">
+                        <Image
+                          src={formData.image}
+                          alt="Package preview"
+                          fill
+                          className="object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-red-600 hover:bg-red-700 shadow-md transition-all active:scale-95"
+                          onClick={() => onFormDataChange(prev => ({ ...prev, image: null }))}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-muted hover:border-primary/50 rounded-lg p-5 text-center transition-all bg-muted/10 hover:bg-primary/5 cursor-pointer relative">
+                        <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
+                          <Upload className="h-8 w-8 text-muted-foreground/60 mb-2 animate-bounce" />
+                          <span className="text-xs font-bold text-primary hover:text-primary/80">Upload Photo</span>
+                          <span className="text-[10px] text-muted-foreground mt-1">PNG, JPG up to 5MB</span>
+                          <input
+                            id="image-upload"
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={onImageUpload}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-2">
-                <div className="space-y-2 sm:col-span-2 lg:col-span-1">
-                  <Label>Service</Label>
+              {/* Right Column - Logistics & Staffing */}
+              <div className="space-y-4">
+                <div className="bg-background border border-muted rounded-xl p-4 sm:p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
+                  <h4 className="text-sm font-bold tracking-wide text-foreground uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                    <Users className="h-4 w-4 text-primary" /> Staffing & Logistics
+                  </h4>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="staffCount" className="text-xs font-bold text-foreground">Professionals Required</Label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="staffCount"
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 2"
+                        value={formData.staffCount}
+                        onChange={(e) => onFormDataChange(prev => ({
+                          ...prev,
+                          staffCount: e.target.value === "" ? "" : (parseInt(e.target.value) || 0)
+                        } as any))}
+                        onBlur={() => {
+                          if (formData.staffCount === "" || formData.staffCount < 1 || isNaN(Number(formData.staffCount))) {
+                            onFormDataChange(prev => ({ ...prev, staffCount: 1 }));
+                          }
+                        }}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        className="pl-9 border-muted focus-visible:ring-primary rounded-lg text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Minimum number of specialists required to execute this wedding package.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground">Assign Staff Members</Label>
+                    {staffLoading ? (
+                      <div className="flex items-center justify-center p-3 border border-muted rounded-lg bg-muted/10">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2 text-primary" />
+                        <span className="text-xs text-muted-foreground">Fetching professional staff...</span>
+                      </div>
+                    ) : staffError ? (
+                      <div className="p-3 border border-red-200 rounded-lg bg-red-50 text-xs text-red-600">
+                        Failed to fetch staff members. Please reload page.
+                      </div>
+                    ) : staff.length === 0 ? (
+                      <div className="p-3 border border-yellow-250 rounded-lg bg-yellow-50 text-xs text-yellow-800">
+                        No team members registered. Please create staff profiles.
+                      </div>
+                    ) : (
+                      <>
+                        <Select
+                          value={selectedStaffForAdd}
+                          onValueChange={(value) => {
+                            if (value && value !== "no-staff" && !formData.assignedStaff.includes(value)) {
+                              onFormDataChange(prev => ({
+                                ...prev,
+                                assignedStaff: [...prev.assignedStaff, value]
+                              }));
+                              setTimeout(() => {
+                                onSelectedStaffChange("");
+                              }, 100);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="border-muted focus:ring-primary rounded-lg text-sm bg-background">
+                            <SelectValue placeholder="Add professionals to this package" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60 rounded-lg border-muted">
+                            {staff.map((staffMember: any) => (
+                              <SelectItem
+                                key={staffMember.id || staffMember._id}
+                                value={staffMember.id || staffMember._id}
+                                disabled={formData.assignedStaff.includes(staffMember.id || staffMember._id)}
+                              >
+                                {staffMember.fullName || staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {formData.assignedStaff.length > 0 ? (
+                            formData.assignedStaff.map((staffId) => {
+                              const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
+                              const nameStr = staffMember ? (staffMember.fullName || staffMember.name) : "Staff";
+                              return staffMember ? (
+                                <Badge
+                                  key={staffId}
+                                  variant="secondary"
+                                  className="flex items-center gap-1.5 py-1 px-2.5 rounded-full hover:bg-muted/80 transition-colors border-muted bg-muted/40 text-foreground text-xs"
+                                >
+                                  <div className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] font-bold flex items-center justify-center">
+                                    {getInitials(nameStr)}
+                                  </div>
+                                  <span>{nameStr}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onFormDataChange(prev => ({
+                                        ...prev,
+                                        assignedStaff: prev.assignedStaff.filter(id => id !== staffId)
+                                      }));
+                                    }}
+                                    className="hover:text-red-500 hover:scale-110 active:scale-95 transition-all"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ) : null;
+                            })
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic">No specific professionals pre-assigned.</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SERVICES SELECTOR & INCLUDE WORKBENCH */}
+            <div className="bg-background border border-muted rounded-xl p-4 sm:p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between border-b border-muted pb-2">
+                <h4 className="text-sm font-bold tracking-wide text-foreground uppercase flex items-center gap-1.5">
+                  <ClipboardList className="h-4 w-4 text-primary" /> Included Services
+                </h4>
+                <Badge variant="outline" className="font-semibold text-xs border-primary/20 text-primary bg-primary/5">
+                  {formData.services.length} Added
+                </Badge>
+              </div>
+
+              {/* Service Quick Add Input Row */}
+              <div className="p-3 bg-muted/20 border border-muted rounded-xl grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-[10px] font-bold text-foreground uppercase tracking-wide">Select Service</Label>
                   <Select
                     value={newService.serviceId}
                     onValueChange={(value) => onNewServiceChange(prev => ({ ...prev, serviceId: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select service" />
+                    <SelectTrigger className="border-muted focus:ring-primary rounded-lg text-xs bg-background">
+                      <SelectValue placeholder="Pick a service from catalog..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-60 rounded-lg border-muted">
                       {services.map((service: Service) => (
-                        <SelectItem key={service._id} value={service._id}>
-                          {service.name}
+                        <SelectItem key={service._id} value={service._id} disabled={formData.services.some(s => s.serviceId === service._id)}>
+                          {service.name} (₹{service.price})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Quantity</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newService.quantity}
-                    onChange={(e) => onNewServiceChange(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-
-                <div className="space-y-2 flex items-end sm:col-span-2 lg:col-span-1">
-                  <div className="flex items-center space-x-2 h-10">
-                    <Checkbox
-                      id="staffRequired"
-                      checked={newService.staffRequired}
-                      onCheckedChange={(checked) =>
-                        onNewServiceChange(prev => ({ ...prev, staffRequired: !!checked }))
-                      }
+                <div className="grid grid-cols-2 gap-3 md:col-span-2 items-end">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-foreground uppercase tracking-wide">Quantity</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newService.quantity}
+                      onChange={(e) => onNewServiceChange(prev => ({
+                        ...prev,
+                        quantity: e.target.value === "" ? "" : (parseInt(e.target.value) || 0)
+                      } as any))}
+                      onBlur={() => {
+                        if (newService.quantity === "" || newService.quantity < 1 || isNaN(Number(newService.quantity))) {
+                          onNewServiceChange(prev => ({ ...prev, quantity: 1 }));
+                        }
+                      }}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="border-muted focus-visible:ring-primary rounded-lg text-xs h-9 bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <Label htmlFor="staffRequired" className="text-sm">Staff Required</Label>
                   </div>
+
+                  <Button
+                    type="button"
+                    onClick={onAddService}
+                    disabled={!newService.serviceId}
+                    className="w-full h-9 rounded-lg font-bold text-xs bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm active:scale-95 transition-all"
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Service
+                  </Button>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Package Services List */}
-          <div className="space-y-3 sm:space-y-4">
-            <Label>Package Services</Label>
-            {formData.services.length > 0 ? (
-              <div className="space-y-2 max-h-48 sm:max-h-60 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                {formData.services.map((pkgService: PackageService) => {
-                  const service = services.find((s: Service) => s._id === pkgService.serviceId);
-                  return (
-                    <div
-                      key={pkgService.serviceId}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-3"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <div className="font-medium text-sm sm:text-base">{service?.name || pkgService.serviceName}</div>
-                        <Badge variant="secondary" className="w-fit">{service?.categoryName}</Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end w-full sm:w-auto">
-                        {modalType !== "view" && (
-                          <div className="flex items-center border rounded-lg">
+              {/* Active Services Listing inside layout */}
+              {formData.services.length > 0 ? (
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {formData.services.map((pkgService: PackageService) => {
+                    const service = services.find((s: Service) => s._id === pkgService.serviceId);
+                    return (
+                      <div
+                        key={pkgService.serviceId}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-muted hover:border-primary/20 rounded-xl bg-background/50 hover:bg-background/95 transition-all gap-3 shadow-inner"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="font-semibold text-sm text-foreground">{service?.name || pkgService.serviceName}</div>
+                          <Badge variant="secondary" className="w-fit text-[9px] font-semibold bg-muted text-muted-foreground border-none">
+                            {service?.categoryName || "General"}
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                          {/* Quantity control clicks */}
+                          <div className="flex items-center border border-muted rounded-lg bg-background shadow-sm overflow-hidden h-8">
                             <Button
                               type="button"
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 rounded-none hover:bg-muted text-muted-foreground active:scale-95"
                               onClick={() => onQuantityChange(pkgService.serviceId, -1)}
                               disabled={pkgService.quantity <= 1}
                             >
-                              <Minus className="h-4 w-4" />
+                              <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="px-2 text-sm font-medium min-w-[30px] text-center">{pkgService.quantity}</span>
+                            <span className="px-2 text-xs font-bold min-w-[28px] text-center text-foreground">{pkgService.quantity}</span>
                             <Button
                               type="button"
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 rounded-none hover:bg-muted text-muted-foreground active:scale-95"
                               onClick={() => onQuantityChange(pkgService.serviceId, 1)}
                             >
-                              <Plus className="h-4 w-4" />
+                              <Plus className="h-3 w-3" />
                             </Button>
                           </div>
-                        )}
-                        {modalType !== "view" && (
+
+                          <div className="text-right min-w-[70px] text-xs">
+                            <div className="font-bold text-foreground">
+                              ₹{service ? (service.price * pkgService.quantity).toFixed(2) : "0.00"}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {service ? `${service.duration * pkgService.quantity} min` : "0 min"}
+                            </div>
+                          </div>
+
                           <Button
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg active:scale-95 transition-all"
                             onClick={() => onRemoveService(pkgService.serviceId)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
-                        )}
-                        <div className="text-right min-w-[80px]">
-                          <div className="text-sm font-semibold">
-                            ₹{service ? (service.price * pkgService.quantity).toFixed(2) : "0.00"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {service ? `${service.duration * pkgService.quantity} min` : "0 min"}
-                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-6 sm:py-8 text-sm text-muted-foreground border rounded-lg">
-                No services added to this package yet
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-xs text-muted-foreground border border-dashed border-muted rounded-xl bg-muted/5 flex flex-col items-center justify-center p-4">
+                  <ClipboardList className="h-8 w-8 text-muted-foreground/40 mb-1" />
+                  <p className="font-medium">No services assigned to this package.</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Use the catalog workbench above to compile services.</p>
+                </div>
+              )}
+            </div>
 
-          {modalType !== "view" && (
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
+            {/* PRICING & DISCOUNTS METRICS WRAPPER */}
+            <div className="bg-primary/[0.02] border border-primary/20 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
+              <h4 className="text-sm font-bold text-foreground tracking-wide uppercase border-b border-muted pb-2 flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4 text-primary" /> Pricing Summary
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                {/* Total Cost Display */}
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Catalog Total Price</span>
+                  <div className="text-xl sm:text-2xl font-extrabold text-foreground">₹{formData.totalPrice.toFixed(2)}</div>
+                </div>
+
+                {/* Percentage Discount Input */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="discountPercent" className="text-xs font-bold text-foreground flex items-center gap-1">
+                    <Percent className="h-3.5 w-3.5 text-primary" /> Discount Percentage
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="discountPercent"
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="e.g., 15 for 15%"
+                      value={discountPercent}
+                      onChange={(e) => handleDiscountPercentChange(e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="pr-8 border-muted focus-visible:ring-primary rounded-lg text-sm h-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-muted-foreground">%</span>
+                  </div>
+                </div>
+
+                {/* Dynamic Package Price */}
+                <div className="space-y-1 md:text-right">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Final Package Price</span>
+                  <div className="flex items-baseline md:justify-end gap-1.5">
+                    {discountPercent !== "" && discountPercent > 0 ? (
+                      <>
+                        <span className="text-xs text-muted-foreground line-through">₹{formData.totalPrice.toFixed(2)}</span>
+                        <span className="text-xl sm:text-2xl font-black text-green-600 dark:text-green-400">
+                          ₹{(formData.discountedPrice || 0).toFixed(2)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xl sm:text-2xl font-black text-foreground">₹{formData.totalPrice.toFixed(2)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Saving Notification Badge */}
+              {discountPercent !== "" && discountPercent > 0 && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-green-500/10 border border-green-500/20 text-xs font-semibold text-green-700 dark:text-green-400 animate-pulse">
+                  <Sparkles className="h-4 w-4" />
+                  <span>
+                    Special Offer Enabled! Clients save ₹{(formData.totalPrice - (formData.discountedPrice || 0)).toFixed(2)} ({discountPercent}% discount).
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-muted">
+              <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto font-bold rounded-lg px-5">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isCreating || isUpdating || formData.services.length === 0}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto font-bold rounded-lg px-6 bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm"
               >
                 {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {modalType === "create" ? "Create Package" : "Update Package"}
               </Button>
             </DialogFooter>
-          )}
-        </form>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
+
