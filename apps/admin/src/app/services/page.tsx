@@ -474,12 +474,12 @@ export default function ServicesPage() {
 
                 {/* View Modal */}
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border border-border/80 rounded-2xl shadow-xl">
+                    <DialogContent className="sm:max-w-[440px] max-h-[85vh] p-0 overflow-hidden flex flex-col border border-border/80 rounded-xl shadow-xl">
                         {selectedService && (
-                            <div className="flex flex-col">
+                            <div className="flex-1 min-h-0 overflow-y-auto">
                                 {/* Banner section */}
                                 {selectedService.serviceImage ? (
-                                    <div className="relative h-48 w-full">
+                                    <div className="relative h-32 w-full">
                                         <img
                                             src={selectedService.serviceImage}
                                             alt={selectedService.name}
@@ -501,7 +501,7 @@ export default function ServicesPage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="relative h-36 w-full bg-gradient-to-r from-violet-600/20 via-primary/10 to-pink-500/10 flex items-center justify-center">
+                                    <div className="relative h-28 w-full bg-gradient-to-r from-violet-600/20 via-primary/10 to-pink-500/10 flex items-center justify-center">
                                         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
                                         <div className="flex flex-col items-center gap-1.5 relative z-10">
                                             <div className="p-2.5 bg-background/80 rounded-full shadow-sm border border-border/40 backdrop-blur-sm">
@@ -525,11 +525,11 @@ export default function ServicesPage() {
                                 )}
 
                                 {/* Content Padding Area */}
-                                <div className="p-6 space-y-6">
+                                <div className="p-4 space-y-4">
                                     {/* DialogHeader inside content to ensure correct ARIA compliance */}
                                     <div className="space-y-1">
                                         <DialogHeader className="p-0 text-left">
-                                            <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+                                            <DialogTitle className="text-lg font-bold tracking-tight text-foreground break-words">
                                                 {selectedService.name}
                                             </DialogTitle>
                                             <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
@@ -540,9 +540,9 @@ export default function ServicesPage() {
                                     </div>
 
                                     {/* Metadata 2x2 grid */}
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-3">
                                         {/* Vendor Card */}
-                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                        <div className="p-3 rounded-lg border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
                                             <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
                                                 <Store className="h-4 w-4 text-violet-500" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">Vendor</span>
@@ -553,7 +553,7 @@ export default function ServicesPage() {
                                         </div>
 
                                         {/* Category Card */}
-                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                        <div className="p-3 rounded-lg border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
                                             <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
                                                 <Tag className="h-4 w-4 text-teal-500" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">Category</span>
@@ -564,7 +564,7 @@ export default function ServicesPage() {
                                         </div>
 
                                         {/* Gender / Suitable For Card */}
-                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                        <div className="p-3 rounded-lg border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
                                             <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
                                                 <Users className="h-4 w-4 text-indigo-500" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">Gender Preference</span>
@@ -575,7 +575,7 @@ export default function ServicesPage() {
                                         </div>
 
                                         {/* Status Card */}
-                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                        <div className="p-3 rounded-lg border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
                                             <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
                                                 <ShieldCheck className="h-4 w-4 text-emerald-500" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">Status</span>
@@ -594,7 +594,7 @@ export default function ServicesPage() {
                                         </div>
 
                                         {/* Registered Card */}
-                                        <div className="col-span-2 p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200 flex items-center justify-between">
+                                        <div className="col-span-2 p-3 rounded-lg border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200 flex items-center justify-between gap-3">
                                             <div className="flex items-center gap-2 text-muted-foreground">
                                                 <Calendar className="h-4 w-4 text-amber-500" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">Registered Date</span>
@@ -610,19 +610,19 @@ export default function ServicesPage() {
                                     </div>
 
                                     {/* Description block */}
-                                    <div className="p-4 rounded-xl border border-border/40 bg-accent/20 space-y-2">
+                                    <div className="p-3 rounded-lg border border-border/40 bg-accent/20 space-y-2">
                                         <div className="flex items-center gap-2 text-muted-foreground">
                                             <FileText className="h-4 w-4 text-blue-500" />
                                             <span className="text-[10px] font-bold uppercase tracking-wider">Service Description</span>
                                         </div>
-                                        <p className="text-sm text-foreground/90 leading-relaxed max-h-[120px] overflow-y-auto pr-1">
+                                        <p className="text-sm text-foreground/90 leading-relaxed max-h-[90px] overflow-y-auto pr-1 whitespace-pre-wrap break-words">
                                             {selectedService.description || 'No description provided for this service.'}
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         )}
-                        <DialogFooter className="px-6 py-4 bg-muted/30 border-t border-border/45">
+                        <DialogFooter className="shrink-0 px-4 py-3 bg-muted/30 border-t border-border/45">
                             <Button type="button" onClick={handleCloseModal} className="px-5 rounded-lg shadow-sm hover:scale-[1.01] active:scale-[0.99] transition-all">
                                 Close
                             </Button>
