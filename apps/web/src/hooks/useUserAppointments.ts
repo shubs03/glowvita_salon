@@ -35,6 +35,7 @@ interface Appointment {
   finalAmount?: number;
   cancellationReason?: string;
   paymentMethod?: string;
+  isPackage?: boolean;
 }
 
 export const useUserAppointments = () => {
@@ -256,7 +257,8 @@ export const useUserAppointments = () => {
         endTime: appointment.endTime,
         serviceItems: serviceItems,
         cancellationReason: appointment.cancellationReason,
-        paymentMethod: appointment.paymentMethod
+        paymentMethod: appointment.paymentMethod,
+        isPackage: shouldUsePackageItems
       };
     });
   }, [appointments]);
