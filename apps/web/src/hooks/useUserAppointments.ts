@@ -114,7 +114,8 @@ export const useUserAppointments = () => {
           startTime: appointment.startTime || '',
           endTime: appointment.endTime || '',
           duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / packageServices.length),
-          amount: srv.amount || 0
+          amount: srv.amount || 0,
+          originalAmount: srv.price || srv.originalAmount || null
         };
       };
 
@@ -128,18 +129,20 @@ export const useUserAppointments = () => {
             return {
               ...item,
               amount: Number(item.amount || packageItem?.amount || 0),
+              originalAmount: Number(item.originalAmount || item.price || packageItem?.price || packageItem?.originalAmount || packageItem?.amount || 0) || null,
               serviceName: item.serviceName || packageItem?.serviceName || 'Service',
               service: item.service || packageItem?.serviceId || packageItem?._id || ''
             };
           });
         }
-      } else if (serviceItems && serviceItems.length > 0) {
-        // For any multi-service appointment, ensure amount is properly normalized as a number
-        // If amounts are all zero/missing and we have a total appointment amount, distribute it
+      }
+
+      if (serviceItems && serviceItems.length > 0) {
+        // For any multi-service or package appointment, ensure amount is properly normalized
         const hasAmounts = serviceItems.some((item: any) => Number(item.amount || 0) > 0);
         
         if (!hasAmounts && (appointment.amount || appointment.totalAmount || appointment.finalAmount)) {
-          // Distribute the total appointment amount across services equally
+          // Distribute the total appointment amount across services equally if amounts are 0
           const totalForDistribution = appointment.amount || appointment.totalAmount || appointment.finalAmount || 0;
           const amountPerService = Math.round((totalForDistribution / serviceItems.length) * 100) / 100;
           

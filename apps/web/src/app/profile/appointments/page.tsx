@@ -383,6 +383,24 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
         return map;
     }, [vendorServicesResponse]);
 
+    const catalogDiscountPriceMap = useMemo(() => {
+        let servicesArr: any[] = [];
+        if (vendorServicesResponse?.services) servicesArr = vendorServicesResponse.services;
+        else if (vendorServicesResponse?.data?.services) servicesArr = vendorServicesResponse.data.services;
+        else if (Array.isArray(vendorServicesResponse?.data)) servicesArr = vendorServicesResponse.data;
+        else if (Array.isArray(vendorServicesResponse)) servicesArr = vendorServicesResponse;
+
+        const map: Record<string, number> = {};
+        servicesArr.forEach((s: any) => {
+            const id = s._id || s.id;
+            if (id) {
+                const discountedPrice = s.discountedPrice ?? s.serviceDiscountedPrice ?? s.amount ?? null;
+                if (discountedPrice != null) map[id] = Number(discountedPrice);
+            }
+        });
+        return map;
+    }, [vendorServicesResponse]);
+
     const originalSubtotal = useMemo(() => {
         if (!appointment) return 0;
         if (appointment.serviceItems && appointment.serviceItems.length > 0) {
@@ -656,15 +674,37 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                             <div className="flex flex-col items-end">
                                                 {(() => {
                                                     const catalogPrice = catalogPriceMap[item.service] ?? null;
+                                                    const catalogDiscountPrice = catalogDiscountPriceMap[item.service] ?? null;
                                                     const originalPrice = (item as any).originalAmount ?? (item as any).price ?? catalogPrice;
-                                                    const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(item.amount);
+
+                                                    let itemAmount = item.amount ?? (item as any).price ?? originalPrice ?? 0;
+
+                                                    // Fix for old appointments where amounts were equally distributed
+                                                    if (appointment.serviceItems!.length > 1) {
+                                                        const firstAmount = appointment.serviceItems![0].amount;
+                                                        const isEquallyDistributed = appointment.serviceItems!.every(si => si.amount === firstAmount);
+                                                        const totalAmount = appointment.amount ?? appointment.price ?? 0;
+
+                                                        if (isEquallyDistributed && originalSubtotal > 0 && originalSubtotal > totalAmount) {
+                                                            if (catalogDiscountPrice !== null) {
+                                                                itemAmount = catalogDiscountPrice;
+                                                            } else {
+                                                                const ratio = (originalPrice !== null ? Number(originalPrice) : 0) / originalSubtotal;
+                                                                itemAmount = Math.round((totalAmount * ratio) * 100) / 100;
+                                                            }
+                                                        }
+                                                    } else if (appointment.serviceItems!.length === 1) {
+                                                        itemAmount = appointment.amount ?? appointment.price ?? itemAmount;
+                                                    }
+
+                                                    const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(itemAmount);
                                                     return (
                                                         <>
                                                             {hasDiscount && (
                                                                 <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(2)}</span>
                                                             )}
                                                             <span className={hasDiscount ? "font-medium text-green-600" : "font-medium"}>
-                                                                ₹{item.amount.toFixed(2)}
+                                                                ₹{Number(itemAmount).toFixed(2)}
                                                             </span>
                                                         </>
                                                     );
@@ -689,14 +729,15 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                         {(() => {
                                             const catalogPrice = catalogPriceMap[appointment.service] ?? null;
                                             const originalPrice = (appointment as any).originalAmount ?? (appointment as any).price ?? catalogPrice;
-                                            const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(appointment.price);
+                                            const currentAmount = appointment.amount ?? appointment.price ?? 0;
+                                            const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(currentAmount);
                                             return (
                                                 <>
                                                     {hasDiscount && (
                                                         <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(2)}</span>
                                                     )}
                                                     <span className={hasDiscount ? "font-medium text-green-600" : "font-medium"}>
-                                                        ₹{appointment.price.toFixed(2)}
+                                                        ₹{Number(currentAmount).toFixed(2)}
                                                     </span>
                                                 </>
                                             );
@@ -725,12 +766,18 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                             </div>
                         </div>
 
-                        {appointment.discountAmount != null && appointment.discountAmount > 0 && (
-                            <div className="flex justify-between text-sm text-green-600">
-                                <span className="text-muted-foreground">Discount</span>
-                                <span>-₹{appointment.discountAmount.toFixed(2)}</span>
-                            </div>
-                        )}
+                        {(() => {
+                            const currentDiscount = appointment.discountAmount || 0;
+                            const subtotal = appointment.amount || appointment.price || 0;
+                            const derivedDiscount = currentDiscount > 0 ? currentDiscount : (originalSubtotal > subtotal ? originalSubtotal - subtotal : 0);
+
+                            return derivedDiscount > 0 ? (
+                                <div className="flex justify-between text-sm text-green-600">
+                                    <span className="text-muted-foreground">Discount</span>
+                                    <span>-₹{derivedDiscount.toFixed(2)}</span>
+                                </div>
+                            ) : null;
+                        })()}
 
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Platform Fee</span>
