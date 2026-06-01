@@ -31,10 +31,8 @@ export default function OnlineTransactionsPage() {
         itemsPerPage: 10
     });
 
-    // To handle view details dialog
     const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
-    // Call API using injected hook or direct api from glowvitaApi
     const { data: response, isLoading, error } = glowvitaApi.endpoints.getAdminOnlineTransactions.useQuery({
         page: pagination.currentPage,
         limit: pagination.itemsPerPage,
@@ -58,22 +56,15 @@ export default function OnlineTransactionsPage() {
     const totalTransactions = response?.pagination?.total || 0;
     const totalPages = response?.pagination?.totalPages || 0;
 
-    // Use a ref to store the timeout ID for debouncing
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setSearch(val);
-        
-        // Reset pagination when searching
         setPagination(prev => ({ ...prev, currentPage: 1 }));
-        
-        // Clear existing timeout
         if (debounceTimeoutRef.current) {
             clearTimeout(debounceTimeoutRef.current);
         }
-        
-        // Set new timeout
         debounceTimeoutRef.current = setTimeout(() => {
             setDebouncedSearch(val);
         }, 500);
@@ -108,10 +99,10 @@ export default function OnlineTransactionsPage() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium ">Completed Appointments</CardTitle>
+                        <CardTitle className="text-sm font-medium">Completed Appointments</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold ">{summary.completedAppointments}</div>
+                        <div className="text-2xl font-bold">{summary.completedAppointments}</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -119,15 +110,15 @@ export default function OnlineTransactionsPage() {
                         <CardTitle className="text-sm font-medium">Cancelled Appointments</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold ">{summary.cancelledAppointments}</div>
+                        <div className="text-2xl font-bold">{summary.cancelledAppointments}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium ">Total Amount Paid</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Amount Paid</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold ">₹{(summary.totalAmountPaid || 0).toFixed(2)}</div>
+                        <div className="text-2xl font-bold">₹{(summary.totalAmountPaid || 0).toFixed(2)}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -275,17 +266,18 @@ export default function OnlineTransactionsPage() {
                                                 <TableCell className="text-right font-semibold">
                                                     ₹{(tx.finalAmount || tx.totalAmount || 0).toFixed(2)}
                                                 </TableCell>
-                                                <TableCell className="text-center text-xs font-medium uppercase">
-                                                    {tx.status}
-                                                </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge variant={
-                                                        tx.paymentStatus === 'completed' ? 'success' :
-                                                            tx.paymentStatus === 'failed' ? 'destructive' :
-                                                                'secondary'
+                                                        tx.status === 'completed' ? 'success' :
+                                                            tx.status === 'cancelled' ? 'destructive' :
+                                                                tx.status === 'confirmed' ? 'default' :
+                                                                    'secondary'
                                                     }>
-                                                        {tx.paymentStatus || 'unknown'}
+                                                        {tx.status}
                                                     </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-center text-xs font-medium uppercase">
+                                                    {tx.paymentStatus || 'unknown'}
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Button variant="ghost" size="sm" onClick={() => setSelectedTransaction(tx)}>
