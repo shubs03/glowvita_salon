@@ -506,7 +506,7 @@ export default function CanvasTemplateEditor({
           <CardContent className="p-4">
             <div
               ref={canvasContainerRef}
-              className="w-full h-[600px] bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden"
+              className="w-full h-[600px] bg-gray-100 rounded-lg flex items-center justify-center overflow-auto"
             >
               {/* Canvas will be inserted here */}
             </div>

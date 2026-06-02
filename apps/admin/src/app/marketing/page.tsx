@@ -1026,7 +1026,7 @@ export default function PlatformMarketingPage() {
 
       {/* Social Media Template Form Dialog */}
       <Dialog open={isSocialMediaTemplateFormOpen} onOpenChange={setIsSocialMediaTemplateFormOpen}>
-        <DialogContent className="sm:max-w-4xl w-full flex flex-col gap-0 p-0 max-h-[82vh] overflow-hidden">
+        <DialogContent className="sm:max-w-7xl w-full flex flex-col gap-0 p-0 max-h-[90vh] overflow-hidden">
           <DialogHeader className="px-6 pt-5 pb-3 shrink-0 border-b">
             <DialogTitle>
               {isEditSocialMediaTemplateMode ? 'Edit Social Media Template' : 'Create New Social Media Template'}
