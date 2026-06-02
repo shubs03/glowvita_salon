@@ -6,8 +6,12 @@ const storePackageJson = require('../../packages/store/package.json');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  experimental: {
+    instrumentationHook: true,
+  },
   transpilePackages: ["@repo/ui", "@repo/store", "@repo/lib", "@repo/config"],
   webpack: (config, { isServer }) => {
+
     config.resolve.alias['@repo/config'] = path.resolve(__dirname, '../../packages/config');
 
     // Dynamic aliases from @repo/lib exports
