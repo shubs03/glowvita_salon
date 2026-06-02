@@ -53,6 +53,7 @@ export const getCompletionTemplate = ({
     businessName,
     serviceName,
     appointmentId,
+    appointmentDate,
     completedDate,
     orderTotal,
     location,
@@ -127,8 +128,12 @@ export const getCompletionTemplate = ({
                     <div class="summary-header">Order details</div>
                     
                     <div class="order-row">
-                        <div class="order-col-left">Order #:</div>
+                        <div class="order-col-left">Invoice #:</div>
                         <div class="order-col-right">${appointmentId}</div>
+                    </div>
+                    <div class="order-row">
+                        <div class="order-col-left">Appointment Date:</div>
+                        <div class="order-col-right">${appointmentDate || completedDate}</div>
                     </div>
                     <div class="order-row">
                         <div class="order-col-left">Completed on:</div>
@@ -138,7 +143,7 @@ export const getCompletionTemplate = ({
                     <div class="divider"></div>
                     
                     <div class="order-row">
-                        <div class="order-col-left">Order total:</div>
+                        <div class="order-col-left">Total Amount:</div>
                         <div class="order-col-right" style="font-weight: bold; font-size: 15px;">₹${(Number(orderTotal) || 0).toFixed(2)}</div>
                     </div>
                     
