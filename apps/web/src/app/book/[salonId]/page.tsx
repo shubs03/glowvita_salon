@@ -2182,7 +2182,24 @@ function BookingPageContent() {
               ...(razorpayPaymentId && { razorpayPaymentId }),
               ...(razorpayOrderId_ && { razorpayOrderId: razorpayOrderId_ })
             },
-            customizedPackageServices: weddingPackageMode === 'customized' ? customizedPackageServices : null
+            customizedPackageServices: ((customizedPackageServices && customizedPackageServices.length > 0) ? customizedPackageServices : selectedWeddingPackage.services).map((svc: any) => {
+              // Enrich with full service info to get price and duration if missing
+              const fullServiceInfo = services.find((s: any) => s.id === (svc.serviceId || svc.id || svc._id));
+              
+              let svcAmount = svc.amount;
+              if (svcAmount === undefined && fullServiceInfo) {
+                  svcAmount = fullServiceInfo.discountedPrice !== null && fullServiceInfo.discountedPrice !== undefined 
+                      ? parseFloat(fullServiceInfo.discountedPrice as any) 
+                      : (fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0);
+              }
+
+              return {
+                ...svc,
+                amount: svcAmount || 0,
+                duration: svc.duration || fullServiceInfo?.duration || "0 min",
+                staffId: staffId || null
+              };
+            })
           })
         });
 

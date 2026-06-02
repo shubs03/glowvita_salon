@@ -165,8 +165,8 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
         }))
       ],
       subtotal: Number(totalBaseAmount + totalAddOnsAmount),
-      originalSubtotal: Number(totalBaseAmount + totalAddOnsAmount),
-      discount: Number(discountAmount),
+      originalSubtotal: Number(originalTotalBaseAmount + totalAddOnsAmount),
+      discount: Number(discountAmount > 0 ? discountAmount : (originalTotalBaseAmount > totalBaseAmount ? originalTotalBaseAmount - totalBaseAmount : 0)),
       tax: Number(serviceTax),
       platformFee: Number(platformFee),
       total: Number(totalAmount),
@@ -385,7 +385,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
                             item.originalAmount ??
                             (item as any).price ??
                             catalogPrice;
-                          const chargedAmount = Number(item.amount);
+                          const chargedAmount = Number(item.amount || (item as any).price || originalPrice || 0);
                           const hasDiscount =
                             originalPrice !== null &&
                             Number(originalPrice) > chargedAmount;
@@ -472,7 +472,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             </div>
             <div className="flex justify-between text-sm text-red-600">
               <span>Discount{couponCode ? `(${couponCode})` : ''}:</span>
-              <span>-₹{Number(discountAmount).toFixed(2)}</span>
+              <span>-₹{Number(discountAmount > 0 ? discountAmount : (originalTotalBaseAmount > totalBaseAmount ? originalTotalBaseAmount - totalBaseAmount : 0)).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-medium mt-1 pt-2 border-t">
               <span>Total:</span>

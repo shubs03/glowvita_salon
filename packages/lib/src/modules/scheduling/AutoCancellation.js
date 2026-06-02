@@ -212,7 +212,7 @@ async function sendCancellationNotifications(appointment, options = {}) {
 
             await sendEmail({
                 to: appointment.clientEmail,
-                subject: 'Appointment Marked as No-Show',
+                subject: 'Appointment Cancelled',
                 html: clientEmailContent
             });
 
@@ -222,20 +222,19 @@ async function sendCancellationNotifications(appointment, options = {}) {
         // Send notification to vendor
         if (notifyVendor && vendor?.email) {
             const vendorEmailContent = `
-        <h2>Appointment Auto-Cancelled (No-Show)</h2>
-        <p>The following appointment was automatically marked as no-show:</p>
+        <h2>Appointment Auto-Cancelled</h2>
+        <p>The following appointment was automatically cancelled:</p>
         <ul>
           <li><strong>Client:</strong> ${appointment.clientName}</li>
           <li><strong>Service:</strong> ${appointment.serviceName}</li>
           <li><strong>Date:</strong> ${new Date(appointment.date).toLocaleDateString()}</li>
           <li><strong>Time:</strong> ${appointment.startTime} - ${appointment.endTime}</li>
-          <li><strong>Reason:</strong> ${appointment.cancellationReason}</li>
         </ul>
       `;
 
             await sendEmail({
                 to: vendor.email,
-                subject: 'Appointment Auto-Cancelled - No Show',
+                subject: 'Appointment Auto-Cancelled',
                 html: vendorEmailContent
             });
 

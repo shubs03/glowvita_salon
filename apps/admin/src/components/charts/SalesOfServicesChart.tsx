@@ -98,45 +98,47 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
   };
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart
-        data={chartData}
-        margin={{
-          top: 20,
-          right: 30,
-          left: 20,
-          bottom: 20,
-        }}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-        <XAxis
-          dataKey="name"
-          stroke="hsl(var(--muted-foreground))"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => truncateName(value, 15)}
-        />
-        <YAxis
-          stroke="hsl(var(--muted-foreground))"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          width={80}
-          tickFormatter={(value) => `₹${value.toLocaleString()}`}
-        />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '30px' }} />
-        <Bar 
-          dataKey="value" 
-          name="Sale (₹)"
-          radius={[4, 4, 0, 0]}
+    <div className="w-full min-w-[500px] h-[350px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={chartData}
+          margin={{
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 20,
+          }}
         >
-          {chartData.map((entry: any, index: number) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <XAxis
+            dataKey="name"
+            stroke="hsl(var(--muted-foreground))"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => truncateName(value, 15)}
+          />
+          <YAxis
+            stroke="hsl(var(--muted-foreground))"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            width={80}
+            tickFormatter={(value) => `₹${value.toLocaleString()}`}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '30px' }} />
+          <Bar 
+            dataKey="value" 
+            name="Sale (₹)"
+            radius={[4, 4, 0, 0]}
+          >
+            {chartData.map((entry: any, index: number) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

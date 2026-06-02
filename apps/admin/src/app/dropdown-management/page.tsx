@@ -1532,6 +1532,7 @@ export default function DropdownManagementPage() {
         { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'general' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },
+        { key: 'socialMediaTemplateType', title: 'Social Media Template Types', description: 'Manage categories for social media templates.', tab: 'marketing' },
         { key: 'supplier', title: 'Supplier Types', description: 'Manage types of suppliers.', tab: 'suppliers' }, // Changed from 'supplierType' to 'supplier'
     ];
 

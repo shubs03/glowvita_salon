@@ -53,6 +53,7 @@ export const getCompletionTemplate = ({
     businessName,
     serviceName,
     appointmentId,
+    appointmentDate,
     completedDate,
     orderTotal,
     location,
@@ -127,8 +128,12 @@ export const getCompletionTemplate = ({
                     <div class="summary-header">Order details</div>
                     
                     <div class="order-row">
-                        <div class="order-col-left">Order #:</div>
+                        <div class="order-col-left">Invoice #:</div>
                         <div class="order-col-right">${appointmentId}</div>
+                    </div>
+                    <div class="order-row">
+                        <div class="order-col-left">Appointment Date:</div>
+                        <div class="order-col-right">${appointmentDate || completedDate}</div>
                     </div>
                     <div class="order-row">
                         <div class="order-col-left">Completed on:</div>
@@ -138,7 +143,7 @@ export const getCompletionTemplate = ({
                     <div class="divider"></div>
                     
                     <div class="order-row">
-                        <div class="order-col-left">Order total:</div>
+                        <div class="order-col-left">Total Amount:</div>
                         <div class="order-col-right" style="font-weight: bold; font-size: 15px;">₹${(Number(orderTotal) || 0).toFixed(2)}</div>
                     </div>
                     
@@ -444,21 +449,22 @@ export const noshowAppointmentEmail = ({ clientName, serviceName, appointmentDat
              <div style="text-align: center;">
                 <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 250px; height: auto; vertical-align: middle;">
             </div>
-            <h2 style="color: #f39c12; margin-top: 15px;">Appointment Marked as No-Show</h2>
+            <h2 style="color: #f39c12; margin-top: 15px;">Appointment Cancelled</h2>
         </div>
         <div class="content">
-            <p>Hi ${clientName},</p>
-            <p>Your appointment at <strong>${salonName}</strong> was marked as a no-show because it wasn't completed or checked in.</p>
+            <p>Dear ${clientName},</p>
+            <p>We regret to inform you that your scheduled appointment at <strong>${salonName}</strong> has been automatically canceled because we were unable to connect with you at the scheduled time.</p>
             
             <div class="details">
                 <p><strong>Service:</strong> ${serviceName}</p>
                 <p><strong>Date:</strong> ${new Date(appointmentDate).toLocaleDateString()}</p>
                 <p><strong>Time:</strong> ${appointmentTime}</p>
-                ${reason ? `<p><strong>Status Detail:</strong> ${reason}</p>` : ''}
             </div>
             
-            <p>If you believe this is an error, please contact the salon directly to resolve your appointment status.</p>
-            <p>We hope to see you again soon!</p>
+            <p>If you would still like to proceed, please schedule a new appointment at your convenience. We would be happy to assist you.</p>
+            <p>Thank you for your understanding.</p>
+            <br>
+            <p>Best Regards,<br>Support Team</p>
         </div>
         <div class="footer">
             <p>This is an automated message from GlowVita Salon.</p>

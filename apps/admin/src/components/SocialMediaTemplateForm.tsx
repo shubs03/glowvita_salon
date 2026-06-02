@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { Image as ImageIcon, Loader2, Plus, RefreshCw, XCircle } from 'lucide-react';
+import { Image as ImageIcon, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Select,
@@ -23,186 +23,119 @@ export interface SocialMediaTemplate {
   description: string;
   imageUrl?: string;
   imageFile?: File | null;
-  image?: string; // For base64 image data
-  jsonData?: any; // For canvas JSON data
+  image?: string;
+  jsonData?: any;
   category: string;
   availableFor: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Type for the form submission data
 type SocialMediaTemplateFormData = Omit<SocialMediaTemplate, 'imageFile' | 'imageUrl'> & {
-  image?: string; // base64 string
+  image?: string;
 };
 
 interface SocialMediaTemplateFormProps {
-  initialData?: Partial<SocialMediaTemplate>;
+  initialData?: Partial<SocialMediaTemplate> | null;
+  categoryOptions?: string[];
   onSubmit: (data: FormData) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-const defaultCategories = [
-  'Happy Birthday',
-  'Anniversary Wishes',
-  'Congratulations',
-  'Holiday Greetings',
-  'New Year Wishes',
-  'Valentine\'s Day',
-  'Mother\'s Day',
-  'Father\'s Day',
-  'Christmas',
-  'Thanksgiving',
-  'Easter',
-  'Halloween',
-  'Welcome Messages',
-  'Thank You Posts',
-  'Motivational Quotes',
-  'Inspirational Messages',
-  'Special Announcements',
-  'Product Launch',
-  'Service Promotion',
-  'Seasonal Offers',
-  'Flash Sales',
-  'Grand Opening',
-  'Event Invitations',
-  'Behind the Scenes',
-  'Team Introductions',
-  'Customer Testimonials',
-  'Before & After',
-  'Tips & Tutorials',
-  'Fun Facts',
-  'Trivia Posts',
-  'Quote of the Day',
-  'Wellness Tips',
-  'Beauty Tips',
-  'Lifestyle Posts',
-  'Community Events',
-  'Charity & Causes',
-  'Award & Recognition',
-  'Milestone Celebrations',
-  'Success Stories',
-  'General Greetings'
-];
+const getStringValue = (value: any): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value.name || value.label || value.value || '';
+};
 
-const getDefaultFormData = (): Omit<SocialMediaTemplate, 'id' | '_id' | 'createdAt' | 'updatedAt'> & { id?: string; _id?: string } => ({
+const getAvailableForValue = (value: any): string => {
+  const availableFor = getStringValue(value).toLowerCase();
+  return ['admin', 'vendor', 'doctor', 'supplier'].includes(availableFor) ? availableFor : 'admin';
+};
+
+const getDefaultFormData = () => ({
   title: '',
   description: '',
   category: '',
-  availableFor: 'admin', // Default value
-  imageFile: null,
-  imageUrl: undefined,
-  jsonData: null,
+  availableFor: 'admin',
+  imageFile: null as File | null,
+  imageUrl: undefined as string | undefined,
+  jsonData: null as any,
 });
 
-// This is a workaround for the "Rendered more hooks than during the previous render" error
-// by moving the conditional rendering into a separate component
-function SocialMediaTemplateFormContent({ 
-  initialData = {}, 
+const buildFormDataFromInitial = (initialData: Partial<SocialMediaTemplate> | null | undefined) => {
+  const data = initialData ?? {};
+  if (Object.keys(data).length > 0) {
+    return {
+      ...getDefaultFormData(),
+      ...data,
+      title: getStringValue(data.title),
+      description: data.description || '',
+      category: getStringValue(data.category),
+      availableFor: getAvailableForValue(data.availableFor),
+      imageUrl: data.imageUrl || undefined,
+      jsonData: data.jsonData || null,
+      imageFile: null as File | null,
+    };
+  }
+  return getDefaultFormData();
+};
+
+function SocialMediaTemplateFormContent({
+  initialData,
+  categoryOptions = [],
   onCancel,
   isSubmitting = false,
   onSubmit,
 }: SocialMediaTemplateFormProps): JSX.Element {
-  // State hooks
-  const [formData, setFormData] = useState<ReturnType<typeof getDefaultFormData>>(getDefaultFormData());
-  const [categories, setCategories] = useState<string[]>([...defaultCategories]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const currentInitialData = useMemo(() => initialData ?? {}, [initialData]);
+
+  const [formData, setFormData] = useState(() => buildFormDataFromInitial(initialData));
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [activeTab, setActiveTab] = useState<string>("basic");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize form data when component mounts or when initialData changes
+  const selectedCategory = getStringValue(currentInitialData.category);
+  const categories = useMemo(() => {
+    return Array.from(new Set([...categoryOptions, selectedCategory].filter(Boolean)));
+  }, [categoryOptions, selectedCategory]);
+
   useEffect(() => {
-    if (initialData && Object.keys(initialData).length > 0) {
-      setFormData({
-        ...getDefaultFormData(),
-        ...initialData,
-        title: initialData.title || '',
-        description: initialData.description || '',
-        category: initialData.category || '',
-        imageUrl: initialData.imageUrl || '',
-        jsonData: initialData.jsonData || null,
-      });
-      
-      if (initialData.imageUrl) {
-        setImagePreview(initialData.imageUrl);
-      } else {
-        setImagePreview(null);
-      }
-    } else {
-      // Reset to default if no initialData
-      setFormData(getDefaultFormData());
-      setImagePreview(null);
-    }
-    
-    // Load saved categories from localStorage if available
-    try {
-      const savedCategories = localStorage.getItem('socialMediaCategories');
-      if (savedCategories) {
-        const parsedCategories = JSON.parse(savedCategories);
-        if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
-          // Merge with default categories and remove duplicates
-          const mergedCategories = [...defaultCategories, ...parsedCategories];
-          const allCategories = mergedCategories.filter((category, index) => 
-            mergedCategories.indexOf(category) === index
-          );
-          // Update local storage with merged categories
-          localStorage.setItem('socialMediaCategories', JSON.stringify(allCategories));
-          setCategories(allCategories);
-        } else {
-          setCategories(defaultCategories);
-        }
-      } else {
-        // Initialize with default categories
-        localStorage.setItem('socialMediaCategories', JSON.stringify(defaultCategories));
-        setCategories(defaultCategories);
-      }
-    } catch (error) {
-      console.error('Error loading categories from localStorage:', error);
-      setCategories(defaultCategories);
-    }
+    const built = buildFormDataFromInitial(initialData);
+    setFormData(built);
+    setImagePreview(initialData?.imageUrl || null);
   }, [initialData]);
 
   const handleSelectChange = (name: keyof SocialMediaTemplate, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.category || !formData.availableFor) {
       toast.error('Please fill in all required fields');
       return;
     }
-
     try {
       const formDataToSubmit = new FormData();
       formDataToSubmit.append('title', formData.title);
       formDataToSubmit.append('description', formData.description);
       formDataToSubmit.append('category', formData.category);
       formDataToSubmit.append('availableFor', formData.availableFor);
-      
-      // Add JSON data if available
       if (formData.jsonData) {
         formDataToSubmit.append('jsonData', JSON.stringify(formData.jsonData));
       }
-      
       if (formData.imageFile) {
         formDataToSubmit.append('image', formData.imageFile);
       } else if (formData.imageUrl) {
         formDataToSubmit.append('image', formData.imageUrl);
       }
-      
       await onSubmit(formDataToSubmit);
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -227,40 +160,40 @@ function SocialMediaTemplateFormContent({
         toast.error('Image size should be less than 5MB');
         return;
       }
-      
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
         setImagePreview(result);
-        setFormData((prev: any) => ({
-          ...prev,
-          imageFile: file,
-          imageUrl: result
-        }));
+        setFormData((prev: any) => ({ ...prev, imageFile: file, imageUrl: result }));
       };
-      reader.onerror = (error) => {
-        console.error('Error reading file:', error);
-        toast.error('Error reading image file');
-      };
+      reader.onerror = () => toast.error('Error reading image file');
       reader.readAsDataURL(file);
     }
   }, []);
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-100px)]">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-        <TabsList className="grid w-full grid-cols-2">
+    <div className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+
+        {/* Sticky tab switcher */}
+        <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
           <TabsTrigger value="design">Design Template</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="basic" className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 flex-1">
+
+        {/* ── Basic Info Tab ── */}
+        <TabsContent value="basic" className="mt-0">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+
               {/* Left Column */}
-              <div className="space-y-6">
+              <div className="space-y-5">
+
+                {/* Post Title */}
                 <div className="space-y-2">
-                  <Label htmlFor="title">Post Title <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="title">
+                    Post Title <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="title"
                     name="title"
@@ -271,32 +204,44 @@ function SocialMediaTemplateFormContent({
                   />
                 </div>
 
+                {/* Category */}
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="category">
+                    Category <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => handleSelectChange('category', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="category" className="w-full">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
+                      {categories.length > 0 ? (
+                        categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-sm text-muted-foreground">
+                          No categories found
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Available For */}
                 <div className="space-y-2">
-                  <Label htmlFor="availableFor">Available For <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="availableFor">
+                    Available For <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={formData.availableFor}
                     onValueChange={(value) => handleSelectChange('availableFor', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="availableFor" className="w-full">
                       <SelectValue placeholder="Select availability" />
                     </SelectTrigger>
                     <SelectContent>
@@ -308,6 +253,7 @@ function SocialMediaTemplateFormContent({
                   </Select>
                 </div>
 
+                {/* Description */}
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <textarea
@@ -316,50 +262,48 @@ function SocialMediaTemplateFormContent({
                     value={formData.description || ''}
                     onChange={handleChange}
                     rows={5}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-md shadow-sm bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none overflow-y-auto"
                     placeholder="Enter post description"
+                    style={{ minHeight: '110px', maxHeight: '180px' }}
                   />
                 </div>
+
               </div>
-              
-              {/* Right Column - Image Upload */}
-              <div className="space-y-2">
+
+              {/* Right Column – Image Upload */}
+              <div className="space-y-2 flex flex-col">
                 <Label>Background Image (Optional)</Label>
-                <div 
-                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors h-full flex flex-col justify-center items-center"
+                <div
+                  className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:bg-accent/30 transition-colors flex-1 flex flex-col justify-center items-center min-h-[200px]"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {imagePreview ? (
                     <div className="relative">
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        className="max-h-48 mx-auto rounded-md"
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-h-44 mx-auto rounded-md object-contain"
                       />
                       <button
                         type="button"
-                        className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
+                        className="absolute -top-2 -right-2 bg-background border border-border rounded-full p-1 shadow-md hover:bg-accent"
                         onClick={(e) => {
                           e.stopPropagation();
                           setImagePreview(null);
-                          setFormData(prev => ({ ...prev, imageFile: null, imageUrl: '' }));
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = '';
-                          }
+                          setFormData(prev => ({ ...prev, imageFile: null, imageUrl: undefined }));
+                          if (fileInputRef.current) fileInputRef.current.value = '';
                         }}
                       >
-                        <XCircle className="h-5 w-5 text-gray-500" />
+                        <XCircle className="h-5 w-5 text-muted-foreground" />
                       </button>
                     </div>
                   ) : (
                     <>
-                      <ImageIcon className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">
+                      <ImageIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">
                         Click to upload a background image or drag and drop
                       </p>
-                      <p className="text-xs text-gray-500">
-                        PNG, JPG, GIF up to 5MB
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF up to 5MB</p>
                     </>
                   )}
                   <input
@@ -371,15 +315,12 @@ function SocialMediaTemplateFormContent({
                   />
                 </div>
               </div>
+
             </div>
-            
-            <div className="mt-auto flex justify-end space-x-3 p-6 border-t bg-background">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isSubmitting}
-              >
+
+            {/* Footer – sticky at bottom of scroll area */}
+            <div className="sticky bottom-0 flex justify-end space-x-3 pt-4 pb-1 border-t bg-background">
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                 Cancel
               </Button>
               {formData.title && formData.category && formData.availableFor && (
@@ -405,17 +346,18 @@ function SocialMediaTemplateFormContent({
             </div>
           </form>
         </TabsContent>
-        
-        <TabsContent value="design" className="flex-1 overflow-y-auto">
-          <div className="p-6 h-full flex flex-col">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">Design Your Template</h3>
-              <p className="text-muted-foreground">
+
+        {/* ── Design Template Tab ── */}
+        <TabsContent value="design" className="mt-0">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-1">Design Your Template</h3>
+              <p className="text-sm text-muted-foreground">
                 Use the canvas editor below to create your template design. You can add text, images, and customize the layout.
               </p>
             </div>
-            
-            <div className="flex-1 overflow-hidden">
+
+            <div className="overflow-hidden rounded-md border border-border">
               <CanvasTemplateEditor
                 initialImage={imagePreview || undefined}
                 onSaveTemplate={handleCanvasTemplateData}
@@ -423,22 +365,13 @@ function SocialMediaTemplateFormContent({
                 height={800}
               />
             </div>
-            
-            <div className="mt-6 flex justify-between bg-background py-4">
-              <Button
-                variant="outline"
-                onClick={() => setActiveTab("basic")}
-              >
+
+            <div className="sticky bottom-0 flex justify-between pt-3 pb-1 border-t bg-background">
+              <Button variant="outline" onClick={() => setActiveTab("basic")}>
                 ← Back to Basic Info
               </Button>
-              
               <div className="flex space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={onCancel}
-                >
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={onCancel}>Cancel</Button>
                 {formData.jsonData && (
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
                     {isSubmitting ? (
@@ -455,6 +388,7 @@ function SocialMediaTemplateFormContent({
             </div>
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );
@@ -467,9 +401,7 @@ export default function SocialMediaTemplateForm(props: SocialMediaTemplateFormPr
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return null;
-  }
+  if (!isMounted) return null;
 
   return <SocialMediaTemplateFormContent {...props} />;
 }

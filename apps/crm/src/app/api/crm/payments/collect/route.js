@@ -637,8 +637,9 @@ export const POST = authMiddlewareCrm(async (req) => {
               businessName,
               serviceName: appointment.serviceName,
               appointmentId: updatedAppointment?.invoiceNumber || appointment.invoiceNumber || appointment._id.toString(),
+              appointmentDate: new Date(appointment.date || appointment.startTime || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
               completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
-              orderTotal: updatedAppointment?.totalAmount || appointment.totalAmount,
+              orderTotal: invoice?.totalAmount || updatedAppointment?.totalAmount || appointment.totalAmount || totalAmount,
               location: appointment.homeServiceLocation?.address || businessName,
               businessAddress,
               businessPhone

@@ -362,7 +362,7 @@ export async function PUT(request) {
         packageName: weddingPackage.name,
         packageServices: (customizedPackageServices || weddingPackage.services || []).map(svc => {
           // Parse duration if it's a string (e.g., "45 min")
-          let duration = svc.duration;
+          let duration = svc.duration !== undefined ? svc.duration : (svc.serviceDuration !== undefined ? svc.serviceDuration : 0);
           if (typeof duration === 'string') {
             const match = duration.match(/(\d+)/);
             duration = match ? parseInt(match[1]) : 0;
@@ -372,7 +372,8 @@ export async function PUT(request) {
             serviceId: svc.serviceId || svc.id || svc._id,
             serviceName: svc.serviceName || svc.name,
             duration: Number(duration) || 0,
-            amount: Number(svc.amount || svc.discountedPrice || svc.price || 0),
+            amount: Number(svc.amount !== undefined ? svc.amount : (svc.discountedPrice !== undefined ? svc.discountedPrice : (svc.serviceDiscountedPrice !== undefined && svc.serviceDiscountedPrice !== null ? svc.serviceDiscountedPrice : (svc.price !== undefined ? svc.price : (svc.servicePrice !== undefined ? svc.servicePrice : 0))))),
+            originalAmount: Number(svc.originalAmount !== undefined ? svc.originalAmount : (svc.price !== undefined ? svc.price : (svc.servicePrice !== undefined ? svc.servicePrice : 0))),
             vendorId: svc.vendorId || weddingPackage.vendorId,
             staffId: svc.staffId || null
           };

@@ -85,7 +85,7 @@ export default function RegionSelector() {
         onValueChange={handleRegionChange}
         disabled={loading}
       >
-        <SelectTrigger className="w-[180px] h-9 bg-background border-muted hover:border-primary/50 transition-colors">
+        <SelectTrigger className="w-[130px] sm:w-[180px] h-9 bg-background border-muted hover:border-primary/50 transition-colors">
           <div className="flex items-center gap-2 truncate">
             <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
             <SelectValue placeholder="Select Region" />
