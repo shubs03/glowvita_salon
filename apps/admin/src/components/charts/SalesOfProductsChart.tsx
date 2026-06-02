@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const COLORS = [
@@ -28,6 +29,17 @@ interface ProductData {
 }
 
 export function SalesOfProductsChart({ productsData, filterType, filterValue }: { productsData?: ProductData[], filterType?: string, filterValue?: string }) {
+  const [isMobileScreen, setIsMobileScreen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 640);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Format the data for the chart - aggregate products data
   const chartData = productsData?.map((product: ProductData) => ({
     name: product.product,
@@ -95,30 +107,30 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
     return null;
   };
 
-
-
   return (
-    <ResponsiveContainer width="100%" height={350} className="min-w-max">
-      <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 20 }}>
-        <Pie
-          data={chartData}
-          cx="50%"
-          cy="45%"
-          outerRadius={75}
-          fill="hsl(var(--primary))"
-          dataKey="value"
-          nameKey="name"
-          labelLine={true}
-          style={{ fontSize: '12px' }}
-          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-        >
-          {chartData.map((entry: any, index: number) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: "20px" }} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="w-full h-[350px] flex items-center justify-center">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart margin={{ top: 20, right: isMobileScreen ? 10 : 30, left: isMobileScreen ? 10 : 30, bottom: 20 }}>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="45%"
+            outerRadius={isMobileScreen ? 55 : 75}
+            fill="hsl(var(--primary))"
+            dataKey="value"
+            nameKey="name"
+            labelLine={!isMobileScreen}
+            style={{ fontSize: '11px' }}
+            label={isMobileScreen ? ({ percent }) => `${(percent * 100).toFixed(0)}%` : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          >
+            {chartData.map((entry: any, index: number) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+          <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: "20px" }} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

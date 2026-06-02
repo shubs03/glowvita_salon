@@ -30,7 +30,8 @@ import {
   useCreateSocialMediaTemplateMutation,
   useUpdateSocialMediaTemplateMutation,
   useDeleteSocialMediaTemplateMutation,
-  useGetAdminMarketingDashboardQuery
+  useGetAdminMarketingDashboardQuery,
+  useGetSuperDataQuery
 } from '../../../../../packages/store/src/services/api';
 
 // TODO: Add SMS package endpoints to the API service
@@ -158,6 +159,7 @@ export default function PlatformMarketingPage() {
   // Fetch SMS packages and templates
   const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery(undefined);
   const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery(undefined);
+  const { data: superData = [] } = useGetSuperDataQuery(undefined);
   
   const [createSmsPackage] = useCreateSmsPackageMutation();
   const [updateSmsPackage] = useUpdateSmsPackageMutation();
@@ -207,6 +209,12 @@ export default function PlatformMarketingPage() {
   };
   
   const popularPackages = smsPackages.filter((pkg: SmsPackage) => pkg.isPopular);
+  const socialMediaTemplateCategories = Array.isArray(superData)
+    ? superData
+        .filter((item: any) => item.type === 'socialMediaTemplateType')
+        .map((item: any) => item.name)
+        .filter(Boolean)
+    : [];
   
   // Ensure socialMediaTemplates is always an array
   const socialMediaTemplates = Array.isArray(socialMediaTemplatesResponse?.data) 
@@ -1018,8 +1026,8 @@ export default function PlatformMarketingPage() {
 
       {/* Social Media Template Form Dialog */}
       <Dialog open={isSocialMediaTemplateFormOpen} onOpenChange={setIsSocialMediaTemplateFormOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-7xl w-full flex flex-col gap-0 p-0 max-h-[90vh] overflow-hidden">
+          <DialogHeader className="px-6 pt-5 pb-3 shrink-0 border-b">
             <DialogTitle>
               {isEditSocialMediaTemplateMode ? 'Edit Social Media Template' : 'Create New Social Media Template'}
             </DialogTitle>
@@ -1028,9 +1036,11 @@ export default function PlatformMarketingPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-hidden min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4 pt-3 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/50">
             <SocialMediaTemplateForm
+              key={selectedSocialMediaTemplate?._id || selectedSocialMediaTemplate?.id || 'new'}
               initialData={selectedSocialMediaTemplate}
+              categoryOptions={socialMediaTemplateCategories}
               onSubmit={handleSocialMediaTemplateSubmit}
               onCancel={() => {
                 setIsSocialMediaTemplateFormOpen(false);

@@ -156,75 +156,78 @@ export default function AdminPage() {
         </div>
 
         {/* Date Filter Controls */}
-        <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 p-4 bg-card rounded-xl border border-border shadow-sm">
+          <div className="flex items-center gap-2 text-muted-foreground shrink-0">
             <Calendar className="h-4 w-4" />
             <span className="text-sm font-medium">Filter by:</span>
           </div>
 
-          <select
-            className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            value={filterType}
-            onChange={handleFilterTypeChange}
-          >
-            <option value="">All Time</option>
-            <option value="day">Day</option>
-            <option value="month">Month</option>
-            <option value="year">Year</option>
-          </select>
-
-          {filterType === 'day' && (
-            <input
-              type="date"
-              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              value={filterValue}
-              onChange={handleFilterValueChange}
-            />
-          )}
-
-          {filterType === 'month' && (
-            <input
-              type="month"
-              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              value={filterValue}
-              onChange={handleFilterValueChange}
-            />
-          )}
-
-          {filterType === 'year' && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto flex-wrap">
             <select
-              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              value={filterValue}
-              onChange={handleFilterValueChange}
+              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-[130px]"
+              value={filterType}
+              onChange={handleFilterTypeChange}
             >
-              <option value="">Select a year</option>
-              {Array.from({ length: new Date().getFullYear() - 2019 }, (_, i) => {
-                const year = 2020 + i;
-                return <option key={year} value={year}>{year}</option>;
-              })}
+              <option value="">All Time</option>
+              <option value="day">Day</option>
+              <option value="month">Month</option>
+              <option value="year">Year</option>
             </select>
-          )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={resetFilters}
-          >
-            Reset Filters
-          </Button>
+            {filterType === 'day' && (
+              <input
+                type="date"
+                className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-auto"
+                value={filterValue}
+                onChange={handleFilterValueChange}
+              />
+            )}
+
+            {filterType === 'month' && (
+              <input
+                type="month"
+                className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-auto"
+                value={filterValue}
+                onChange={handleFilterValueChange}
+              />
+            )}
+
+            {filterType === 'year' && (
+              <select
+                className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-[130px]"
+                value={filterValue}
+                onChange={handleFilterValueChange}
+              >
+                <option value="">Select a year</option>
+                {Array.from({ length: new Date().getFullYear() - 2019 }, (_, i) => {
+                  const year = 2020 + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetFilters}
+              className="w-full sm:w-auto"
+            >
+              Reset Filters
+            </Button>
+          </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="bg-primary/5 border border-primary/20">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <Skeleton className="h-4 w-24 mb-2" />
                     <Skeleton className="h-8 w-32 mb-2" />
                     <Skeleton className="h-3 w-20" />
                   </div>
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -234,21 +237,19 @@ export default function AdminPage() {
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mt-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i + 4} className="bg-primary/5 border border-primary/20">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <Skeleton className="h-4 w-24 mb-2" />
                     <Skeleton className="h-8 w-32 mb-2" />
                     <Skeleton className="h-3 w-20" />
                   </div>
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-
-
 
         <div className="grid grid-cols-1 gap-6">
           <Card className="bg-primary/5 border border-primary/20">
@@ -305,81 +306,83 @@ export default function AdminPage() {
       </div>
 
       {/* Date Filter Controls */}
-      <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-card rounded-xl border border-border shadow-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 p-4 bg-card rounded-xl border border-border shadow-sm">
+        <div className="flex items-center gap-2 text-muted-foreground shrink-0">
           <Calendar className="h-4 w-4" />
           <span className="text-sm font-medium">Filter by:</span>
         </div>
 
-        <select
-          className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[120px] flex-grow sm:flex-grow-0"
-          value={filterType}
-          onChange={handleFilterTypeChange}
-        >
-          <option value="">All Time</option>
-          <option value="day">Day</option>
-          <option value="month">Month</option>
-          <option value="year">Year</option>
-        </select>
-
-        {filterType === 'day' && (
-          <input
-            type="date"
-            className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary flex-grow sm:flex-grow-0"
-            value={filterValue}
-            onChange={handleFilterValueChange}
-          />
-        )}
-
-        {filterType === 'month' && (
-          <input
-            type="month"
-            className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary flex-grow sm:flex-grow-0"
-            value={filterValue}
-            onChange={handleFilterValueChange}
-          />
-        )}
-
-        {filterType === 'year' && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto flex-wrap">
           <select
-            className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[120px] flex-grow sm:flex-grow-0"
-            value={filterValue}
-            onChange={handleFilterValueChange}
+            className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-[130px]"
+            value={filterType}
+            onChange={handleFilterTypeChange}
           >
-            <option value="">Select a year</option>
-            {Array.from({ length: new Date().getFullYear() - 2019 }, (_, i) => {
-              const year = 2020 + i;
-              return <option key={year} value={year}>{year}</option>;
-            })}
+            <option value="">All Time</option>
+            <option value="day">Day</option>
+            <option value="month">Month</option>
+            <option value="year">Year</option>
           </select>
-        )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={resetFilters}
-          className="ml-auto sm:ml-0 mt-2 sm:mt-0"
-        >
-          Reset Filters
-        </Button>
+          {filterType === 'day' && (
+            <input
+              type="date"
+              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-auto"
+              value={filterValue}
+              onChange={handleFilterValueChange}
+            />
+          )}
+
+          {filterType === 'month' && (
+            <input
+              type="month"
+              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-auto"
+              value={filterValue}
+              onChange={handleFilterValueChange}
+            />
+          )}
+
+          {filterType === 'year' && (
+            <select
+              className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-[130px]"
+              value={filterValue}
+              onChange={handleFilterValueChange}
+            >
+              <option value="">Select a year</option>
+              {Array.from({ length: new Date().getFullYear() - 2019 }, (_, i) => {
+                const year = 2020 + i;
+                return <option key={year} value={year}>{year}</option>;
+              })}
+            </select>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetFilters}
+            className="w-full sm:w-auto"
+          >
+            Reset Filters
+          </Button>
+        </div>
       </div>
 
       {/* First Row: Business & Financial Overview */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Total Business (Sum of all revenue components) */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Total Business</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Business</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(totalBusinessValue)}
                 </div>
                 <div className="text-[10px] text-secondary-foreground/70 mt-1 line-clamp-1">
                   Includes Service, Product, Fees, Tax, Subs & SMS
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -388,15 +391,15 @@ export default function AdminPage() {
 
         {/* Card 2: Total Revenue */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Total Revenue</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Revenue</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.totalRevenue?.current || 0)}
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -405,23 +408,19 @@ export default function AdminPage() {
 
         {/* Card 3: Total Business User (Merged Vendors & Suppliers) */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Total Business User</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Business User</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "0" : ((dashboardData?.totalVendors?.current || 0) + (dashboardData?.totalSuppliers?.current || 0)).toLocaleString()}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium">Vendors:
-                    {showPlaceholder ? "0" : (dashboardData?.totalVendors?.current || 0).toLocaleString()}
-                  </span>
-                  <span className="font-medium">Suppliers:
-                    {showPlaceholder ? "0" : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium shrink-0">Vendors: {showPlaceholder ? "0" : (dashboardData?.totalVendors?.current || 0).toLocaleString()}</span>
+                  <span className="font-medium shrink-0">Suppliers: {showPlaceholder ? "0" : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FiUsers className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -430,23 +429,19 @@ export default function AdminPage() {
 
         {/* Card 4: Subscription Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Subscription Amount</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Subscription Amount</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.subscriptionAmount || 0)}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium text-primary/80">Active:
-                    {showPlaceholder ? "0" : (dashboardData?.subscriptionStats?.active || 0).toLocaleString()}
-                  </span>
-                  <span className="font-medium">Inactive:
-                    {showPlaceholder ? "0" : (dashboardData?.subscriptionStats?.inactive || 0).toLocaleString()}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Active: {showPlaceholder ? "0" : (dashboardData?.subscriptionStats?.active || 0).toLocaleString()}</span>
+                  <span className="font-medium shrink-0">Inactive: {showPlaceholder ? "0" : (dashboardData?.subscriptionStats?.inactive || 0).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -458,42 +453,38 @@ export default function AdminPage() {
 
       {/* Second Row: Detailed Performance Cards */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mt-6">
-        {/* Card 6: Total Service Amount */}
-       {/* Card 5: SMS Amount */}
+        {/* Card 5: SMS Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">SMS Amount</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">SMS Amount</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.smsAmount || 0)}
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
       
+        {/* Card 6: Total Service Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Total Service Amount</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Service Amount</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.serviceAmount || 0)}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium text-primary/80">Vendor:
-                    {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.vendorServiceAmount || 0)}
-                  </span>
-                  <span className="font-medium">Supplier:
-                    {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierServiceAmount || 0)}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Vendor: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.vendorServiceAmount || 0)}</span>
+                  <span className="font-medium shrink-0">Supplier: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierServiceAmount || 0)}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -502,23 +493,19 @@ export default function AdminPage() {
 
         {/* Card 7: Total Product Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Total Product Amount</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Product Amount</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.productAmount || 0)}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium text-primary/80">Vendor:
-                    {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.vendorProductAmount || 0)}
-                  </span>
-                  <span className="font-medium">Supplier:
-                    {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierProductAmount || 0)}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Vendor: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.vendorProductAmount || 0)}</span>
+                  <span className="font-medium shrink-0">Supplier: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierProductAmount || 0)}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -527,23 +514,19 @@ export default function AdminPage() {
 
         {/* Card 8: Total Bookings */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Total Bookings</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Bookings</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "0" : (dashboardData?.totalBookings?.current || 0).toLocaleString()}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium text-primary/80">Online:
-                    {showPlaceholder ? "0" : (dashboardData?.totalBookings?.online || 0).toLocaleString()}
-                  </span>
-                  <span className="font-medium">Offline:
-                    {showPlaceholder ? "0" : (dashboardData?.totalBookings?.offline || 0).toLocaleString()}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Online: {showPlaceholder ? "0" : (dashboardData?.totalBookings?.online || 0).toLocaleString()}</span>
+                  <span className="font-medium shrink-0">Offline: {showPlaceholder ? "0" : (dashboardData?.totalBookings?.offline || 0).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FaShoppingCart className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -552,23 +535,19 @@ export default function AdminPage() {
 
         {/* Card 9: Completed Appointments */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Completed Appointments</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Completed Appointments</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "0" : (dashboardData?.totalBookings?.completed || 0).toLocaleString()}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium text-primary/80">Online:
-                    {showPlaceholder ? "0" : (dashboardData?.totalBookings?.completedOnline || 0).toLocaleString()}
-                  </span>
-                  <span className="font-medium">Offline:
-                    {showPlaceholder ? "0" : (dashboardData?.totalBookings?.completedOffline || 0).toLocaleString()}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Online: {showPlaceholder ? "0" : (dashboardData?.totalBookings?.completedOnline || 0).toLocaleString()}</span>
+                  <span className="font-medium shrink-0">Offline: {showPlaceholder ? "0" : (dashboardData?.totalBookings?.completedOffline || 0).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FiActivity className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -577,23 +556,19 @@ export default function AdminPage() {
 
         {/* Card 10: Cancelled Bookings */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Cancelled Bookings</p>
-                <div className="text-2xl font-bold text-secondary-foreground">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Cancelled Bookings</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "0" : (dashboardData?.cancelledBookings?.current || 0).toLocaleString()}
                 </div>
-                <div className="flex text-xs text-secondary-foreground/70 mt-1">
-                  <span className="mr-3 font-medium text-primary/80">Online:
-                    {showPlaceholder ? "0" : (dashboardData?.cancelledBookings?.online || 0).toLocaleString()}
-                  </span>
-                  <span className="font-medium">Offline:
-                    {showPlaceholder ? "0" : (dashboardData?.cancelledBookings?.offline || 0).toLocaleString()}
-                  </span>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Online: {showPlaceholder ? "0" : (dashboardData?.cancelledBookings?.online || 0).toLocaleString()}</span>
+                  <span className="font-medium shrink-0">Offline: {showPlaceholder ? "0" : (dashboardData?.cancelledBookings?.offline || 0).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FiXCircle className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -620,9 +595,7 @@ export default function AdminPage() {
             <CardDescription>Popular products across all vendors</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="overflow-x-auto">
-              <SalesOfProductsChart productsData={dashboardData?.products || []} filterType={filterType} filterValue={filterValue} />
-            </div>
+            <SalesOfProductsChart productsData={dashboardData?.products || []} filterType={filterType} filterValue={filterValue} />
           </CardContent>
         </Card>
       </div>

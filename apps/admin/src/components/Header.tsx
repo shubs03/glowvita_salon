@@ -93,7 +93,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
         <span className="sr-only">Toggle navigation menu</span>
       </Button>
 
-      <div className="flex items-center gap-2 md:gap-4 ml-auto">
+      <div className="flex items-center gap-1.5 sm:gap-4 ml-auto">
         <RegionSelector />
         <ThemeToggle />
 
