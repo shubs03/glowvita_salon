@@ -19,6 +19,7 @@ const superDataSchema = new mongoose.Schema({
       'designation',
       'smsType',
       'socialPlatform',
+      'socialMediaTemplateType',
       'bank',
       'documentType',
       'country',

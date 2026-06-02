@@ -30,7 +30,8 @@ import {
   useCreateSocialMediaTemplateMutation,
   useUpdateSocialMediaTemplateMutation,
   useDeleteSocialMediaTemplateMutation,
-  useGetAdminMarketingDashboardQuery
+  useGetAdminMarketingDashboardQuery,
+  useGetSuperDataQuery
 } from '../../../../../packages/store/src/services/api';
 
 // TODO: Add SMS package endpoints to the API service
@@ -158,6 +159,7 @@ export default function PlatformMarketingPage() {
   // Fetch SMS packages and templates
   const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery(undefined);
   const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery(undefined);
+  const { data: superData = [] } = useGetSuperDataQuery(undefined);
   
   const [createSmsPackage] = useCreateSmsPackageMutation();
   const [updateSmsPackage] = useUpdateSmsPackageMutation();
@@ -207,6 +209,12 @@ export default function PlatformMarketingPage() {
   };
   
   const popularPackages = smsPackages.filter((pkg: SmsPackage) => pkg.isPopular);
+  const socialMediaTemplateCategories = Array.isArray(superData)
+    ? superData
+        .filter((item: any) => item.type === 'socialMediaTemplateType')
+        .map((item: any) => item.name)
+        .filter(Boolean)
+    : [];
   
   // Ensure socialMediaTemplates is always an array
   const socialMediaTemplates = Array.isArray(socialMediaTemplatesResponse?.data) 
@@ -1031,6 +1039,7 @@ export default function PlatformMarketingPage() {
           <div className="flex-1 overflow-hidden min-h-0">
             <SocialMediaTemplateForm
               initialData={selectedSocialMediaTemplate}
+              categoryOptions={socialMediaTemplateCategories}
               onSubmit={handleSocialMediaTemplateSubmit}
               onCancel={() => {
                 setIsSocialMediaTemplateFormOpen(false);

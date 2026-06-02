@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
@@ -37,54 +37,12 @@ type SocialMediaTemplateFormData = Omit<SocialMediaTemplate, 'imageFile' | 'imag
 };
 
 interface SocialMediaTemplateFormProps {
-  initialData?: Partial<SocialMediaTemplate>;
+  initialData?: Partial<SocialMediaTemplate> | null;
+  categoryOptions?: string[];
   onSubmit: (data: FormData) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
-
-const defaultCategories = [
-  'Happy Birthday',
-  'Anniversary Wishes',
-  'Congratulations',
-  'Holiday Greetings',
-  'New Year Wishes',
-  'Valentine\'s Day',
-  'Mother\'s Day',
-  'Father\'s Day',
-  'Christmas',
-  'Thanksgiving',
-  'Easter',
-  'Halloween',
-  'Welcome Messages',
-  'Thank You Posts',
-  'Motivational Quotes',
-  'Inspirational Messages',
-  'Special Announcements',
-  'Product Launch',
-  'Service Promotion',
-  'Seasonal Offers',
-  'Flash Sales',
-  'Grand Opening',
-  'Event Invitations',
-  'Behind the Scenes',
-  'Team Introductions',
-  'Customer Testimonials',
-  'Before & After',
-  'Tips & Tutorials',
-  'Fun Facts',
-  'Trivia Posts',
-  'Quote of the Day',
-  'Wellness Tips',
-  'Beauty Tips',
-  'Lifestyle Posts',
-  'Community Events',
-  'Charity & Causes',
-  'Award & Recognition',
-  'Milestone Celebrations',
-  'Success Stories',
-  'General Greetings'
-];
 
 const getDefaultFormData = (): Omit<SocialMediaTemplate, 'id' | '_id' | 'createdAt' | 'updatedAt'> & { id?: string; _id?: string } => ({
   title: '',
@@ -99,33 +57,38 @@ const getDefaultFormData = (): Omit<SocialMediaTemplate, 'id' | '_id' | 'created
 // This is a workaround for the "Rendered more hooks than during the previous render" error
 // by moving the conditional rendering into a separate component
 function SocialMediaTemplateFormContent({ 
-  initialData = {}, 
+  initialData, 
+  categoryOptions = [],
   onCancel,
   isSubmitting = false,
   onSubmit,
 }: SocialMediaTemplateFormProps): JSX.Element {
+  const currentInitialData = useMemo(() => initialData ?? {}, [initialData]);
   // State hooks
   const [formData, setFormData] = useState<ReturnType<typeof getDefaultFormData>>(getDefaultFormData());
-  const [categories, setCategories] = useState<string[]>([...defaultCategories]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("basic");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categories = useMemo(() => {
+    const selectedCategory = currentInitialData.category ? [currentInitialData.category] : [];
+    return Array.from(new Set([...categoryOptions, ...selectedCategory].filter(Boolean)));
+  }, [categoryOptions, currentInitialData.category]);
 
   // Initialize form data when component mounts or when initialData changes
   useEffect(() => {
-    if (initialData && Object.keys(initialData).length > 0) {
+    if (Object.keys(currentInitialData).length > 0) {
       setFormData({
         ...getDefaultFormData(),
-        ...initialData,
-        title: initialData.title || '',
-        description: initialData.description || '',
-        category: initialData.category || '',
-        imageUrl: initialData.imageUrl || '',
-        jsonData: initialData.jsonData || null,
+        ...currentInitialData,
+        title: currentInitialData.title || '',
+        description: currentInitialData.description || '',
+        category: currentInitialData.category || '',
+        imageUrl: currentInitialData.imageUrl || '',
+        jsonData: currentInitialData.jsonData || null,
       });
       
-      if (initialData.imageUrl) {
-        setImagePreview(initialData.imageUrl);
+      if (currentInitialData.imageUrl) {
+        setImagePreview(currentInitialData.imageUrl);
       } else {
         setImagePreview(null);
       }
@@ -134,34 +97,7 @@ function SocialMediaTemplateFormContent({
       setFormData(getDefaultFormData());
       setImagePreview(null);
     }
-    
-    // Load saved categories from localStorage if available
-    try {
-      const savedCategories = localStorage.getItem('socialMediaCategories');
-      if (savedCategories) {
-        const parsedCategories = JSON.parse(savedCategories);
-        if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
-          // Merge with default categories and remove duplicates
-          const mergedCategories = [...defaultCategories, ...parsedCategories];
-          const allCategories = mergedCategories.filter((category, index) => 
-            mergedCategories.indexOf(category) === index
-          );
-          // Update local storage with merged categories
-          localStorage.setItem('socialMediaCategories', JSON.stringify(allCategories));
-          setCategories(allCategories);
-        } else {
-          setCategories(defaultCategories);
-        }
-      } else {
-        // Initialize with default categories
-        localStorage.setItem('socialMediaCategories', JSON.stringify(defaultCategories));
-        setCategories(defaultCategories);
-      }
-    } catch (error) {
-      console.error('Error loading categories from localStorage:', error);
-      setCategories(defaultCategories);
-    }
-  }, [initialData]);
+  }, [currentInitialData]);
 
   const handleSelectChange = (name: keyof SocialMediaTemplate, value: string) => {
     setFormData((prev) => ({
@@ -281,11 +217,17 @@ function SocialMediaTemplateFormContent({
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
+                      {categories.length > 0 ? (
+                        categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-3 text-sm text-muted-foreground">
+                          No categories found
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
