@@ -7,3 +7,6 @@ export * from "./auth.js";
 export * from "./models/user/User.model.js";
 export * from "./models/user/UserWishlist.model.js";
 export * from "./hashing.js";
+export { default as NotificationService } from "./services/NotificationService.js";
+export { default as SmsService } from "./services/SmsService.js";
+export { default as NotificationModel } from "./models/Notification.model.js";

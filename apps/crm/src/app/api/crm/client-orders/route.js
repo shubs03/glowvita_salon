@@ -9,6 +9,7 @@ import UserModel from '@repo/lib/models/user/User.model';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import InventoryTransactionModel from '@repo/lib/models/Vendor/InventoryTransaction.model';
 import { withSubscriptionCheck } from '@/middlewareCrm';
+import { NotificationService } from '@repo/lib';
 
 // Initialize DB connection
 const initDb = async () => {
@@ -107,6 +108,14 @@ export const PATCH = withSubscriptionCheck(async (req) => {
 
     await order.save();
 
+    // Trigger Notification to Client (Non-blocking)
+    (async () => {
+      try {
+        await NotificationService.sendOrderAlert(order.userId, 'client', order, status.toLowerCase());
+      } catch (err) {
+        console.error('Order Status Update Notification Error:', err);
+      }
+    })();
     // Stock Refund: Increment stock for each product if order is cancelled
     if (status === 'Cancelled' && order.items && order.items.length > 0) {
       console.log("Cancelling order, performing stock refund for items:", order.items.length);

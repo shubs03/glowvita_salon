@@ -137,13 +137,13 @@ export async function POST(req) {
         }, { status: 400 });
       }
 
-      // Basic UPI ID validation
-      const upiRegex = /^[\w.-]+@[\w.-]+$/;
-      if (!upiRegex.test(bankDetails.upiId)) {
+      // Standard UPI ID validation: username@bank
+      const upiRegex = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
+      if (!bankDetails.upiId || !upiRegex.test(bankDetails.upiId)) {
         await session.abortTransaction();
         return NextResponse.json({
           success: false,
-          message: 'Invalid UPI ID format'
+          message: 'Invalid UPI ID format. Example: username@upi'
         }, { status: 400 });
       }
     } else {
@@ -157,20 +157,20 @@ export async function POST(req) {
       }
 
       // Validate IFSC code
-      if (!validateIFSC(bankDetails.ifsc.toUpperCase())) {
+      if (!bankDetails.ifsc || !validateIFSC(bankDetails.ifsc.toUpperCase())) {
         await session.abortTransaction();
         return NextResponse.json({
           success: false,
-          message: 'Invalid IFSC code format'
+          message: 'Invalid IFSC code format. Example: ABCD0123456'
         }, { status: 400 });
       }
 
       // Validate account number
-      if (!validateAccountNumber(bankDetails.accountNumber)) {
+      if (!bankDetails.accountNumber || !validateAccountNumber(bankDetails.accountNumber)) {
         await session.abortTransaction();
         return NextResponse.json({
           success: false,
-          message: 'Invalid account number. Must be 9-18 digits.'
+          message: 'Invalid bank account number. Must be 9-18 digits.'
         }, { status: 400 });
       }
     }
@@ -201,30 +201,21 @@ export async function POST(req) {
     // Check withdrawal limit (dynamic from settings)
     const maxWithdrawalPercentage = settings.maxWithdrawablePercentage || 50;
     const maxAllowedByPercentage = (user.wallet || 0) * (maxWithdrawalPercentage / 100);
-    
+
     if (amount > maxAllowedByPercentage) {
       await session.abortTransaction();
       return NextResponse.json({
         success: false,
-        message: `You can only withdraw up to ${maxWithdrawalPercentage}% of your current wallet balance (₹${maxAllowedByPercentage.toFixed(2)})`
+        message: `You can only withdraw up to ${maxWithdrawalPercentage}% of your current wallet balance (Your limit: ₹${maxAllowedByPercentage.toFixed(2)})`
       }, { status: 400 });
     }
 
-    // Check minimum amount
-    if (amount < settings.minWithdrawalAmount) {
-      await session.abortTransaction();
-      return NextResponse.json({
-        success: false,
-        message: `Minimum withdrawal amount is ₹${settings.minWithdrawalAmount}`
-      }, { status: 400 });
-    }
-
-    // Check maximum amount
+    // Check absolute maximum amount from settings
     if (amount > settings.maxWithdrawalAmount) {
       await session.abortTransaction();
       return NextResponse.json({
         success: false,
-        message: `Maximum withdrawal amount is ₹${settings.maxWithdrawalAmount}`
+        message: `Amount exceeds the maximum allowed withdrawal of ₹${settings.maxWithdrawalAmount} per transaction.`
       }, { status: 400 });
     }
 
@@ -321,20 +312,63 @@ export async function POST(req) {
       shouldBlock = riskAssessment.shouldBlock;
     }
 
+    // If high risk, reject automatically
+    if (shouldBlock) {
+      const withdrawal = await WalletWithdrawalModel.create([{
+        userId: user._id,
+        amount,
+        withdrawalFee,
+        netAmount,
+        bankDetails: {
+          accountNumber: bankDetails.accountNumber || null,
+          ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
+          accountHolderName: bankDetails.accountHolderName,
+          bankName: bankDetails.bankName || '',
+          upiId: bankDetails.upiId || null
+        },
+        status: 'rejected_by_system',
+        rejectionReason: `High risk transaction detected: ${riskFlags.join(', ')}`,
+        riskScore,
+        riskFlags,
+        autoProcessed: true
+      }], { session });
+
+      await session.commitTransaction();
+
+      return NextResponse.json({
+        success: false,
+        message: 'Withdrawal request rejected due to security concerns.',
+        data: {
+          withdrawalId: withdrawal[0].withdrawalId,
+          riskFlags,
+          reason: 'Please contact support for assistance.'
+        }
+      }, { status: 400 });
+    }
+
+    // Manual generation of IDs to ensure validation passes during session
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const generatedWithdrawalId = `WD_${timestamp}_${random}`;
+    const generatedTransactionId = `WTX_${timestamp}_${random}`;
+
+    // Create initial withdrawal record in 'pending' status
     // Initial withdrawal record in 'pending' status
     const withdrawal = await WalletWithdrawalModel.create([{
       userId: user._id,
       userType: 'User',
       regionId: user.regionId,
+      withdrawalId: generatedWithdrawalId,
       amount,
       withdrawalFee,
       netAmount,
       bankDetails: {
-        accountNumber: bankDetails.accountNumber || null,
-        ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
         accountHolderName: bankDetails.accountHolderName,
-        bankName: bankDetails.bankName || '',
-        upiId: bankDetails.upiId || null
+        // Only save details relevant to the method
+        accountNumber: withdrawalMethod === 'bank_transfer' ? (bankDetails.accountNumber || null) : null,
+        ifsc: withdrawalMethod === 'bank_transfer' ? (bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null) : null,
+        bankName: withdrawalMethod === 'bank_transfer' ? (bankDetails.bankName || '') : '',
+        upiId: withdrawalMethod === 'upi' ? (bankDetails.upiId || null) : null
       },
       status: 'pending',
       riskScore,
@@ -353,6 +387,7 @@ export async function POST(req) {
       userId: user._id,
       userType: 'User',
       regionId: user.regionId,
+      transactionId: generatedTransactionId,
       transactionType: 'debit',
       amount: -amount,
       balanceBefore: user.wallet + amount,
@@ -395,7 +430,7 @@ export async function POST(req) {
 
   } catch (error) {
     if (session.inTransaction()) {
-        await session.abortTransaction();
+      await session.abortTransaction();
     }
     console.error('Error processing withdrawal:', error);
     return NextResponse.json({

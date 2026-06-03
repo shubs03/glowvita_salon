@@ -73,16 +73,28 @@ export async function GET(req) {
     // Get referrals where this user is the referrer
     const referrals = await ReferralModel.find({ 
       referrer: userId,
-      referralType: 'C2C' // Client to Client referrals
+      referralType: { $in: ['C2C', 'C2V'] } 
     }).lean();
 
     // Get referee details for each referral
     const referralHistory = await Promise.all(
       referrals.map(async (referral) => {
-        const referee = await UserModel.findById(referral.referee).select('firstName lastName').lean();
+        let friendName = 'Unknown';
+        
+        if (referral.referralType === 'C2C') {
+          const referee = await UserModel.findById(referral.referee).select('firstName lastName').lean();
+          friendName = referee ? `${referee.firstName} ${referee.lastName}` : 'Unknown User';
+        } else if (referral.referralType === 'C2V') {
+          // Import Vendor model if needed (might be already imported or via @repo/lib)
+          const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+          const referee = await VendorModel.findById(referral.referee).select('businessName firstName lastName').lean();
+          friendName = referee ? (referee.businessName || `${referee.firstName} ${referee.lastName}`) : 'Unknown Partner';
+        }
+
         return {
           id: referral._id,
-          friend: referee ? `${referee.firstName} ${referee.lastName}` : 'Unknown',
+          friend: friendName,
+          type: referral.referralType === 'C2C' ? 'Client' : 'Partner',
           date: referral.date || referral.createdAt,
           status: referral.status,
           reward: referral.bonus
@@ -104,6 +116,19 @@ export async function GET(req) {
     const successfulReferrals = referrals.filter(r => r.status === 'Completed' || r.status === 'Bonus Paid').length;
     const totalReferrals = referrals.length;
 
+    // Fetch referral settings based on user region
+    const { C2CSettingsModel, C2VSettingsModel } = await import('@repo/lib/models/admin/Reffer');
+    
+    const c2cSettings = await C2CSettingsModel.findOne({
+      $or: [{ regionId: user.regionId }, { regionId: null }],
+      status: 'Active'
+    }).sort({ regionId: -1 });
+
+    const c2vSettings = await C2VSettingsModel.findOne({
+      $or: [{ regionId: user.regionId }, { regionId: null }],
+      status: 'Active'
+    }).sort({ regionId: -1 });
+
     return NextResponse.json({ 
       success: true, 
       data: {
@@ -113,6 +138,16 @@ export async function GET(req) {
           totalEarnings,
           successfulReferrals,
           totalReferrals
+        },
+        settings: {
+          c2c: c2cSettings ? {
+            referrerBonus: c2cSettings.referrerBonus.bonusValue,
+            refereeBonus: c2cSettings.refereeBonus?.enabled ? c2cSettings.refereeBonus.bonusValue : 0
+          } : null,
+          c2v: c2vSettings ? {
+            referrerBonus: c2vSettings.referrerBonus.bonusValue,
+            refereeBonus: c2vSettings.refereeBonus?.enabled ? c2vSettings.refereeBonus.bonusValue : 0
+          } : null
         },
         referralHistory: referralHistory.sort((a, b) => new Date(b.date) - new Date(a.date))
       }

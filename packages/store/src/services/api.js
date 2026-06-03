@@ -3234,7 +3234,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["CrmReports"]
     }),
-    
+
     // Consolidated Sales Report (CRM)
     getVendorConsolidatedSalesReport: builder.query({
       query: (filters) => {

@@ -9,10 +9,14 @@ export interface Notification {
   channels: string[];
   content: string;
   targetType:
-    | "all_online_clients"
+    | ("all_online_clients"
     | "all_offline_clients"
     | "all_staffs"
-    | "specific_clients";
+    | "specific_clients")
+    | ("all_online_clients"
+    | "all_offline_clients"
+    | "all_staffs"
+    | "specific_clients")[];
   targets?: Client[];
   date: string;
   status: "Sent" | "Scheduled";

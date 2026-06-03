@@ -32,6 +32,11 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }
 
+    // Update last login and reset inactivity reminder
+    user.lastLogin = new Date();
+    user.inactivityReminderSent = false;
+    await user.save();
+
     const token = await createJwt({ userId: user._id.toString(), role: user.role, email: user.emailAddress });
 
     cookies().set('token', token, {

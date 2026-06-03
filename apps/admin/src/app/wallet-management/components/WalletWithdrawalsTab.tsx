@@ -7,11 +7,12 @@ import { Input } from "@repo/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Badge } from "@repo/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@repo/ui/dialog";
-import { 
-  Search, 
-  RefreshCw, 
-  Loader2, 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
+import { Label } from "@repo/ui/label";
+import {
+  Search,
+  RefreshCw,
+  Loader2,
   ArrowUpRight,
   Banknote,
   Eye,
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { 
+import {
   useGetAdminWithdrawalsQuery,
   useGetRegionsQuery,
   useUpdateWithdrawalStatusMutation
@@ -60,7 +61,7 @@ interface WalletWithdrawal {
 export function WalletWithdrawalsTab() {
   const selectedRegionId = useSelector(selectSelectedRegion);
   const currentAdmin = useSelector(selectCurrentAdmin);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -68,6 +69,10 @@ export function WalletWithdrawalsTab() {
   const [filterUserType, setFilterUserType] = useState<string>("all");
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WalletWithdrawal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectionInput, setShowRejectionInput] = useState(false);
+
+
   const [adminReason, setAdminReason] = useState("");
 
   // RTK Query hooks
@@ -100,7 +105,7 @@ export function WalletWithdrawalsTab() {
 
   const handleAction = async (action: 'approve' | 'reject') => {
     if (!selectedWithdrawal) return;
-    
+
     if (action === 'reject' && !adminReason) {
       toast.error("Please provide a reason for rejection");
       return;
@@ -140,7 +145,7 @@ export function WalletWithdrawalsTab() {
       rejected_by_system: { label: "Rejected", variant: "destructive", icon: <AlertTriangle className="h-3 w-3" /> },
       cancelled: { label: "Cancelled", variant: "outline", icon: <XCircle className="h-3 w-3" /> },
     };
-    
+
     const config = statusMap[status] || { label: status, variant: "outline", icon: null };
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
@@ -172,7 +177,35 @@ export function WalletWithdrawalsTab() {
 
   const handleViewDetails = (withdrawal: WalletWithdrawal) => {
     setSelectedWithdrawal(withdrawal);
+    setRejectionReason("");
+    setShowRejectionInput(false);
     setShowDetailModal(true);
+  };
+
+  const handleUpdateStatus = async (action: "approve" | "reject") => {
+    if (!selectedWithdrawal) return;
+
+    if (action === "reject" && !showRejectionInput) {
+      setShowRejectionInput(true);
+      return;
+    }
+
+    try {
+      const result = await updateStatus({
+        id: selectedWithdrawal._id,
+        action,
+        rejectionReason: action === "reject" ? rejectionReason : undefined
+      }).unwrap();
+
+      if (result.success) {
+        toast.success(result.message || `Withdrawal ${action}d successfully`);
+        setShowDetailModal(false);
+      } else {
+        toast.error(result.message || `Failed to ${action} withdrawal`);
+      }
+    } catch (err: any) {
+      toast.error(err.data?.message || err.message || `Error ${action}ing withdrawal`);
+    }
   };
 
   // No need to recalculate stats as they come from the API response
@@ -453,17 +486,26 @@ export function WalletWithdrawalsTab() {
                 <p className="text-sm text-muted-foreground">Bank/UPI Details</p>
                 <div className="bg-secondary p-3 rounded-lg mt-1">
                   <p className="font-medium">{selectedWithdrawal.bankDetails.accountHolderName}</p>
-                  {selectedWithdrawal.bankDetails.upiId ? (
-                     <>
-                        <p className="text-sm">UPI Payment</p>
-                        <p className="text-sm text-muted-foreground">{selectedWithdrawal.bankDetails.upiId}</p>
-                     </>
-                  ) : (
+                  {selectedWithdrawal.bankDetails?.accountNumber ? (
                     <>
-                        <p className="text-sm">{selectedWithdrawal.bankDetails.bankName}</p>
-                        <p className="text-sm text-muted-foreground">{selectedWithdrawal.bankDetails.accountNumber}</p>
-                        <p className="text-sm text-muted-foreground">IFSC: {selectedWithdrawal.bankDetails.ifsc}</p>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bank:</span>
+                        <span>{selectedWithdrawal.bankDetails?.bankName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Number:</span>
+                        <span className="font-semibold">{selectedWithdrawal.bankDetails?.accountNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IFSC:</span>
+                        <span className="font-semibold">{selectedWithdrawal.bankDetails?.ifsc}</span>
+                      </div>
                     </>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">UPI ID:</span>
+                      <span className="font-semibold">{selectedWithdrawal.bankDetails?.upiId || 'N/A'}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -519,24 +561,24 @@ export function WalletWithdrawalsTab() {
                 <div className="border-t pt-4 space-y-4">
                   <div>
                     <p className="text-sm font-semibold mb-2">Processing Actions</p>
-                    <Textarea 
-                      placeholder="Add notes or rejection reason..." 
+                    <Textarea
+                      placeholder="Add notes or rejection reason..."
                       value={adminReason}
                       onChange={(e) => setAdminReason(e.target.value)}
                       className="min-h-[80px]"
                     />
                   </div>
                   <div className="flex gap-3">
-                    <Button 
-                      className="flex-1 bg-green-600 hover:bg-green-700" 
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
                       onClick={() => handleAction('approve')}
                       disabled={isUpdating}
                     >
                       {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
                       Approve Payout
                     </Button>
-                    <Button 
-                      variant="destructive" 
+                    <Button
+                      variant="destructive"
                       className="flex-1"
                       onClick={() => handleAction('reject')}
                       disabled={isUpdating}
