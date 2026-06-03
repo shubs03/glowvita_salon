@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
@@ -48,11 +48,32 @@ type Campaign = {
   updatedAt: string;
 };
 
+/* ─── Razorpay script loader (cached) ───────────────────────────────────── */
+let rzpScriptLoaded = false;
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (rzpScriptLoaded || (typeof window !== 'undefined' && (window as any).Razorpay)) {
+      rzpScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => { rzpScriptLoaded = true; resolve(true); };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 export default function MessageBlastPage() {
   const [activeTab, setActiveTab] = useState('packages');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [purchaseSmsPackage, { isLoading: isPurchasing }] = usePurchaseSmsPackageMutation();
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
+
+  // Preload Razorpay script on mount
+  useEffect(() => {
+    loadRazorpayScript();
+  }, []);
 
   // Get CRM authentication state
   const { isAuthenticated, token, user } = useAppSelector((state: any) => ({
@@ -99,8 +120,11 @@ export default function MessageBlastPage() {
   
   // Extract active package from purchase history
   const purchases = purchaseHistoryResponse?.data?.purchases || [];
-  const activePurchase = purchases.find((p: any) => p.status === 'active' && new Date(p.expiryDate) >= new Date());
-  const activePackageId = activePurchase?.packageId;
+  const remainingSmsCount = purchaseHistoryResponse?.data?.activePackageInfo?.remainingSmsCount || 0;
+  
+  // A package is considered actively in use if it has not expired and the user still has an SMS balance
+  const activePurchases = purchases.filter((p: any) => p.status === 'active' && new Date(p.expiryDate) > new Date() && remainingSmsCount > 0);
+  const activePackageIds = activePurchases.map((p: any) => typeof p.packageId === 'object' ? p.packageId?._id : p.packageId);
   
   // Extract packages from the response
   const smsPackages = packagesResponse?.data || [];
@@ -126,50 +150,129 @@ export default function MessageBlastPage() {
       toast.error('Invalid package selection');
       return;
     }
+
+    const pkg = smsPackages.find((p: SMSPackage) => p._id === packageId);
+    if (!pkg) {
+      toast.error('SMS Package not found');
+      return;
+    }
+
+    const packagePrice = pkg.price;
     
-    console.log('Attempting to purchase package:', packageId);
+    console.log('Attempting to purchase package:', packageId, 'Price:', packagePrice);
     console.log('User object:', user);
-    console.log('User ID:', user?._id);
-    console.log('Vendor ID:', user?.vendorId);
     
     // Set the specific package as purchasing
     setPurchasingPackageId(packageId);
     
     try {
-      console.log('Sending purchase request with packageId:', packageId);
-      const result: any = await purchaseSmsPackage({ packageId }).unwrap();
-      console.log('Purchase response:', result);
-      
-      if (result.success) {
-        // Show success message
-        toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
-        // Refresh packages and purchase history to update any UI that depends on balance
-        refetchPackages();
-        refetchPurchaseHistory();
-      } else {
-        toast.error(result.message || 'Failed to purchase package');
+      // Step 1: Load Razorpay JS script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
       }
+
+      // Step 2: Create payment order on CRM backend
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: packagePrice,
+          currency: 'INR',
+          receipt: `smspkg_${packageId}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to create payment order');
+      }
+
+      // Step 3: Open Razorpay checkout
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(packagePrice * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita CRM',
+          description: `SMS Package: ${pkg.name} (${pkg.smsCount.toLocaleString()} SMS)`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          prefill: {
+            name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '',
+            email: user?.emailAddress || user?.email || '',
+            contact: user?.mobileNo || user?.phone || '',
+          },
+          retry: { enabled: true, max_count: 3 },
+          modal: {
+            ondismiss: () => reject(new Error('Payment cancelled by user')),
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              // Step 4: Verify payment signature
+              const verifyRes = await fetch('/api/payments/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed.');
+
+              // Step 5: Finalize purchase inside backend
+              console.log('Sending purchase request with packageId:', packageId);
+              const result: any = await purchaseSmsPackage({ 
+                packageId, 
+                paymentId: response.razorpay_payment_id,
+                paymentOrderId: response.razorpay_order_id
+              }).unwrap();
+              console.log('Purchase response:', result);
+              
+              if (result.success) {
+                // Show success message
+                toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
+                // Refresh packages and purchase history and wait for it
+                await Promise.all([
+                  refetchPackages(),
+                  refetchPurchaseHistory()
+                ]);
+                resolve();
+              } else {
+                throw new Error(result.message || 'Failed to purchase package');
+              }
+            } catch (err: any) {
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      console.error('Purchase error:', error);
+      console.error('Purchase/Payment error:', error);
       
-      // More detailed error handling
-      let errorMessage = 'Failed to purchase package. Please try again.';
-      
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.status === 400) {
-        errorMessage = 'Invalid request. Please check the package details.';
-      } else if (error?.status === 404) {
-        errorMessage = 'Package not found. Please refresh and try again.';
-      } else if (error?.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
+      if (error?.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled.');
       } else {
-        errorMessage = 'Error purchasing SMS package. Please try again.';
+        // More detailed error handling
+        let errorMessage = 'Failed to purchase package. Please try again.';
+        
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        } else if (error?.status === 400) {
+          errorMessage = 'Invalid request. Please check the package details.';
+        } else if (error?.status === 404) {
+          errorMessage = 'Package not found. Please refresh and try again.';
+        } else if (error?.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        toast.error(errorMessage);
       }
-      
-      toast.error(errorMessage);
     } finally {
       // Reset the purchasing state
       setPurchasingPackageId(null);
@@ -300,10 +403,10 @@ export default function MessageBlastPage() {
                     <Button 
                       className="w-full" 
                       size="sm" 
-                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id || activePackageId === pkg._id}
+                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id || activePackageIds.includes(pkg._id)}
                       onClick={() => handlePurchasePackage(pkg._id)}
                     >
-                      {purchasingPackageId === pkg._id ? 'Processing...' : activePackageId === pkg._id ? 'Active' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
+                      {purchasingPackageId === pkg._id ? 'Processing...' : activePackageIds.includes(pkg._id) ? 'Active' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
                     </Button>
                   </CardFooter>
                 </Card>
