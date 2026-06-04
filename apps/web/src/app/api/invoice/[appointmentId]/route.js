@@ -5,6 +5,8 @@ import _db from '@repo/lib/db';
 import InvoiceModel from '@repo/lib/models/Invoice/Invoice.model';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import ClientModel from '@repo/lib/models/Vendor/Client.model';
+import UserModel from '@repo/lib/models/user/User.model';
 
 await _db();
 
@@ -39,15 +41,51 @@ export async function GET(req, { params }) {
 
         // 3. Security check: confirm logged-in user owns this appointment
         // For online bookings: appointment.client stores the User ID directly (mode: 'online')
+        // For offline bookings: appointment.client stores the Client ID
         const clientRef = appointment.client?.toString();
         const userId = payload.userId.toString();
 
-        if (clientRef !== userId) {
+        let isOwner = false;
+        
+        const user = await UserModel.findById(userId).lean();
+
+        if (clientRef === userId) {
+            isOwner = true;
+        } else if (clientRef) {
+            const clientDoc = await ClientModel.findById(clientRef).lean();
+            if (clientDoc) {
+                if (clientDoc.userId?.toString() === userId) {
+                    isOwner = true;
+                } else if (user && user.mobileNo && clientDoc.phone && user.mobileNo === clientDoc.phone) {
+                    isOwner = true;
+                }
+            }
+        }
+
+        if (!isOwner && user && user.mobileNo && appointment.clientPhone) {
+            if (user.mobileNo === appointment.clientPhone) {
+                isOwner = true;
+            }
+        }
+
+        if (!isOwner) {
             return NextResponse.json({ success: false, message: 'Access denied' }, { status: 403 });
         }
 
         // 4. Look up the invoice linked to this appointment
-        const invoice = await InvoiceModel.findOne({ appointmentId }).lean();
+        let invoice = await InvoiceModel.findOne({ appointmentId }).lean();
+        
+        if (!invoice && (appointment.status === 'completed' || appointment.status === 'completed without payment')) {
+            try {
+                const newInvoice = await InvoiceModel.createFromAppointment(appointmentId, appointment.vendorId);
+                if (newInvoice) {
+                    invoice = newInvoice.toObject ? newInvoice.toObject() : newInvoice;
+                }
+            } catch (err) {
+                console.error('[Invoice API] Error generating invoice:', err);
+            }
+        }
+
         if (!invoice) {
             return NextResponse.json(
                 { success: false, message: 'Invoice not yet available. It will be generated once your appointment is completed.' },
