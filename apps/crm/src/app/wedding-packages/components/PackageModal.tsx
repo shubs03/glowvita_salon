@@ -35,6 +35,7 @@ import {
   DollarSign,
   Clock,
   Check,
+  HelpCircle,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -532,7 +533,7 @@ export function PackageModal({
                           staffCount: e.target.value === "" ? "" : (parseInt(e.target.value) || 0)
                         } as any))}
                         onBlur={() => {
-                          if (formData.staffCount === "" || formData.staffCount < 1 || isNaN(Number(formData.staffCount))) {
+                          if (!formData.staffCount || formData.staffCount < 1 || isNaN(Number(formData.staffCount))) {
                             onFormDataChange(prev => ({ ...prev, staffCount: 1 }));
                           }
                         }}
@@ -677,7 +678,7 @@ export function PackageModal({
                         quantity: e.target.value === "" ? "" : (parseInt(e.target.value) || 0)
                       } as any))}
                       onBlur={() => {
-                        if (newService.quantity === "" || newService.quantity < 1 || isNaN(Number(newService.quantity))) {
+                        if (!newService.quantity || newService.quantity < 1 || isNaN(Number(newService.quantity))) {
                           onNewServiceChange(prev => ({ ...prev, quantity: 1 }));
                         }
                       }}
