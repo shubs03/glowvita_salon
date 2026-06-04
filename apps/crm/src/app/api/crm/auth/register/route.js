@@ -420,6 +420,9 @@ export async function POST(req) {
             }
           })();
         }
+      } catch (referralErr) {
+        console.error('Referral processing error:', referralErr);
+      }
     }
 
     // 9️⃣ Remove password before returning

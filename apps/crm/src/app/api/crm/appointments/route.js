@@ -44,7 +44,8 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
 
         // 1. Send Email (Existing Logic Restored)
         if (clientEmail) {
-            if (newStatus === 'confirmed') {
+            try {
+                if (newStatus === 'confirmed') {
                 const emailHtml = getConfirmationTemplate({
                     clientName,
                     businessName,
@@ -130,42 +131,9 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                 } catch (tplError) {
                     console.error('Error fetching invoice for email:', tplError);
                 }
-
-                // Generate PDF Buffer (add this for consistency if missing)
+                // Generate PDF Buffer
                 let pdfBuffer;
                 if (invoiceHtml) {
-                    try {
-                        const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                        formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
-
-                        if (formalInvoice) {
-                            invoiceHtml = getInvoiceTemplate({
-                                clientName, clientPhone, businessName, businessAddress, businessPhone,
-                                date: new Date(formalInvoice.createdAt).toLocaleDateString(),
-                                items: formalInvoice.items, subtotal: formalInvoice.subtotal,
-                                tax: formalInvoice.taxAmount, taxRate: formalInvoice.taxRate,
-                                platformFee: formalInvoice.platformFee, discount: formalInvoice.discountAmount,
-                                couponCode: appointment.payment?.offer?.code || "",
-                                totalAmount: formalInvoice.totalAmount, paymentStatus: formalInvoice.paymentStatus,
-                                invoiceNumber: formalInvoice.invoiceNumber, paymentMethod: formalInvoice.paymentMethod
-                            });
-                        } else {
-                            invoiceHtml = getInvoiceTemplate({
-                                clientName, clientPhone, businessName, businessAddress, businessPhone,
-                                date: new Date(appointment.date).toLocaleDateString(),
-                                items: [{ name: appointment.serviceName, price: appointment.amount, quantity: 1, totalPrice: appointment.amount }],
-                                subtotal: appointment.amount, tax: appointment.serviceTax || appointment.tax || 0,
-                                taxRate: 0, platformFee: appointment.platformFee || 0,
-                                discount: appointment.discountAmount || appointment.discount || 0,
-                                totalAmount: appointment.totalAmount, paymentStatus: appointment.paymentStatus,
-                                invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
-                                paymentMethod: appointment.paymentMethod
-                            });
-                        }
-                    } catch (tplError) { console.error('Error fetching invoice for email:', tplError); }
-
-                    let pdfBuffer;
-                    if (invoiceHtml) {
                         try {
                             const pdf = (await import('html-pdf')).default;
                             pdfBuffer = await new Promise((resolve, reject) => {

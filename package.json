@@ -52,6 +52,7 @@
     "canvas": "^3.2.0",
     "date-fns": "^4.1.0",
     "fabric": "^6.7.1",
+    "firebase": "^12.14.0",
     "genkit": "^1.18.0",
     "globby": "^16.1.0",
     "html-pdf": "^3.0.1",
