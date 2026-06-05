@@ -477,7 +477,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                               </span>
                               {template.price > 0 && (
                                 <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-semibold">
-                                  ${template.price.toFixed(2)}
+                                  ₹{template.price.toFixed(2)}
                                 </span>
                               )}
                             </div>

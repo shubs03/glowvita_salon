@@ -2420,6 +2420,10 @@ export const glowvitaApi = createApi({
       query: (campaign) => ({ url: "/crm/campaigns", method: "POST", body: campaign }),
       invalidatesTags: ["CrmCampaign"],
     }),
+    updateCrmCampaign: builder.mutation({
+      query: (campaign) => ({ url: "/crm/campaigns", method: "PUT", body: campaign }),
+      invalidatesTags: ["CrmCampaign"],
+    }),
     getCrmSocialMediaTemplates: builder.query({
       query: () => ({ url: "/crm/social-media-templates", method: "GET" }),
       providesTags: ["CrmSocialMediaTemplate"],
@@ -3487,6 +3491,7 @@ export const {
   useGetCrmSmsPackagesQuery,
   useGetCrmCampaignsQuery,
   useCreateCrmCampaignMutation,
+  useUpdateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
   useDeleteCustomizedTemplateMutation,
