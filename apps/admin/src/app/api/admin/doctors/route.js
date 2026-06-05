@@ -4,6 +4,7 @@ import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer.model";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { NotificationService } from "@repo/lib";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
@@ -145,6 +146,20 @@ export const POST = authMiddlewareAdmin(
         }
       }
 
+      // Trigger Registration Notification
+      (async () => {
+        try {
+          await NotificationService.sendRegistrationAlert(newDoctor._id.toString(), 'doctor', {
+            name: newDoctor.name,
+            role: 'Doctor'
+          });
+          // Notify Admin
+          await NotificationService.sendAdminAlert('Doctor Registration', `New doctor registered: ${newDoctor.name} (${newDoctor.email})`);
+        } catch (err) {
+          console.error('Registration Notification Error:', err);
+        }
+      })();
+
       return NextResponse.json({ message: "Doctor created successfully", doctor: newDoctor }, { status: 201 });
 
     } catch (error) {
@@ -205,6 +220,21 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       updateData,
       { new: true }
     ).populate("subscription.plan", "name").select("-password");
+
+    if (!updatedDoctor) {
+      return Response.json({ message: "Doctor not found" }, { status: 404 });
+    }
+
+    // Trigger Notification for Approval if status changed
+    if (body.status) {
+      (async () => {
+        try {
+          await NotificationService.sendApprovalAlert(id, 'doctor', body.status);
+        } catch (err) {
+          console.error('Doctor Approval Notification Error:', err);
+        }
+      })();
+    }
 
     return NextResponse.json(updatedDoctor);
   } catch (error) {

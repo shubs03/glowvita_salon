@@ -531,10 +531,17 @@ export default function CheckoutPage() {
           throw new Error('Razorpay SDK not loaded');
         }
 
-        // Initialize Razorpay payment with all standard options
-        // This allows credit cards, debit cards, net banking, and UPI to all be visible.
+
+
+        // Determine method sequence based on selection
+        let displaySequence = ['block.upi', 'card', 'netbanking'];
+        if (paymentMethod === 'upi') displaySequence = ['block.upi'];
+        else if (paymentMethod === 'credit-card') displaySequence = ['card'];
+        else if (paymentMethod === 'netbanking') displaySequence = ['netbanking'];
+
+        // Initialize Razorpay payment
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          key: razorpayOrder.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: razorpayOrder.amount,
           currency: razorpayOrder.currency,
           name: 'GlowVita Salon',
@@ -546,7 +553,16 @@ export default function CheckoutPage() {
           // The sequence can still be customized if desired.
           config: {
             display: {
-              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true }, // UPI ID entry
+                    { method: 'upi', qr: true }   // QR Code
+                  ],
+                },
+              },
+              sequence: displaySequence,
             },
           },
           handler: async function (response: any) {

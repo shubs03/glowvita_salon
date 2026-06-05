@@ -103,7 +103,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       );
     }
     
-    const { packageId } = body;
+    const { packageId, paymentId, paymentOrderId } = body;
     
     if (!packageId) {
       return NextResponse.json(
@@ -154,92 +154,9 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     console.log('Purchase date:', purchaseDate);
     console.log('Expiry date:', expiryDate);
 
-    // Check if supplier already has an active SMS package
-    if (userType === 'supplier') {
-      const activePackage = await SmsTransaction.findOne({
-        userId: validatedSupplierId,
-        userType: 'supplier',
-        status: 'active',
-        expiryDate: { $gte: new Date() }
-      });
-      
-      if (activePackage) {
-        console.log('Supplier already has an active SMS package:', activePackage);
-        return NextResponse.json(
-          { 
-            success: false,
-            message: 'You already have an active SMS package.' 
-          },
-          { status: 409 }
-        );
-      }
-    }
-    
-    // Check if vendor already has an active SMS package (same restriction as supplier)
-    if (userType === 'vendor') {
-      const activePackage = await SmsTransaction.findOne({
-        userId: validatedVendorId,
-        userType: 'vendor',
-        status: 'active',
-        expiryDate: { $gte: new Date() }
-      });
-      
-      if (activePackage) {
-        console.log('Vendor already has an active SMS package:', activePackage);
-        return NextResponse.json(
-          { 
-            success: false,
-            message: 'You already have an active SMS package.' 
-          },
-          { status: 409 }
-        );
-      }
-    }
 
-    // Check if this purchase already exists to prevent duplicates (same package on same day)
-    let existingPurchase = null;
-    if (userType === 'supplier') {
-      const startOfDay = new Date(purchaseDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(purchaseDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      existingPurchase = await SmsTransaction.findOne({
-        userId: validatedSupplierId,
-        userType: 'supplier',
-        packageId: smsPackage._id,
-        purchaseDate: {
-          $gte: startOfDay,
-          $lt: endOfDay
-        }
-      });
-    } else {
-      const startOfDay = new Date(purchaseDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(purchaseDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      existingPurchase = await SmsTransaction.findOne({
-        userId: validatedVendorId,
-        userType: 'vendor',
-        packageId: smsPackage._id,
-        purchaseDate: {
-          $gte: startOfDay,
-          $lt: endOfDay
-        }
-      });
-    }
-    
-    if (existingPurchase) {
-      console.log('Duplicate purchase detected:', existingPurchase);
-      return NextResponse.json(
-        { 
-          success: false,
-          message: 'You have already purchased this package today. Please try again tomorrow.' 
-        },
-        { status: 409 }
-      );
-    }
+
+
     
     // Create purchase history record
     console.log('Creating purchase history record with data:', {
@@ -265,7 +182,8 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       price: smsPackage.price,
       purchaseDate,
       expiryDate,
-      status: 'active'
+      status: 'active',
+      paymentMethod: paymentId ? `Online (Razorpay: ${paymentId})` : 'Online'
     };
     
     // If regionId couldn't be extracted from the token, fetch it from the database first
@@ -551,15 +469,8 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
         p.status === 'expired' || p.status === 'used' || p.expiryDate < new Date()
       );
       
-      // Only show one active package (the most recent one) if there are any
-      let displayPurchases = [...expiredPackages];
-      if (activePackages.length > 0) {
-        // Sort active packages by purchase date and take the most recent one
-        const mostRecentActive = activePackages.sort((a, b) => 
-          new Date(b.purchaseDate) - new Date(a.purchaseDate)
-        )[0];
-        displayPurchases.unshift(mostRecentActive);
-      }
+      // Show all active packages plus expired ones
+      let displayPurchases = [...activePackages, ...expiredPackages];
       
       // Apply pagination to the filtered results
       total = displayPurchases.length;
@@ -586,15 +497,8 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
         p.status === 'expired' || p.status === 'used' || p.expiryDate < new Date()
       );
       
-      // Only show one active package (the most recent one) if there are any
-      let displayVendorPurchases = [...expiredVendorPackages];
-      if (activeVendorPackages.length > 0) {
-        // Sort active packages by purchase date and take the most recent one
-        const mostRecentActive = activeVendorPackages.sort((a, b) => 
-          new Date(b.purchaseDate) - new Date(a.purchaseDate)
-        )[0];
-        displayVendorPurchases.unshift(mostRecentActive);
-      }
+      // Show all active packages plus expired ones
+      let displayVendorPurchases = [...activeVendorPackages, ...expiredVendorPackages];
       
       // Apply pagination to the filtered results
       total = displayVendorPurchases.length;

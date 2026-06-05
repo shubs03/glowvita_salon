@@ -6,6 +6,7 @@ import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { NotificationService } from "@repo/lib";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 // Utility function to process base64 image and upload it
@@ -150,6 +151,18 @@ export const POST = async (req) => {
       }
     });
 
+    // Trigger Registration Notification
+    (async () => {
+        try {
+            await NotificationService.sendRegistrationAlert(newSupplier._id.toString(), 'supplier', {
+                name: newSupplier.firstName,
+                role: 'Supplier'
+            });
+        } catch (err) {
+            console.error('Registration Notification Error:', err);
+        }
+    })();
+
     // Handle referral if code provided
     if (referredByCode) {
       try {
@@ -169,6 +182,13 @@ export const POST = async (req) => {
             date: new Date(),
             status: 'Completed',
             bonus: String(bonusValue),
+          });
+
+          // Trigger Referral Notification for Referrer
+          await NotificationService.sendReferralAlert(referringSupplier._id.toString(), 'supplier', {
+            referrerName: newSupplier.shopName || newSupplier.firstName,
+            rewardAmount: bonusValue,
+            status: 'completed'
           });
         }
       } catch (err) {
@@ -368,6 +388,15 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
         return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
       }
 
+      // Trigger Notification for Supplier Approval
+      (async () => {
+        try {
+          await NotificationService.sendApprovalAlert(id, 'supplier', status);
+        } catch (err) {
+          console.error('Supplier Approval Notification Error:', err);
+        }
+      })();
+
       return NextResponse.json({
         message: `Supplier ${status} successfully`,
         supplier: updatedSupplier,
@@ -412,6 +441,22 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       if (!updatedSupplier) {
         return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
       }
+
+      // Trigger Notification for Document Status Update
+      (async () => {
+        try {
+          const docLabels = {
+            'aadharCard': 'Aadhar Card',
+            'udyogAadhar': 'Udyog Aadhar',
+            'udhayamCert': 'Udhayam Certificate',
+            'shopLicense': 'Shop License',
+            'panCard': 'PAN Card'
+          };
+          await NotificationService.sendDocumentAlert(supplierId, 'supplier', docLabels[documentType] || documentType, status, rejectionReason);
+        } catch (err) {
+          console.error('Document Status Notification Error:', err);
+        }
+      })();
 
       return NextResponse.json({
         message: `Document ${status} successfully`,

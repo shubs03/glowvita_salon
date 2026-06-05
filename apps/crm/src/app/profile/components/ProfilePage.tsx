@@ -18,6 +18,7 @@ import { TravelSettingsTab } from './tabs/TravelSettingsTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { OpeningHoursTab } from './tabs/OpeningHoursTab';
 import { TaxesTab } from './tabs/TaxesTab';
+import { NotificationsTab } from './tabs/NotificationsTab';
 
 import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 import { QRCodeModal } from './modals/QRCodeModal';
@@ -185,6 +186,10 @@ export default function ProfilePage() {
   const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
     skip: !user?._id || role !== 'doctor'
   });
+
+  const [apiUpdateVendor] = useUpdateVendorProfileMutation();
+  const [apiUpdateSupplier] = useUpdateSupplierProfileMutation();
+  const [apiUpdateDoctor] = useUpdateDoctorProfileMutation();
 
   console.log("Doctor Data:", doctorData);
 
@@ -502,6 +507,12 @@ export default function ProfilePage() {
                     >
                       Taxes
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="notifications"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Notifications
+                    </TabsTrigger>
                   </>
                 )}
                 {role === 'supplier' && (
@@ -538,6 +549,12 @@ export default function ProfilePage() {
                     >
                       Taxes
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="notifications"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Notifications
+                    </TabsTrigger>
                   </>
                 )}
                 {role === 'doctor' && (
@@ -547,6 +564,12 @@ export default function ProfilePage() {
                       className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
                     >
                       Subscription
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="notifications"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Notifications
                     </TabsTrigger>
                     <TabsTrigger
                       value="documents"
@@ -651,6 +674,30 @@ export default function ProfilePage() {
               </TabsContent>
             </>
           )}
+
+          <TabsContent value="notifications">
+            {role === 'vendor' && localVendor && (
+              <NotificationsTab 
+                profile={localVendor} 
+                setProfile={setLocalVendor} 
+                updateMutation={apiUpdateVendor} 
+              />
+            )}
+            {role === 'supplier' && localSupplier && (
+              <NotificationsTab 
+                profile={localSupplier} 
+                setProfile={setLocalSupplier} 
+                updateMutation={apiUpdateSupplier} 
+              />
+            )}
+            {role === 'doctor' && localDoctor && (
+              <NotificationsTab 
+                profile={localDoctor} 
+                setProfile={setLocalDoctor} 
+                updateMutation={apiUpdateDoctor} 
+              />
+            )}
+          </TabsContent>
         </Tabs>
 
         <QRCodeModal

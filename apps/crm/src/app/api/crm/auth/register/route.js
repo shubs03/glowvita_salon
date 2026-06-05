@@ -8,6 +8,7 @@ import { ReferralModel, V2VSettingsModel, C2VSettingsModel } from "../../../../.
 import UserModel from "@repo/lib/models/user/User.model";
 import _db from "@repo/lib/db";
 import mongoose from "mongoose";
+import { NotificationService } from "@repo/lib";
 
 await _db();
 
@@ -284,6 +285,20 @@ export async function POST(req) {
       }
     });
 
+    // Trigger Registration Notification
+    (async () => {
+      try {
+        await NotificationService.sendRegistrationAlert(newVendor._id.toString(), 'vendor', {
+          name: newVendor.firstName,
+          role: 'Vendor'
+        });
+        // Notify Admin
+        await NotificationService.sendAdminAlert('Vendor Registration', `New vendor registered: ${newVendor.businessName} (${newVendor.email})`);
+      } catch (err) {
+        console.error('Registration Notification Error:', err);
+      }
+    })();
+    
     // Reload the vendor to ensure we have the proper _id
     console.log(`Vendor created with ID: ${newVendor._id}`);
     const reloadedVendor = await VendorModel.findById(newVendor._id);
@@ -366,9 +381,10 @@ export async function POST(req) {
           }).sort({ regionId: -1 });
 
           const bonusValue = settings?.referrerBonus?.bonusValue || 0;
-          const bonusType = settings?.referrerBonus?.bonusType || 'amount';
-          const bonusString = bonusType === 'amount' ? `₹${bonusValue}` : `${bonusValue}%`;
-          const referralId = `REF_${referralType.charAt(0)}_${Date.now()}`;
+          const referralId = `REF_REG_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const referringName = entityType === 'Vendor' 
+            ? (referringEntity.businessName || `${referringEntity.firstName} ${referringEntity.lastName}`)
+            : `${referringEntity.firstName} ${referringEntity.lastName}`;
 
           await ReferralModel.create({
             referralId,
@@ -377,25 +393,35 @@ export async function POST(req) {
             referrerType: entityType,
             referee: newVendor._id.toString(),
             refereeType: 'Vendor',
-            regionId: newVendor.regionId,
             date: new Date(),
-            status: 'Pending',
-            bonus: bonusString,
+            status: 'Pending', // Set to pending initially, will be completed after subscription purchase
+            bonus: `₹${bonusValue}`,
+            regionId: newVendor.regionId
           });
 
-          console.log(`${referralType} Referral created (Pending): ${referringEntity.businessName || referringEntity.firstName} refers ${newVendor.businessName}`);
+          // Trigger Referral Notifications
+          (async () => {
+            try {
+              // Notify Referee (New Vendor)
+              await NotificationService.sendReferralAlert(newVendor._id.toString(), 'vendor', {
+                referrerName: referringName,
+                rewardAmount: bonusValue,
+                status: 'pending'
+              });
 
-          // Check if bonus should be credited on signup
-          const creditTime = settings?.referrerBonus?.creditTime;
-          const refereeCreditTime = settings?.refereeBonus?.creditTime;
-
-          if (creditTime === 'signup' || (settings?.refereeBonus?.enabled && refereeCreditTime === 'signup')) {
-              console.log("Triggering referral bonus credit for vendor signup...");
-              await checkAndCreditReferralBonus(newVendor._id.toString(), 'signup');
-          }
+              // Notify Referrer (User or Vendor)
+              await NotificationService.sendReferralAlert(referringEntity._id.toString(), entityType.toLowerCase(), {
+                referrerName: newVendor.businessName,
+                rewardAmount: bonusValue,
+                status: 'pending'
+              });
+            } catch (err) {
+              console.error('Referral Notification Error:', err);
+            }
+          })();
         }
-      } catch (refErr) {
-        console.error("Error processing registration referral:", refErr);
+      } catch (referralErr) {
+        console.error('Referral processing error:', referralErr);
       }
     }
 

@@ -36,7 +36,11 @@ const userCartSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
-  items: [userCartItemSchema]
+  items: [userCartItemSchema],
+  notified: {
+    type: Boolean,
+    default: false
+  }
 }, { timestamps: true });
 
 const UserCartModel = mongoose.models.UserCart || mongoose.model('UserCart', userCartSchema);

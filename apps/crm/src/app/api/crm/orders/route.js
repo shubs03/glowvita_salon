@@ -10,6 +10,7 @@ import InventoryTransactionModel from '@repo/lib/models/Vendor/InventoryTransact
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
+import { NotificationService } from '@repo/lib';
 
 await _db();
 
@@ -107,6 +108,18 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     await newOrder.save();
 
+    // Trigger Notification for Marketplace Order
+    (async () => {
+      try {
+        // Notify Supplier
+        await NotificationService.sendMarketplaceOrderAlert(supplierId, 'supplier', newOrder, 'placed');
+        
+        // Notify Admin of new B2B activity
+        await NotificationService.sendAdminAlert('New Marketplace Order', `New order ${orderId} placed from a vendor to a supplier.`);
+      } catch (err) {
+        console.error('Order Notification Error:', err);
+      }
+    })();
     // Decrement stock and create inventory transactions for each item
     for (const item of normalizedItems) {
       if (item.productId) {
@@ -274,6 +287,26 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     });
 
     await order.save();
+    
+    // Trigger Notification for Status Update (Non-blocking)
+    (async () => {
+      try {
+        // If B2B (vendor placed order to supplier), notify vendor
+        if (order.vendorId && !order.customerId) {
+          await NotificationService.sendMarketplaceOrderAlert(order.vendorId, 'vendor', order, status);
+        }
+        // If B2C (customer placed order to vendor), notify customer
+        else if (order.customerId) {
+           await NotificationService.sendToUser(order.customerId, 'client', {
+            title: `Order Update: ${status} 🛍️`,
+            body: `Your order ${order.orderId} from the salon is now ${status}.`,
+            data: { type: 'order_update', orderId: order._id.toString(), status }
+          });
+        }
+      } catch (err) {
+        console.error('Order Status Update Notification Error:', err);
+      }
+    })();
 
     return NextResponse.json(order, { status: 200 });
 
