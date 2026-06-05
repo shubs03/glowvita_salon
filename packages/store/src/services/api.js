@@ -333,17 +333,18 @@ export const glowvitaApi = createApi({
         method: "POST",
         body: formData,
       }),
-      invalidatesTags: ["SocialMediaTemplate"],
+      invalidatesTags: ["SocialMediaTemplate", "CrmSocialMediaTemplate"],
     }),
 
     updateSocialMediaTemplate: builder.mutation({
-      query: ({ id, ...formData }) => ({
+      query: ({ id, data }) => ({
         url: `/admin/social-media-templates?id=${id}`,
         method: "PUT",
-        body: formData,
+        body: data,
       }),
       invalidatesTags: (result, error, { id }) => [
         "SocialMediaTemplate",
+        "CrmSocialMediaTemplate",
         { type: "SocialMediaTemplate", id },
       ],
     }),
@@ -353,7 +354,7 @@ export const glowvitaApi = createApi({
         url: `/admin/social-media-templates?id=${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["SocialMediaTemplate"],
+      invalidatesTags: ["SocialMediaTemplate", "CrmSocialMediaTemplate"],
     }),
 
     // SMS Packages Endpoints
@@ -2432,6 +2433,10 @@ export const glowvitaApi = createApi({
       query: (templateData) => ({ url: "/crm/social-media-templates", method: "POST", body: templateData }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
+    deleteCustomizedTemplate: builder.mutation({
+      query: (id) => ({ url: `/crm/social-media-templates?id=${id}`, method: "DELETE" }),
+      invalidatesTags: ["CrmSocialMediaTemplate"],
+    }),
 
     // CRM SMS Purchase Endpoints
     purchaseSmsPackage: builder.mutation({
@@ -3484,6 +3489,7 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+  useDeleteCustomizedTemplateMutation,
   usePurchaseSmsPackageMutation,
   useGetSmsPurchaseHistoryQuery,
 

@@ -14,16 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/select";
-import CanvasTemplateEditor from './CanvasTemplateEditor';
+import CanvasTemplateEditor, { CanvasTemplateEditorRef } from './CanvasTemplateEditor';
 
 export interface SocialMediaTemplate {
   id?: string;
   _id?: string;
   title: string;
   description: string;
-  imageUrl?: string;
   imageFile?: File | null;
   image?: string;
+  previewImage?: string;
   jsonData?: any;
   category: string;
   availableFor: string;
@@ -31,7 +31,7 @@ export interface SocialMediaTemplate {
   updatedAt?: string;
 }
 
-type SocialMediaTemplateFormData = Omit<SocialMediaTemplate, 'imageFile' | 'imageUrl'> & {
+type SocialMediaTemplateFormData = Omit<SocialMediaTemplate, 'imageFile' | 'imageUrl' | 'previewImage'> & {
   image?: string;
 };
 
@@ -61,12 +61,22 @@ const getDefaultFormData = () => ({
   availableFor: 'admin',
   imageFile: null as File | null,
   imageUrl: undefined as string | undefined,
+  previewImage: undefined as string | undefined,
   jsonData: null as any,
 });
 
 const buildFormDataFromInitial = (initialData: Partial<SocialMediaTemplate> | null | undefined) => {
   const data = initialData ?? {};
   if (Object.keys(data).length > 0) {
+    let parsedJson = data.jsonData || null;
+    if (typeof parsedJson === 'string' && parsedJson.trim()) {
+      try {
+        parsedJson = JSON.parse(parsedJson);
+      } catch (e) {
+        console.error("Failed to parse jsonData in buildFormDataFromInitial:", e);
+        parsedJson = null;
+      }
+    }
     return {
       ...getDefaultFormData(),
       ...data,
@@ -75,7 +85,8 @@ const buildFormDataFromInitial = (initialData: Partial<SocialMediaTemplate> | nu
       category: getStringValue(data.category),
       availableFor: getAvailableForValue(data.availableFor),
       imageUrl: data.imageUrl || undefined,
-      jsonData: data.jsonData || null,
+      previewImage: undefined,
+      jsonData: parsedJson,
       imageFile: null as File | null,
     };
   }
@@ -95,6 +106,7 @@ function SocialMediaTemplateFormContent({
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [activeTab, setActiveTab] = useState<string>("basic");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<CanvasTemplateEditorRef>(null);
 
   const selectedCategory = getStringValue(currentInitialData.category);
   const categories = useMemo(() => {
@@ -106,6 +118,31 @@ function SocialMediaTemplateFormContent({
     setFormData(built);
     setImagePreview(initialData?.imageUrl || null);
   }, [initialData]);
+
+  /**
+   * Normalize any stored imageUrl to a displayable src.
+   * Handles: base64, relative paths (/uploads/...), full URLs (any host/port).
+   * For full URLs we extract just the filename and serve relative to the current app.
+   */
+  const resolvedImagePreview = useMemo(() => {
+    if (!imagePreview) return null;
+    // Already a data URL — use as-is
+    if (imagePreview.startsWith('data:image')) return imagePreview;
+    // Already a relative path — use as-is
+    if (imagePreview.startsWith('/')) return imagePreview;
+    // Full URL (http:// or https://) — extract filename and serve from current app
+    if (imagePreview.startsWith('http')) {
+      try {
+        const url = new URL(imagePreview);
+        const filename = url.pathname.split('/').pop();
+        return `/uploads/${filename}`;
+      } catch {
+        return imagePreview;
+      }
+    }
+    // Plain filename — serve from current app uploads
+    return `/uploads/${imagePreview}`;
+  }, [imagePreview]);
 
   const handleSelectChange = (name: keyof SocialMediaTemplate, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -128,18 +165,39 @@ function SocialMediaTemplateFormContent({
       formDataToSubmit.append('description', formData.description);
       formDataToSubmit.append('category', formData.category);
       formDataToSubmit.append('availableFor', formData.availableFor);
-      if (formData.jsonData) {
-        formDataToSubmit.append('jsonData', JSON.stringify(formData.jsonData));
+      let finalJsonData = formData.jsonData;
+      let finalPreviewImage = formData.previewImage;
+
+      // Automatically capture the latest canvas state before saving if we are on the design tab
+      if (activeTab === "design" && canvasRef.current) {
+        const designData = canvasRef.current.applyDesign();
+        if (designData) {
+          finalJsonData = designData.jsonData;
+          finalPreviewImage = designData.previewImage;
+        }
       }
+
+      if (finalJsonData) {
+        formDataToSubmit.append('jsonData', JSON.stringify(finalJsonData));
+      }
+      
+      // The canvas preview for the thumbnail (may be null if canvas was CORS-tainted)
+      if (finalPreviewImage && finalPreviewImage.startsWith('data:image')) {
+        formDataToSubmit.append('previewImage', finalPreviewImage);
+      } else if (!finalPreviewImage && formData.imageUrl && formData.imageUrl.startsWith('data:image')) {
+        formDataToSubmit.append('previewImage', formData.imageUrl);
+      }
+
+      // The original background image file (if changed)
       if (formData.imageFile) {
-        formDataToSubmit.append('image', formData.imageFile);
-      } else if (formData.imageUrl) {
-        formDataToSubmit.append('image', formData.imageUrl);
+        formDataToSubmit.append('backgroundImage', formData.imageFile);
       }
+      
       await onSubmit(formDataToSubmit);
     } catch (error) {
+      // The parent's onSubmit (handleSocialMediaTemplateSubmit) already toasts the real error
+      // and re-throws. Only show a fallback toast if no specific message was already shown.
       console.error('Error submitting form:', error);
-      toast.error('Failed to save template');
     }
   };
 
@@ -147,10 +205,11 @@ function SocialMediaTemplateFormContent({
     setFormData(prev => ({
       ...prev,
       jsonData: templateData.jsonData,
-      imageUrl: templateData.previewImage
+      previewImage: templateData.previewImage
     }));
-    setImagePreview(templateData.previewImage);
-    toast.success('Template design created! You can now save it.');
+    // NOTE: do NOT call setImagePreview here — that controls the background image
+    // used to initialise the canvas. Overwriting it with the canvas JPEG would
+    // re-trigger the canvas useEffect and dispose the live canvas.
   };
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,7 +339,7 @@ function SocialMediaTemplateFormContent({
                   {imagePreview ? (
                     <div className="relative">
                       <img
-                        src={imagePreview}
+                        src={resolvedImagePreview as string}
                         alt="Preview"
                         className="max-h-44 mx-auto rounded-md object-contain"
                       />
@@ -349,30 +408,27 @@ function SocialMediaTemplateFormContent({
 
         {/* ── Design Template Tab ── */}
         <TabsContent value="design" className="mt-0">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">Design Your Template</h3>
-              <p className="text-sm text-muted-foreground">
-                Use the canvas editor below to create your template design. You can add text, images, and customize the layout.
-              </p>
-            </div>
+          {activeTab === "design" && (
+            <div style={{ display: "flex", flexDirection: "column", height: "calc(85vh - 9rem)", minHeight: 560 }}>
+              {/* Canvas editor — fills all available height */}
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <CanvasTemplateEditor
+                  ref={canvasRef}
+                  initialImage={resolvedImagePreview || undefined}
+                  initialJsonData={formData.jsonData || undefined}
+                  onSaveTemplate={handleCanvasTemplateData}
+                  width={680}
+                  height={500}
+                />
+              </div>
 
-            <div className="overflow-hidden rounded-md border border-border">
-              <CanvasTemplateEditor
-                initialImage={imagePreview || undefined}
-                onSaveTemplate={handleCanvasTemplateData}
-                width={900}
-                height={800}
-              />
-            </div>
-
-            <div className="sticky bottom-0 flex justify-between pt-3 pb-1 border-t bg-background">
-              <Button variant="outline" onClick={() => setActiveTab("basic")}>
-                ← Back to Basic Info
-              </Button>
-              <div className="flex space-x-3">
-                <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                {formData.jsonData && (
+              {/* Footer actions */}
+              <div className="shrink-0 flex justify-between pt-3 pb-1 border-t bg-background mt-3">
+                <Button variant="outline" onClick={() => setActiveTab("basic")}>
+                  ← Back to Basic Info
+                </Button>
+                <div className="flex space-x-3">
+                  <Button variant="outline" onClick={onCancel}>Cancel</Button>
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
                     {isSubmitting ? (
                       <>
@@ -380,13 +436,13 @@ function SocialMediaTemplateFormContent({
                         {initialData?.id || initialData?._id ? 'Updating...' : 'Saving...'}
                       </>
                     ) : (
-                      <>{initialData?.id || initialData?._id ? 'Update Template' : 'Save Complete Template'}</>
+                      <>{initialData?.id || initialData?._id ? 'Update Template' : 'Save Template'}</>
                     )}
                   </Button>
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </TabsContent>
 
       </Tabs>

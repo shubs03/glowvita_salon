@@ -61,13 +61,34 @@ const socialMediaTemplateSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser',
+    // Admin templates ref AdminUser; vendor copies ref Vendor — keep flexible
+    refPath: 'createdByModel',
     required: true
+  },
+  createdByModel: {
+    type: String,
+    enum: ['AdminUser', 'Vendor'],
+    default: 'AdminUser'
   },
   updatedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'AdminUser',
     required: true
+  },
+
+  // ── Vendor copy fields ─────────────────────────────────────────────────────
+  // If vendorId is set this document is a vendor-specific copy, NOT an original.
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    default: null,
+    index: true
+  },
+  // The original admin template this was copied from.
+  parentTemplateId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SocialMediaTemplate',
+    default: null,
+    index: true
   }
 }, {
   timestamps: true,
@@ -93,8 +114,14 @@ const socialMediaTemplateSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Indexes
+// Virtual: true if this is an admin-owned original (not a vendor copy)
+socialMediaTemplateSchema.virtual('isAdminTemplate').get(function() {
+  return !this.vendorId;
+});
+
+// Indexes for performance
 socialMediaTemplateSchema.index({ title: 'text', category: 'text' });
+socialMediaTemplateSchema.index({ vendorId: 1, parentTemplateId: 1 }); // Efficient upsert look-ups
 
 // Define the model name
 const modelName = 'SocialMediaTemplate';
