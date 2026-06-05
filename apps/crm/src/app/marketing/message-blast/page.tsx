@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CreateCampaignModal } from './CreateCampaignModal';
+import { CampaignDetailsModal } from './CampaignDetailsModal';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
@@ -67,6 +68,7 @@ const loadRazorpayScript = (): Promise<boolean> =>
 export default function MessageBlastPage() {
   const [activeTab, setActiveTab] = useState('packages');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [purchaseSmsPackage, { isLoading: isPurchasing }] = usePurchaseSmsPackageMutation();
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
 
@@ -548,7 +550,7 @@ export default function MessageBlastPage() {
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedCampaign(campaign)}>
                           View Details
                         </Button>
                         {campaign.status === 'Draft' && (
@@ -567,6 +569,11 @@ export default function MessageBlastPage() {
               open={isCreateModalOpen} 
               onOpenChange={setIsCreateModalOpen}
               onCampaignCreated={refetchCampaigns}
+            />
+            <CampaignDetailsModal
+              campaign={selectedCampaign}
+              open={!!selectedCampaign}
+              onOpenChange={(open) => { if (!open) setSelectedCampaign(null); }}
             />
           </div>
         </TabsContent>
