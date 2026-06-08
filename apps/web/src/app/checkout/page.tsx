@@ -54,7 +54,7 @@ export default function CheckoutPage() {
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('pay-online');
+  const [paymentMethod, setPaymentMethod] = useState<string>('pay-online');
   const [addressError, setAddressError] = useState('');
   const [phoneError, setPhoneError] = useState('');
 

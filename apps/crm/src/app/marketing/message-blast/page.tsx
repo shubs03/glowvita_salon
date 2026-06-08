@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CreateCampaignModal } from './CreateCampaignModal';
+import { CampaignDetailsModal } from './CampaignDetailsModal';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { MessageSquare, Package, FileText, Plus, ArrowLeft } from 'lucide-react';
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery } from '@repo/store/services/api';
+import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery, useUpdateCrmCampaignMutation } from '@repo/store/services/api';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
+import { Rocket } from 'lucide-react';
 
 type SMSPackage = {
   _id: string;
@@ -67,8 +70,11 @@ const loadRazorpayScript = (): Promise<boolean> =>
 export default function MessageBlastPage() {
   const [activeTab, setActiveTab] = useState('packages');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [launchConfirmCampaign, setLaunchConfirmCampaign] = useState<Campaign | null>(null);
   const [purchaseSmsPackage, { isLoading: isPurchasing }] = usePurchaseSmsPackageMutation();
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
+  const [updateCrmCampaign, { isLoading: isLaunching }] = useUpdateCrmCampaignMutation();
 
   // Preload Razorpay script on mount
   useEffect(() => {
@@ -276,6 +282,21 @@ export default function MessageBlastPage() {
     } finally {
       // Reset the purchasing state
       setPurchasingPackageId(null);
+    }
+  };
+
+  const handleLaunchCampaign = async () => {
+    if (!launchConfirmCampaign) return;
+    try {
+      await updateCrmCampaign({
+        _id: launchConfirmCampaign._id,
+        status: 'Active',
+      }).unwrap();
+      toast.success(`Campaign "${launchConfirmCampaign.name}" has been launched!`);
+      setLaunchConfirmCampaign(null);
+      refetchCampaigns();
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to launch campaign');
     }
   };
 
@@ -548,11 +569,12 @@ export default function MessageBlastPage() {
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedCampaign(campaign)}>
                           View Details
                         </Button>
                         {campaign.status === 'Draft' && (
-                          <Button size="sm">
+                          <Button size="sm" onClick={() => setLaunchConfirmCampaign(campaign)}>
+                            <Rocket className="h-3.5 w-3.5 mr-1.5" />
                             Launch
                           </Button>
                         )}
@@ -568,6 +590,41 @@ export default function MessageBlastPage() {
               onOpenChange={setIsCreateModalOpen}
               onCampaignCreated={refetchCampaigns}
             />
+            <CampaignDetailsModal
+              campaign={selectedCampaign}
+              open={!!selectedCampaign}
+              onOpenChange={(open) => { if (!open) setSelectedCampaign(null); }}
+            />
+
+            {/* Launch Confirmation Dialog */}
+            <Dialog open={!!launchConfirmCampaign} onOpenChange={(open) => { if (!open) setLaunchConfirmCampaign(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Rocket className="h-5 w-5 text-primary" />
+                    </div>
+                    <DialogTitle>Launch Campaign</DialogTitle>
+                  </div>
+                  <DialogDescription className="text-sm text-muted-foreground pt-1">
+                    Are you sure you want to launch{' '}
+                    <span className="font-semibold text-foreground">{launchConfirmCampaign?.name}</span>?
+                    <br />
+                    This will activate the campaign and start sending messages to{' '}
+                    <span className="font-medium">{launchConfirmCampaign?.targetAudience}</span>.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={() => setLaunchConfirmCampaign(null)} disabled={isLaunching}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleLaunchCampaign} disabled={isLaunching} className="gap-2">
+                    <Rocket className="h-4 w-4" />
+                    {isLaunching ? 'Launching...' : 'Yes, Launch'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </TabsContent>
       </Tabs>
