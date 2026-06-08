@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Badge } from "@repo/ui/badge";
 import { cn } from "@repo/ui/cn";
 import { useRouter } from "next/navigation";
-import MarketingHeader from "../../components/MarketingHeader";
+import { MarketingHeader } from "../../components/MarketingHeader";
 
 interface Notification {
   _id: string;
