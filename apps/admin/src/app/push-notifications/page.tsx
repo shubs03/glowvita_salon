@@ -46,7 +46,7 @@ export default function PushNotificationsPage() {
   const { data: regions = [] } = useGetRegionsQuery(undefined);
   const [selectedRegion, setSelectedRegion] = useState<string>(userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? "" : userRegion || "");
 
-  
+
   const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery(selectedRegion || undefined);
   const { data: usersResponse = [], isLoading: isUsersLoading } = useGetAdminUsersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const users = Array.isArray(usersResponse) ? usersResponse : (usersResponse as any)?.users || [];
@@ -54,7 +54,7 @@ export default function PushNotificationsPage() {
   const [createNotification] = useCreateNotificationMutation();
   const [updateNotification] = useUpdateNotificationMutation();
   const [deleteNotification] = useDeleteNotificationMutation();
-  
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [title, setTitle] = useState<string>('');
@@ -122,7 +122,7 @@ export default function PushNotificationsPage() {
     return [];
   }, [targetType, users, vendors]);
 
-  const filteredTargets = useMemo(() => getTargetData().filter(t => 
+  const filteredTargets = useMemo(() => getTargetData().filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     !selectedTargets.some(st => st.id === t.id)
   ), [getTargetData, searchQuery, selectedTargets]);
@@ -178,7 +178,7 @@ export default function PushNotificationsPage() {
   const getDisplayTarget = useCallback((n: Notification): string => {
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const types = Array.isArray(n.targetType) ? n.targetType : [n.targetType];
-    
+
     return types.map(type => {
       if (type.startsWith('all_')) {
         return `All ${cap(type.split('_')[1])}`;
@@ -208,7 +208,7 @@ export default function PushNotificationsPage() {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-48 mb-6" />
-        
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
@@ -283,7 +283,7 @@ export default function PushNotificationsPage() {
           </div>
         )}
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -361,9 +361,8 @@ export default function PushNotificationsPage() {
                     <TableCell>{getDisplayTarget(notification)}</TableCell>
                     <TableCell>{new Date(notification.date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        notification.status === "Sent" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${notification.status === "Sent" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
+                        }`}>
                         {notification.status}
                       </span>
                     </TableCell>
@@ -473,8 +472,8 @@ export default function PushNotificationsPage() {
                     <>
                       <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder={`Search for a ${targetType.split('_')[1].slice(0, -1)}...`} 
+                        <Input
+                          placeholder={`Search for a ${targetType.split('_')[1].slice(0, -1)}...`}
                           className="pl-8"
                           value={searchQuery}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
@@ -500,7 +499,7 @@ export default function PushNotificationsPage() {
                         {t.name}
                         {modalType !== 'view' && (
                           <button onClick={() => handleRemoveTarget(t.id)} className="ml-2 rounded-full hover:bg-muted-foreground/20">
-                            <X className="h-3 w-3"/>
+                            <X className="h-3 w-3" />
                           </button>
                         )}
                       </Badge>

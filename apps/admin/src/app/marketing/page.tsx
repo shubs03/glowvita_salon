@@ -15,6 +15,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Switch } from '@repo/ui/switch';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
+import { Textarea } from '@repo/ui/textarea';
+import { UserCheck, Tag } from 'lucide-react';
 
 // Import RTK Query hooks and types from the store
 import { 
@@ -226,6 +232,17 @@ export default function PlatformMarketingPage() {
   // Alias for backward compatibility
   const socialPosts = socialMediaTemplates;
 
+  const [activeTab, setActiveTab] = useState("sms_templates");
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab) {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
+
   const [isPackageFormOpen, setIsPackageFormOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Partial<SmsPackage> | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -244,6 +261,294 @@ export default function PlatformMarketingPage() {
   const handleViewPurchase = (purchase: PurchaseHistory) => {
     setSelectedPurchase(purchase);
     setIsViewPurchaseDetailsOpen(true);
+  };
+
+  // Real data state for Marketing Tickets tab
+  const [realTickets, setRealTickets] = useState<any[]>([]);
+  const [realPackages, setRealPackages] = useState<any[]>([]);
+  const [realAgents, setRealAgents] = useState<any[]>([]);
+  const [isLoadingRealData, setIsLoadingRealData] = useState(false);
+  const [ticketSubTab, setTicketSubTab] = useState("active_tickets");
+
+  // Real Ticket Detail & Edit State
+  const [viewRealTicket, setViewRealTicket] = useState<any | null>(null);
+  const [isRealTicketOpen, setIsRealTicketOpen] = useState(false);
+  const [ticketSubmitting, setTicketSubmitting] = useState(false);
+  const [ticketForm, setTicketForm] = useState({
+    status: "Pending",
+    agentId: "",
+    adminNotes: ""
+  });
+
+  // Real Package Form State
+  const [isRealPkgOpen, setIsRealPkgOpen] = useState(false);
+  const [pkgEditTarget, setPkgEditTarget] = useState<any | null>(null);
+  const [pkgForm, setPkgForm] = useState({
+    name: "",
+    price: 0,
+    description: "",
+    featuresString: "",
+    platforms: [] as string[],
+    isActive: true
+  });
+
+  // Real Agent Form State
+  const [isRealAgtOpen, setIsRealAgtOpen] = useState(false);
+  const [agtEditTarget, setAgtEditTarget] = useState<any | null>(null);
+  const [agtForm, setAgtForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    specialtiesString: "",
+    isActive: true
+  });
+
+  // Real Delete State
+  const [realDeleteTarget, setRealDeleteTarget] = useState<{ id: string; type: "package" | "agent" } | null>(null);
+  const [isRealDeleteOpen, setIsRealDeleteOpen] = useState(false);
+  const [isRealDeleting, setIsRealDeleting] = useState(false);
+
+  // Fetch functions
+  const fetchRealData = useCallback(async () => {
+    setIsLoadingRealData(true);
+    try {
+      const [resTkt, resPkg, resAgt] = await Promise.all([
+        fetch("/api/admin/Marketing/tickets"),
+        fetch("/api/admin/Marketing/packages"),
+        fetch("/api/admin/Marketing/agents")
+      ]);
+      
+      if (resTkt.ok) {
+        const data = await resTkt.json();
+        setRealTickets(data.data || []);
+      }
+      if (resPkg.ok) {
+        const data = await resPkg.json();
+        setRealPackages(data.data || []);
+      }
+      if (resAgt.ok) {
+        const data = await resAgt.json();
+        setRealAgents(data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch ticket dashboard data:", err);
+    } finally {
+      setIsLoadingRealData(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRealData();
+  }, [fetchRealData]);
+
+  // Handle Ticket actions
+  const handleViewRealTicket = (ticket: any) => {
+    setViewRealTicket(ticket);
+    setTicketForm({
+      status: ticket.status,
+      agentId: ticket.agentId?._id || "none",
+      adminNotes: ticket.adminNotes || ""
+    });
+    setIsRealTicketOpen(true);
+  };
+
+  const handleUpdateRealTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!viewRealTicket) return;
+    setTicketSubmitting(true);
+    try {
+      const payload = {
+        id: viewRealTicket._id,
+        status: ticketForm.status,
+        agentId: ticketForm.agentId === "none" ? "" : ticketForm.agentId,
+        adminNotes: ticketForm.adminNotes
+      };
+
+      const res = await fetch("/api/admin/Marketing/tickets", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Ticket updated successfully.");
+        setIsRealTicketOpen(false);
+        fetchRealData();
+      } else {
+        throw new Error(data.message || "Failed to update ticket.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong.");
+    } finally {
+      setTicketSubmitting(false);
+    }
+  };
+
+  // Handle Package CRUD
+  const handleOpenRealPkg = (pkg: any | null = null) => {
+    if (pkg) {
+      setPkgEditTarget(pkg);
+      setPkgForm({
+        name: pkg.name,
+        price: pkg.price,
+        description: pkg.description || "",
+        featuresString: (pkg.features || []).join(", "),
+        platforms: pkg.platforms || [],
+        isActive: pkg.isActive
+      });
+    } else {
+      setPkgEditTarget(null);
+      setPkgForm({
+        name: "",
+        price: 0,
+        description: "",
+        featuresString: "",
+        platforms: [],
+        isActive: true
+      });
+    }
+    setIsRealPkgOpen(true);
+  };
+
+  const handleRealPkgSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pkgForm.name || pkgForm.price === undefined) {
+      toast.error("Please fill required fields.");
+      return;
+    }
+
+    const payload = {
+      name: pkgForm.name,
+      price: Number(pkgForm.price),
+      description: pkgForm.description,
+      features: pkgForm.featuresString.split(",").map(f => f.trim()).filter(Boolean),
+      platforms: pkgForm.platforms,
+      isActive: pkgForm.isActive
+    };
+
+    try {
+      let res;
+      if (pkgEditTarget) {
+        res = await fetch(`/api/admin/Marketing/packages?id=${pkgEditTarget._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch("/api/admin/Marketing/packages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(pkgEditTarget ? "Package updated successfully" : "Package created successfully");
+        setIsRealPkgOpen(false);
+        fetchRealData();
+      } else {
+        throw new Error(data.message || "Failed to save package");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save package.");
+    }
+  };
+
+  // Handle Agent CRUD
+  const handleOpenRealAgt = (agt: any | null = null) => {
+    if (agt) {
+      setAgtEditTarget(agt);
+      setAgtForm({
+        name: agt.name,
+        email: agt.email,
+        phone: agt.phone || "",
+        specialtiesString: (agt.specialties || []).join(", "),
+        isActive: agt.isActive
+      });
+    } else {
+      setAgtEditTarget(null);
+      setAgtForm({
+        name: "",
+        email: "",
+        phone: "",
+        specialtiesString: "",
+        isActive: true
+      });
+    }
+    setIsRealAgtOpen(true);
+  };
+
+  const handleRealAgtSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agtForm.name || !agtForm.email) {
+      toast.error("Name and Email are required.");
+      return;
+    }
+
+    const payload = {
+      name: agtForm.name,
+      email: agtForm.email,
+      phone: agtForm.phone,
+      specialties: agtForm.specialtiesString.split(",").map(s => s.trim()).filter(Boolean),
+      isActive: agtForm.isActive
+    };
+
+    try {
+      let res;
+      if (agtEditTarget) {
+        res = await fetch(`/api/admin/Marketing/agents?id=${agtEditTarget._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch("/api/admin/Marketing/agents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(agtEditTarget ? "Agent updated successfully" : "Agent created successfully");
+        setIsRealAgtOpen(false);
+        fetchRealData();
+      } else {
+        throw new Error(data.message || "Failed to save agent");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save agent.");
+    }
+  };
+
+  const handleRealDeleteClick = (id: string, type: "package" | "agent") => {
+    setRealDeleteTarget({ id, type });
+    setIsRealDeleteOpen(true);
+  };
+
+  const handleConfirmRealDelete = async () => {
+    if (!realDeleteTarget) return;
+    setIsRealDeleting(true);
+    try {
+      const url = `/api/admin/Marketing/${realDeleteTarget.type === "package" ? "packages" : "agents"}?id=${realDeleteTarget.id}`;
+      const res = await fetch(url, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`${realDeleteTarget.type === "package" ? "Package" : "Agent"} deleted successfully.`);
+        setIsRealDeleteOpen(false);
+        setRealDeleteTarget(null);
+        fetchRealData();
+      } else {
+        throw new Error(data.message || "Failed to delete.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Delete failed.");
+    } finally {
+      setIsRealDeleting(false);
+    }
   };
 
 
@@ -489,14 +794,16 @@ export default function PlatformMarketingPage() {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{metrics.openTicketsCount}</div>
+                    <div className="text-2xl font-bold">
+                      {realTickets.length > 0 ? realTickets.filter(t => t.status !== "Resolved" && t.status !== "Closed").length : metrics.openTicketsCount}
+                    </div>
                     <p className="text-xs text-muted-foreground">Awaiting resolution</p>
                 </CardContent>
             </Card>
         </div>
 
 
-       <Tabs defaultValue="sms_templates">
+       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="sms_templates">SMS Templates</TabsTrigger>
             <TabsTrigger value="sms_packages">SMS Packages</TabsTrigger>
@@ -772,80 +1079,255 @@ export default function PlatformMarketingPage() {
         </TabsContent>
 
         <TabsContent value="marketing_tickets" className="mt-4">
-            <Card>
+          <Tabs value={ticketSubTab} onValueChange={setTicketSubTab} className="space-y-4">
+            <TabsList className="bg-slate-100 p-1 rounded-xl w-fit">
+              <TabsTrigger value="active_tickets" className="rounded-lg gap-2">
+                <Ticket className="w-4 h-4" />
+                Tickets
+              </TabsTrigger>
+              <TabsTrigger value="manage_packages" className="rounded-lg gap-2">
+                <Tag className="w-4 h-4" />
+                Packages
+              </TabsTrigger>
+              <TabsTrigger value="manage_agents" className="rounded-lg gap-2">
+                <UserCheck className="w-4 h-4" />
+                Marketing Agents
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Active Tickets Sub-Tab */}
+            <TabsContent value="active_tickets">
+              <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>Marketing Tickets</CardTitle>
-                            <CardDescription>View and manage marketing support tickets.</CardDescription>
-                        </div>
-                    </div>
+                  <CardTitle>Vendor Marketing Requests</CardTitle>
+                  <CardDescription>View, assign, and update status of vendor marketing tickets.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto no-scrollbar">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Ticket ID</TableHead>
-                                    <TableHead>Vendor</TableHead>
-                                    <TableHead>Service</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Priority</TableHead>
-                                    <TableHead>Assigned To</TableHead>
-                                    <TableHead>Last Updated</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {marketingTickets?.map((ticket) => (
-                                    <TableRow key={ticket.id}>
-                                        <TableCell>{ticket.id}</TableCell>
-                                        <TableCell>{ticket.vendorName}</TableCell>
-                                        <TableCell>{ticket.service}</TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                ticket.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                                                ticket.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                                {ticket.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                ticket.priority === 'High' ? 'bg-red-100 text-red-800' : 
-                                                ticket.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {ticket.priority}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>{ticket.assignedTo}</TableCell>
-                                        <TableCell>{new Date(ticket.lastUpdated).toLocaleString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end space-x-2">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {(!marketingTickets || marketingTickets.length === 0) && (
-                                    <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
-                                            No marketing tickets found.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                  {isLoadingRealData ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
+                  ) : realTickets.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No marketing requests found.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto no-scrollbar">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Salon / Vendor</TableHead>
+                            <TableHead>Package</TableHead>
+                            <TableHead>Subject</TableHead>
+                            <TableHead>Assigned Agent</TableHead>
+                            <TableHead>Created At</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {realTickets.map((t) => (
+                            <TableRow key={t._id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-semibold text-sm">{t.salonName}</p>
+                                  <p className="text-xs text-muted-foreground">{t.contactName}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {t.packageId?.name || "Custom Plan"}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">{t.subject}</TableCell>
+                              <TableCell className="text-slate-500 font-medium">
+                                {t.agentId?.name || <span className="text-amber-500 text-xs font-semibold">Unassigned</span>}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {t.createdAt ? new Date(t.createdAt).toLocaleDateString("en-IN") : "N/A"}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                  t.status === "Pending" ? "bg-amber-100 text-amber-800 border-amber-200" :
+                                  t.status === "Assigned" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                                  t.status === "In Progress" ? "bg-indigo-100 text-indigo-800 border-indigo-200" :
+                                  t.status === "Resolved" ? "bg-green-100 text-green-800 border-green-200" :
+                                  "bg-slate-100 text-slate-800 border-slate-200"
+                                }`}>
+                                  {t.status}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => handleViewRealTicket(t)}>
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
-            </Card>
+              </Card>
+            </TabsContent>
+
+            {/* Configure Packages Sub-Tab */}
+            <TabsContent value="manage_packages">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <div>
+                    <CardTitle>Marketing Packages</CardTitle>
+                    <CardDescription>Manage structured pricing options available for vendors.</CardDescription>
+                  </div>
+                  <Button onClick={() => handleOpenRealPkg()} className="bg-purple-600 hover:bg-purple-700 text-white gap-2">
+                    <Plus className="w-4 h-4" /> Add Package
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingRealData ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : realPackages.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No packages created. Add one to get started.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto no-scrollbar">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Package Name</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead>Platforms</TableHead>
+                            <TableHead>Features</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {realPackages.map((pkg) => (
+                            <TableRow key={pkg._id}>
+                              <TableCell className="font-semibold">{pkg.name}</TableCell>
+                              <TableCell className="font-semibold text-slate-800">₹{pkg.price}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {(pkg.platforms || []).length === 0 ? (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  ) : (
+                                    (pkg.platforms || []).map((p: string) => {
+                                      const icons: Record<string, string> = {
+                                        "Instagram": "📸",
+                                        "Facebook": "👥",
+                                        "YouTube": "▶️",
+                                        "Twitter/X": "🐦",
+                                        "LinkedIn": "💼",
+                                        "WhatsApp": "💬"
+                                      };
+                                      return (
+                                        <span key={p} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 rounded text-xs font-medium text-slate-700">
+                                          {icons[p] || ""} {p}
+                                        </span>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="max-w-xs text-xs text-muted-foreground truncate">
+                                {pkg.features.join(" • ")}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${pkg.isActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"}`}>
+                                  {pkg.isActive ? "Active" : "Inactive"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => handleOpenRealPkg(pkg)}>
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80" onClick={() => handleRealDeleteClick(pkg._id, "package")}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Configure Agents Sub-Tab */}
+            <TabsContent value="manage_agents">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <div>
+                    <CardTitle>Marketing Agents / Specialists</CardTitle>
+                    <CardDescription>Assign specific specialists to vendor requests.</CardDescription>
+                  </div>
+                  <Button onClick={() => handleOpenRealAgt()} className="bg-purple-600 hover:bg-purple-700 text-white gap-2">
+                    <Plus className="w-4 h-4" /> Add Agent
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingRealData ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : realAgents.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      No agents created yet.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto no-scrollbar">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Agent Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Specialties</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {realAgents.map((agt) => (
+                            <TableRow key={agt._id}>
+                              <TableCell className="font-semibold">{agt.name}</TableCell>
+                              <TableCell>{agt.email}</TableCell>
+                              <TableCell>{agt.phone || "—"}</TableCell>
+                              <TableCell className="max-w-xs text-xs text-muted-foreground truncate">
+                                {agt.specialties.join(", ")}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${agt.isActive ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"}`}>
+                                  {agt.isActive ? "Active" : "Inactive"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => handleOpenRealAgt(agt)}>
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80" onClick={() => handleRealDeleteClick(agt._id, "agent")}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="purchase_history" className="mt-4">
@@ -1159,6 +1641,313 @@ export default function PlatformMarketingPage() {
           )}
           <DialogFooter>
             <Button onClick={() => setIsViewPurchaseDetailsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Real Ticket Details & Action Dialog */}
+      <Dialog open={isRealTicketOpen} onOpenChange={setIsRealTicketOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Update Marketing Request</DialogTitle>
+            <DialogDescription>Assign agents, update ticket status, and add response notes.</DialogDescription>
+          </DialogHeader>
+          {viewRealTicket && (
+            <form onSubmit={handleUpdateRealTicket} className="space-y-4">
+              {/* Request Summary */}
+              <div className="bg-slate-50 border rounded-xl p-3.5 space-y-2 text-sm text-slate-700">
+                <div>
+                  <span className="font-semibold block text-[10px] text-slate-400 uppercase tracking-wider">Vendor / Salon</span>
+                  <span className="font-medium text-slate-800">{viewRealTicket.salonName} ({viewRealTicket.contactName})</span>
+                </div>
+                <div>
+                  <span className="font-semibold block text-[10px] text-slate-400 uppercase tracking-wider">Contact Details</span>
+                  <span className="font-medium text-slate-600">{viewRealTicket.email} | {viewRealTicket.phone}</span>
+                </div>
+                <div>
+                  <span className="font-semibold block text-[10px] text-slate-400 uppercase tracking-wider">Requested Package</span>
+                  <span className="font-medium text-slate-800">{viewRealTicket.packageId?.name || "Custom Plan"} (₹{viewRealTicket.packageId?.price || 0})</span>
+                </div>
+                <div>
+                  <span className="font-semibold block text-[10px] text-slate-400 uppercase tracking-wider">Subject</span>
+                  <span className="font-medium text-slate-800 text-base">{viewRealTicket.subject}</span>
+                </div>
+                <div>
+                  <span className="font-semibold block text-[10px] text-slate-400 uppercase tracking-wider">Description</span>
+                  <div className="mt-1 bg-white border rounded-lg p-2.5 max-h-32 overflow-y-auto whitespace-pre-wrap text-xs text-slate-600">
+                    {viewRealTicket.description}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Select */}
+              <div className="space-y-1.5">
+                <Label htmlFor="real_status" className="font-semibold">Update Status</Label>
+                <Select
+                  value={ticketForm.status}
+                  onValueChange={(val) => setTicketForm(prev => ({ ...prev, status: val as any }))}
+                >
+                  <SelectTrigger id="real_status">
+                    <SelectValue placeholder="Select status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Assigned">Assigned</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Resolved">Resolved</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Assign Agent Select */}
+              <div className="space-y-1.5">
+                <Label htmlFor="real_assignAgent" className="font-semibold">Assign Marketing Agent</Label>
+                <Select
+                  value={ticketForm.agentId}
+                  onValueChange={(val) => setTicketForm(prev => ({ ...prev, agentId: val }))}
+                >
+                  <SelectTrigger id="real_assignAgent">
+                    <SelectValue placeholder="Select Agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {realAgents.filter(a => a.isActive).map((agt) => (
+                      <SelectItem key={agt._id} value={agt._id}>
+                        {agt.name} ({agt.specialties.slice(0, 2).join(", ")})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Admin Notes */}
+              <div className="space-y-1.5">
+                <Label htmlFor="real_adminNotes" className="font-semibold">Admin Update Notes / Reply</Label>
+                <Textarea
+                  id="real_adminNotes"
+                  placeholder="Provide progress updates or list deliverables for the vendor..."
+                  value={ticketForm.adminNotes}
+                  onChange={(e) => setTicketForm(prev => ({ ...prev, adminNotes: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setIsRealTicketOpen(false)} disabled={ticketSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={ticketSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  {ticketSubmitting ? "Saving..." : "Save Updates"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Package Form Dialog */}
+      <Dialog open={isRealPkgOpen} onOpenChange={setIsRealPkgOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{pkgEditTarget ? "Edit Package" : "Create Package"}</DialogTitle>
+            <DialogDescription>Setup pricing tier for marketing services.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRealPkgSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="real_pkgName" className="font-semibold">Package Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="real_pkgName"
+                placeholder="e.g. Bronze Poster Package"
+                value={pkgForm.name}
+                onChange={(e) => setPkgForm(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="real_pkgPrice" className="font-semibold">Price (₹) <span className="text-destructive">*</span></Label>
+              <Input
+                id="real_pkgPrice"
+                type="number"
+                placeholder="e.g. 1500"
+                value={pkgForm.price}
+                onChange={(e) => setPkgForm(prev => ({ ...prev, price: Number(e.target.value) }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="real_pkgDesc" className="font-semibold">Description</Label>
+              <Textarea
+                id="real_pkgDesc"
+                placeholder="Brief summary of this package..."
+                value={pkgForm.description}
+                onChange={(e) => setPkgForm(prev => ({ ...prev, description: e.target.value }))}
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="real_pkgFeatures" className="font-semibold">Features (Comma separated)</Label>
+              <Input
+                id="real_pkgFeatures"
+                placeholder="e.g. 5 custom posters, ad optimization, reels setup"
+                value={pkgForm.featuresString}
+                onChange={(e) => setPkgForm(prev => ({ ...prev, featuresString: e.target.value }))}
+              />
+            </div>
+
+            {/* Social Media Platforms */}
+            <div className="space-y-2">
+              <Label className="font-semibold">Social Media Platforms</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "pkg_instagram", label: "Instagram", icon: "📸", value: "Instagram", color: "border-pink-200 bg-pink-50 text-pink-700" },
+                  { id: "pkg_facebook", label: "Facebook", icon: "👥", value: "Facebook", color: "border-blue-200 bg-blue-50 text-blue-700" },
+                  { id: "pkg_youtube", label: "YouTube", icon: "▶️", value: "YouTube", color: "border-red-200 bg-red-50 text-red-700" },
+                  { id: "pkg_twitter", label: "Twitter/X", icon: "🐦", value: "Twitter/X", color: "border-slate-200 bg-slate-50 text-slate-700" },
+                  { id: "pkg_linkedin", label: "LinkedIn", icon: "💼", value: "LinkedIn", color: "border-blue-200 bg-blue-50 text-blue-800" },
+                  { id: "pkg_whatsapp", label: "WhatsApp", icon: "💬", value: "WhatsApp", color: "border-green-200 bg-green-50 text-green-700" },
+                ].map((platform) => {
+                  const isSelected = pkgForm.platforms.includes(platform.value);
+                  return (
+                    <button
+                      key={platform.id}
+                      type="button"
+                      onClick={() => {
+                        setPkgForm(prev => ({
+                          ...prev,
+                          platforms: isSelected
+                            ? prev.platforms.filter(p => p !== platform.value)
+                            : [...prev.platforms, platform.value]
+                        }));
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                        isSelected
+                          ? `${platform.color} border-current shadow-sm`
+                          : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                      }`}
+                    >
+                      <span className="text-base leading-none">{platform.icon}</span>
+                      <span>{platform.label}</span>
+                      {isSelected && <span className="ml-auto text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              {pkgForm.platforms.length === 0 && (
+                <p className="text-xs text-muted-foreground">Select at least one platform this package covers.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t pt-3">
+              <span className="text-sm font-semibold">Package Active Status</span>
+              <Switch
+                checked={pkgForm.isActive}
+                onCheckedChange={(val) => setPkgForm(prev => ({ ...prev, isActive: val }))}
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsRealPkgOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+                Save Package
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agent Form Dialog */}
+      <Dialog open={isRealAgtOpen} onOpenChange={setIsRealAgtOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{agtEditTarget ? "Edit Agent" : "Create Agent"}</DialogTitle>
+            <DialogDescription>Setup marketing specialist details.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRealAgtSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="real_agtName" className="font-semibold">Full Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="real_agtName"
+                placeholder="e.g. Sunita Nair"
+                value={agtForm.name}
+                onChange={(e) => setAgtForm(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="real_agtEmail" className="font-semibold">Email Address <span className="text-destructive">*</span></Label>
+              <Input
+                id="real_agtEmail"
+                type="email"
+                placeholder="e.g. sunita@glowvita.com"
+                value={agtForm.email}
+                onChange={(e) => setAgtForm(prev => ({ ...prev, email: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="real_agtPhone" className="font-semibold">Phone Number</Label>
+              <Input
+                id="real_agtPhone"
+                placeholder="e.g. 9876543210"
+                value={agtForm.phone}
+                onChange={(e) => setAgtForm(prev => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="real_agtSpecialties" className="font-semibold">Specialties (Comma separated)</Label>
+              <Input
+                id="real_agtSpecialties"
+                placeholder="e.g. Ads management, Graphic design, SEO"
+                value={agtForm.specialtiesString}
+                onChange={(e) => setAgtForm(prev => ({ ...prev, specialtiesString: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-between border-t pt-3">
+              <span className="text-sm font-semibold">Agent Active Status</span>
+              <Switch
+                checked={agtForm.isActive}
+                onCheckedChange={(val) => setAgtForm(prev => ({ ...prev, isActive: val }))}
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsRealAgtOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
+                Save Agent
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isRealDeleteOpen} onOpenChange={setIsRealDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the selected {realDeleteTarget?.type}. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRealDeleteOpen(false)} disabled={isRealDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmRealDelete} disabled={isRealDeleting}>
+              {isRealDeleting ? "Deleting..." : "Delete Permanently"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
