@@ -52,7 +52,7 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
 
     // CRM INSTANT SYNC: Listen for the sound signal to refresh the CRM bell icon IMMEDIATELY
     const setupInstantSync = () => {
-      NotificationManager.onMessageListener((payload) => {
+      NotificationManager.onMessageListener((payload: any) => {
         console.log('[CRM Bell] Instant signal received, refreshing...');
         fetchNotifications();
       });
