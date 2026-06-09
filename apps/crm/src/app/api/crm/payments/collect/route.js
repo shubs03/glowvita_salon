@@ -516,13 +516,14 @@ export const POST = authMiddlewareCrm(async (req) => {
             logToFile(`Attempting to send email to: ${clientEmail}`);
 
             let invoiceHtml;
+            let invoice;
             try {
               console.log('Generating invoice template...');
               logToFile('Generating invoice template...');
 
               // Fetch the saved invoice to get formal items and other details
               const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-              const invoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+              invoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
 
               if (invoice) {
                 invoiceHtml = getInvoiceTemplate({
@@ -638,7 +639,9 @@ export const POST = authMiddlewareCrm(async (req) => {
               serviceName: appointment.serviceName,
               appointmentId: updatedAppointment?.invoiceNumber || appointment.invoiceNumber || appointment._id.toString(),
               appointmentDate: new Date(appointment.date || appointment.startTime || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+              appointmentTime: updatedAppointment?.startTime || appointment.startTime,
               completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+              completedTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
               orderTotal: invoice?.totalAmount || updatedAppointment?.totalAmount || appointment.totalAmount || totalAmount,
               location: appointment.homeServiceLocation?.address || businessName,
               businessAddress,
