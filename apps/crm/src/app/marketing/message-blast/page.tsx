@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CreateCampaignModal } from './CreateCampaignModal';
+import { CampaignDetailsModal } from './CampaignDetailsModal';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { MessageSquare, Package, FileText, Plus, ArrowLeft } from 'lucide-react';
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery } from '@repo/store/services/api';
+import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery, useUpdateCrmCampaignMutation } from '@repo/store/services/api';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
+import { Rocket } from 'lucide-react';
 
 type SMSPackage = {
   _id: string;
@@ -48,11 +51,35 @@ type Campaign = {
   updatedAt: string;
 };
 
+/* ─── Razorpay script loader (cached) ───────────────────────────────────── */
+let rzpScriptLoaded = false;
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (rzpScriptLoaded || (typeof window !== 'undefined' && (window as any).Razorpay)) {
+      rzpScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => { rzpScriptLoaded = true; resolve(true); };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 export default function MessageBlastPage() {
   const [activeTab, setActiveTab] = useState('packages');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [launchConfirmCampaign, setLaunchConfirmCampaign] = useState<Campaign | null>(null);
   const [purchaseSmsPackage, { isLoading: isPurchasing }] = usePurchaseSmsPackageMutation();
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
+  const [updateCrmCampaign, { isLoading: isLaunching }] = useUpdateCrmCampaignMutation();
+
+  // Preload Razorpay script on mount
+  useEffect(() => {
+    loadRazorpayScript();
+  }, []);
 
   // Get CRM authentication state
   const { isAuthenticated, token, user } = useAppSelector((state: any) => ({
@@ -99,8 +126,11 @@ export default function MessageBlastPage() {
   
   // Extract active package from purchase history
   const purchases = purchaseHistoryResponse?.data?.purchases || [];
-  const activePurchase = purchases.find((p: any) => p.status === 'active' && new Date(p.expiryDate) >= new Date());
-  const activePackageId = activePurchase?.packageId;
+  const remainingSmsCount = purchaseHistoryResponse?.data?.activePackageInfo?.remainingSmsCount || 0;
+  
+  // A package is considered actively in use if it has not expired and the user still has an SMS balance
+  const activePurchases = purchases.filter((p: any) => p.status === 'active' && new Date(p.expiryDate) > new Date() && remainingSmsCount > 0);
+  const activePackageIds = activePurchases.map((p: any) => typeof p.packageId === 'object' ? p.packageId?._id : p.packageId);
   
   // Extract packages from the response
   const smsPackages = packagesResponse?.data || [];
@@ -126,53 +156,147 @@ export default function MessageBlastPage() {
       toast.error('Invalid package selection');
       return;
     }
+
+    const pkg = smsPackages.find((p: SMSPackage) => p._id === packageId);
+    if (!pkg) {
+      toast.error('SMS Package not found');
+      return;
+    }
+
+    const packagePrice = pkg.price;
     
-    console.log('Attempting to purchase package:', packageId);
+    console.log('Attempting to purchase package:', packageId, 'Price:', packagePrice);
     console.log('User object:', user);
-    console.log('User ID:', user?._id);
-    console.log('Vendor ID:', user?.vendorId);
     
     // Set the specific package as purchasing
     setPurchasingPackageId(packageId);
     
     try {
-      console.log('Sending purchase request with packageId:', packageId);
-      const result: any = await purchaseSmsPackage({ packageId }).unwrap();
-      console.log('Purchase response:', result);
-      
-      if (result.success) {
-        // Show success message
-        toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
-        // Refresh packages and purchase history to update any UI that depends on balance
-        refetchPackages();
-        refetchPurchaseHistory();
-      } else {
-        toast.error(result.message || 'Failed to purchase package');
+      // Step 1: Load Razorpay JS script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
       }
+
+      // Step 2: Create payment order on CRM backend
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: packagePrice,
+          currency: 'INR',
+          receipt: `smspkg_${packageId}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to create payment order');
+      }
+
+      // Step 3: Open Razorpay checkout
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(packagePrice * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita CRM',
+          description: `SMS Package: ${pkg.name} (${pkg.smsCount.toLocaleString()} SMS)`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          prefill: {
+            name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.name || '',
+            email: user?.emailAddress || user?.email || '',
+            contact: user?.mobileNo || user?.phone || '',
+          },
+          retry: { enabled: true, max_count: 3 },
+          modal: {
+            ondismiss: () => reject(new Error('Payment cancelled by user')),
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              // Step 4: Verify payment signature
+              const verifyRes = await fetch('/api/payments/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed.');
+
+              // Step 5: Finalize purchase inside backend
+              console.log('Sending purchase request with packageId:', packageId);
+              const result: any = await purchaseSmsPackage({ 
+                packageId, 
+                paymentId: response.razorpay_payment_id,
+                paymentOrderId: response.razorpay_order_id
+              }).unwrap();
+              console.log('Purchase response:', result);
+              
+              if (result.success) {
+                // Show success message
+                toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
+                // Refresh packages and purchase history and wait for it
+                await Promise.all([
+                  refetchPackages(),
+                  refetchPurchaseHistory()
+                ]);
+                resolve();
+              } else {
+                throw new Error(result.message || 'Failed to purchase package');
+              }
+            } catch (err: any) {
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      console.error('Purchase error:', error);
+      console.error('Purchase/Payment error:', error);
       
-      // More detailed error handling
-      let errorMessage = 'Failed to purchase package. Please try again.';
-      
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.status === 400) {
-        errorMessage = 'Invalid request. Please check the package details.';
-      } else if (error?.status === 404) {
-        errorMessage = 'Package not found. Please refresh and try again.';
-      } else if (error?.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
+      if (error?.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled.');
       } else {
-        errorMessage = 'Error purchasing SMS package. Please try again.';
+        // More detailed error handling
+        let errorMessage = 'Failed to purchase package. Please try again.';
+        
+        if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        } else if (error?.status === 400) {
+          errorMessage = 'Invalid request. Please check the package details.';
+        } else if (error?.status === 404) {
+          errorMessage = 'Package not found. Please refresh and try again.';
+        } else if (error?.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        toast.error(errorMessage);
       }
-      
-      toast.error(errorMessage);
     } finally {
       // Reset the purchasing state
       setPurchasingPackageId(null);
+    }
+  };
+
+  const handleLaunchCampaign = async () => {
+    if (!launchConfirmCampaign) return;
+    try {
+      await updateCrmCampaign({
+        _id: launchConfirmCampaign._id,
+        status: 'Active',
+      }).unwrap();
+      toast.success(`Campaign "${launchConfirmCampaign.name}" has been launched!`);
+      setLaunchConfirmCampaign(null);
+      refetchCampaigns();
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to launch campaign');
     }
   };
 
@@ -300,10 +424,10 @@ export default function MessageBlastPage() {
                     <Button 
                       className="w-full" 
                       size="sm" 
-                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id || activePackageId === pkg._id}
+                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id || activePackageIds.includes(pkg._id)}
                       onClick={() => handlePurchasePackage(pkg._id)}
                     >
-                      {purchasingPackageId === pkg._id ? 'Processing...' : activePackageId === pkg._id ? 'Active' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
+                      {purchasingPackageId === pkg._id ? 'Processing...' : activePackageIds.includes(pkg._id) ? 'Active' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -445,11 +569,12 @@ export default function MessageBlastPage() {
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedCampaign(campaign)}>
                           View Details
                         </Button>
                         {campaign.status === 'Draft' && (
-                          <Button size="sm">
+                          <Button size="sm" onClick={() => setLaunchConfirmCampaign(campaign)}>
+                            <Rocket className="h-3.5 w-3.5 mr-1.5" />
                             Launch
                           </Button>
                         )}
@@ -465,6 +590,41 @@ export default function MessageBlastPage() {
               onOpenChange={setIsCreateModalOpen}
               onCampaignCreated={refetchCampaigns}
             />
+            <CampaignDetailsModal
+              campaign={selectedCampaign}
+              open={!!selectedCampaign}
+              onOpenChange={(open) => { if (!open) setSelectedCampaign(null); }}
+            />
+
+            {/* Launch Confirmation Dialog */}
+            <Dialog open={!!launchConfirmCampaign} onOpenChange={(open) => { if (!open) setLaunchConfirmCampaign(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Rocket className="h-5 w-5 text-primary" />
+                    </div>
+                    <DialogTitle>Launch Campaign</DialogTitle>
+                  </div>
+                  <DialogDescription className="text-sm text-muted-foreground pt-1">
+                    Are you sure you want to launch{' '}
+                    <span className="font-semibold text-foreground">{launchConfirmCampaign?.name}</span>?
+                    <br />
+                    This will activate the campaign and start sending messages to{' '}
+                    <span className="font-medium">{launchConfirmCampaign?.targetAudience}</span>.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={() => setLaunchConfirmCampaign(null)} disabled={isLaunching}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleLaunchCampaign} disabled={isLaunching} className="gap-2">
+                    <Rocket className="h-4 w-4" />
+                    {isLaunching ? 'Launching...' : 'Yes, Launch'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </TabsContent>
       </Tabs>

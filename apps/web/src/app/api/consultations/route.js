@@ -3,6 +3,7 @@ import DoctorConsultation from '@repo/lib/models/Vendor/DoctorConsultation.model
 import Patient from '@repo/lib/models/Vendor/Patient.model';
 import Doctor from '@repo/lib/models/Vendor/Docters.model';
 import _db from '@repo/lib/db';
+import { NotificationService } from '@repo/lib';
 import { checkAndCreditReferralBonus } from '@repo/lib/utils/referralWalletCredit';
 
 await _db();
@@ -123,6 +124,20 @@ export const POST = async (req) => {
       notes: body.notes
     });
 
+    // Trigger Notifications
+    (async () => {
+      try {
+        // Notify Client
+        if (userId && userId.toString().length === 24) {
+          await NotificationService.sendConsultationAlert(userId, 'client', consultation, 'scheduled');
+        }
+        
+        // Notify Doctor
+        await NotificationService.sendConsultationAlert(doctorId, 'doctor', consultation, 'scheduled');
+      } catch (err) {
+        console.error('Consultation Booking Notification Error:', err);
+      }
+    })();
     // Increment coupon redemption count and total discount if applicable
     if (body.couponCode) {
       try {
@@ -315,6 +330,20 @@ export const PUT = async (req) => {
 
     await consultation.save();
 
+    // Trigger Notification if status changed
+    if (updates.status) {
+      (async () => {
+        try {
+          if (consultation.userId) {
+            await NotificationService.sendConsultationAlert(consultation.userId, 'client', consultation, updates.status.toLowerCase());
+          }
+          await NotificationService.sendConsultationAlert(consultation.doctorId, 'doctor', consultation, updates.status.toLowerCase());
+        } catch (err) {
+          console.error('Consultation Update Notification Error:', err);
+        }
+      })();
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -360,6 +389,18 @@ export const DELETE = async (req) => {
     }
 
     await consultation.cancel(reason);
+
+    // Trigger Notifications
+    (async () => {
+      try {
+        if (consultation.userId) {
+          await NotificationService.sendConsultationAlert(consultation.userId, 'client', consultation, 'cancelled');
+        }
+        await NotificationService.sendConsultationAlert(consultation.doctorId, 'doctor', consultation, 'cancelled');
+      } catch (err) {
+        console.error('Consultation Cancellation Notification Error:', err);
+      }
+    })();
 
     return NextResponse.json(
       {

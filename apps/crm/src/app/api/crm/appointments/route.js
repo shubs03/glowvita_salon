@@ -7,51 +7,45 @@ import { withSubscriptionCheck } from '@/middlewareCrm';
 import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
 import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
 import VendorModelLib from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import { NotificationService, SmsService } from "@repo/lib";
 import { checkAndCreditReferralBonus } from "../../../../../../../packages/lib/src/utils/referralWalletCredit";
 
-// Helper function to send appointment emails
+// Helper function to send appointment emails and notifications
 const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus, fallbackClientId = null) => {
-    console.log(`[Email Debug] Attempting to send email for appointment ${appointment._id}`);
-    console.log(`[Email Debug] Status change: ${oldStatus} -> ${newStatus}`);
+    console.log(`[Notification Debug] Processing appointment ${appointment._id}`);
+    console.log(`[Notification Debug] Status change: ${oldStatus} -> ${newStatus}`);
 
-    if (newStatus === oldStatus) {
-        console.log('[Email Debug] Status unchanged, skipping email');
-        return;
-    }
+    if (newStatus === oldStatus) return;
 
     try {
         const vendor = await VendorModelLib.findById(vendorId).select('businessName address phone city state pincode');
         const businessName = vendor?.businessName || 'GlowVita Salon';
         const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
         const businessPhone = vendor?.phone || '';
-
+        
+        // Resolve Client Info
         let clientEmail = appointment.client?.email || appointment.clientEmail;
         let clientName = appointment.client?.fullName || appointment.clientName;
         let clientPhone = appointment.client?.phone || '';
+        let clientId = appointment.client?._id || appointment.client || fallbackClientId;
 
-        // If client email is missing, it might be an online booking with a User ID stored in the client field
-        // We check appointment.client (which might be populated/null) or try to get the raw ID
-        const clientId = appointment.client?._id || appointment.client || fallbackClientId;
-
-        if (!clientEmail && clientId) {
-            console.log(`[Email Debug] Client email missing, checking User model for ID: ${clientId}`);
+        if ((!clientEmail || !clientPhone) && clientId) {
             try {
                 const user = await UserModel.findById(clientId).select('firstName lastName emailAddress email mobileNo');
                 if (user) {
-                    clientEmail = user.emailAddress || user.email;
+                    clientEmail = clientEmail || user.emailAddress || user.email;
                     clientName = clientName || `${user.firstName} ${user.lastName}`;
-                    clientPhone = user.mobileNo || user.phone;
-                    console.log(`[Email Debug] Found user info from User model: Name=${clientName}, Email=${clientEmail}, Phone=${clientPhone}`);
+                    clientPhone = clientPhone || user.mobileNo || user.phone;
                 }
-            } catch (userError) {
-                console.error('[Email Debug] Error fetching user data:', userError);
+            } catch (err) {
+                console.error('[Notification Debug] User fetch error:', err);
             }
         }
 
-        console.log(`[Email Debug] Final Client Info for email: Name=${clientName}, Email=${clientEmail}`);
-
+        // 1. Send Email (Existing Logic Restored)
         if (clientEmail) {
-            if (newStatus === 'confirmed') {
+            try {
+                if (newStatus === 'confirmed') {
                 const emailHtml = getConfirmationTemplate({
                     clientName,
                     businessName,
@@ -140,56 +134,62 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                 } catch (tplError) {
                     console.error('Error fetching invoice for email:', tplError);
                 }
-
-                // Generate PDF Buffer (add this for consistency if missing)
+                // Generate PDF Buffer
                 let pdfBuffer;
                 if (invoiceHtml) {
-                    try {
-                        const pdf = (await import('html-pdf')).default;
-                        pdfBuffer = await new Promise((resolve, reject) => {
-                            pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
-                                if (err) reject(err);
-                                else resolve(buffer);
+                        try {
+                            const pdf = (await import('html-pdf')).default;
+                            pdfBuffer = await new Promise((resolve, reject) => {
+                                pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
+                                    if (err) reject(err); else resolve(buffer);
+                                });
                             });
-                        });
-                    } catch (pdfError) {
-                        console.error('PDF generation failed in appointments route:', pdfError);
+                        } catch (pdfError) { console.error('PDF generation failed:', pdfError); }
                     }
-                }
 
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Appointment Completed - ${businessName}`,
-                    html: completionHtml,
-                    attachments: pdfBuffer ? [
-                        {
+                    await sendEmail({
+                        to: clientEmail,
+                        subject: `Appointment Completed - ${businessName}`,
+                        html: completionHtml,
+                        attachments: pdfBuffer ? [{
                             filename: `Invoice_${formalInvoice?.invoiceNumber || appointment.invoiceNumber || appointment._id}.pdf`,
                             content: pdfBuffer,
                             contentType: 'application/pdf'
-                        }
-                    ] : []
-                });
-                console.log(`Completion email and invoice sent to ${clientEmail}`);
-            } else if (newStatus === 'cancelled') {
-                const emailHtml = getCancellationTemplate({
-                    clientName,
-                    businessName,
-                    serviceName: appointment.serviceName,
-                    date: appointment.date,
-                    startTime: appointment.startTime,
-                    cancellationReason: appointment.cancellationReason
-                });
-
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Appointment Cancelled - ${businessName}`,
-                    html: emailHtml
-                });
-                console.log(`Cancellation email sent to ${clientEmail}`);
+                        }] : []
+                    });
+                } else if (newStatus === 'cancelled') {
+                    const emailHtml = getCancellationTemplate({
+                        clientName, businessName, serviceName: appointment.serviceName,
+                        date: appointment.date, startTime: appointment.startTime,
+                        cancellationReason: appointment.cancellationReason
+                    });
+                    await sendEmail({ to: clientEmail, subject: `Appointment Cancelled - ${businessName}`, html: emailHtml });
+                }
+            } catch (e) {
+                console.error('Email Dispatch Fail:', e);
             }
         }
-    } catch (emailError) {
-        console.error('Error sending appointment status email:', emailError);
+
+        // 2. Send Push Notification (INSTANT)
+        if (clientId && clientId.toString().length === 24) {
+            await NotificationService.sendAppointmentAlert(clientId, 'client', appointment, newStatus);
+        }
+        
+        // Notify Vendor as well
+        if (vendorId) {
+            await NotificationService.sendAppointmentAlert(vendorId, 'vendor', appointment, newStatus);
+        }
+
+        // 3. Send SMS (CRITICAL STATUSES)
+        if (clientPhone) {
+            const smsStatusMap = ['confirmed', 'cancelled', 'scheduled'];
+            if (smsStatusMap.includes(newStatus)) {
+                await SmsService.sendAppointmentSms(clientPhone, appointment, newStatus);
+            }
+        }
+
+    } catch (error) {
+        console.error('Notification Dispatch Error:', error);
     }
 };
 

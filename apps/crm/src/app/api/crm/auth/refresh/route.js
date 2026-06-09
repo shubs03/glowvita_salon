@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import Vendor from '@repo/lib/models/Vendor/Vendor.model';
 import Doctor from '@repo/lib/models/Vendor/Docters.model';
 import Supplier from '@repo/lib/models/Vendor/Supplier.model';
+import SubscriptionPlan from '@repo/lib/models/admin/SubscriptionPlan.model';
 import * as jose from 'jose';
 
 

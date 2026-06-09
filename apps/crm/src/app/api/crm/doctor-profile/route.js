@@ -99,7 +99,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
       'state', 'city', 'pincode', 'profileImage', 'qualification',
       'registrationYear', 'physicalConsultationStartTime', 'physicalConsultationEndTime',
       'faculty', 'assistantName', 'assistantContact', 'doctorAvailability',
-      'landline', 'workingWithHospital', 'videoConsultation'
+      'landline', 'workingWithHospital', 'videoConsultation', 'notificationPreferences'
     ];
 
     // Update fields

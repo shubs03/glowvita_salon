@@ -35,8 +35,44 @@ export const GET = authMiddlewareAdmin(async (req) => {
       console.warn('Warning: Could not ensure indexes:', e.message);
     }
 
-    console.log('Fetching social media templates...');
-    const templates = await TemplateModel.find({})
+    console.log('Fetching social media templates (admin originals only)...');
+    
+    // Self-healing migration for old customized templates
+    try {
+      const unlinkedCopies = await TemplateModel.find({
+        parentTemplateId: null,
+        title: { $regex: /\s*-\s*(Edited|Customized|My Design)$/i }
+      });
+
+      if (unlinkedCopies.length > 0) {
+        console.log(`[Migration] Found ${unlinkedCopies.length} unlinked vendor copies in Admin GET. Healing...`);
+        for (const copy of unlinkedCopies) {
+          const copyTitleClean = copy.title.replace(/\s*-\s*(Edited|Customized|My Design)$/i, '').trim().toLowerCase();
+          // Find original template with the clean name
+          const originalMatch = await TemplateModel.findOne({
+            parentTemplateId: null,
+            title: { $regex: new RegExp(`^${copyTitleClean}$`, 'i') },
+            _id: { $ne: copy._id }
+          });
+
+          if (originalMatch) {
+            console.log(`[Migration] Linking ${copy.title} (ID: ${copy._id}) to original (ID: ${originalMatch._id})`);
+            await TemplateModel.updateOne(
+              { _id: copy._id },
+              {
+                $set: {
+                  parentTemplateId: originalMatch._id,
+                  vendorId: copy.createdBy
+                }
+              }
+            );
+          }
+        }
+      }
+    } catch (migrationErr) {
+      console.error('[Migration] Failed running template self-healing in Admin:', migrationErr);
+    }
+    const templates = await TemplateModel.find({ parentTemplateId: null })
       .select('-__v -createdAt -updatedAt')
       .sort({ createdAt: -1 })
       .lean()
@@ -125,12 +161,23 @@ export const POST = authMiddlewareAdmin(async (req) => {
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      body = Object.fromEntries(formData.entries());
-      const imageFile = formData.get('image');
-      if (imageFile && imageFile instanceof File) {
-        const arrayBuffer = await imageFile.arrayBuffer();
+      body = {};
+      for (const [key, value] of formData.entries()) {
+        if (!(value instanceof File)) {
+          body[key] = value;
+        }
+      }
+      
+      const previewImage = formData.get('previewImage');
+      const backgroundImage = formData.get('backgroundImage');
+
+      if (previewImage && typeof previewImage === 'string') {
+        body.previewImage = previewImage;
+      }
+      if (backgroundImage && backgroundImage instanceof File) {
+        const arrayBuffer = await backgroundImage.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        body.image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
+        body.backgroundImage = `data:${backgroundImage.type};base64,${buffer.toString('base64')}`;
       }
     } else {
       body = await req.json();
@@ -148,37 +195,32 @@ export const POST = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ success: false, message: `Missing required fields: ${missingFields.join(', ')}` }, { status: 400 });
     }
 
-    if (image && !image.startsWith('data:image/')) {
-      return NextResponse.json({ success: false, message: 'Invalid image format. Must be a base64 encoded image.' }, { status: 400 });
+    // Handle background image upload
+    let backgroundUrl = '';
+    if (body.backgroundImage && body.backgroundImage.startsWith('data:image/')) {
+      const fileName = `social-media-template-bg-${Date.now()}`;
+      backgroundUrl = await uploadBase64(body.backgroundImage, fileName);
     }
 
-    const existingTemplate = await SocialMediaTemplate.findOne({ title: { $regex: new RegExp(`^${title.trim()}$`, 'i') } });
-    if (existingTemplate) {
-      return NextResponse.json({ success: false, message: "A template with this title already exists" }, { status: 400 });
-    }
-
-    // Handle image upload if provided
+    // Handle preview image upload
     let imageUrl = '';
-    if (image) {
-      if (!image.startsWith('data:image/')) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Invalid image format. Must be a base64 encoded image.'
-          },
-          { status: 400 }
-        );
-      }
+    if (body.previewImage && body.previewImage.startsWith('data:image/')) {
+      const fileName = `social-media-template-preview-${Date.now()}`;
+      imageUrl = await uploadBase64(body.previewImage, fileName);
+    } else {
+      imageUrl = backgroundUrl;
+    }
 
-      // Upload image to VPS
-      const fileName = `social-media-template-${Date.now()}`;
-      imageUrl = await uploadBase64(image, fileName);
+    if (!imageUrl && !backgroundUrl) {
+      // It's allowed to have no image, but if they tried we should probably handle it.
+    }
 
-      if (!imageUrl) {
-        return NextResponse.json(
-          { success: false, message: "Failed to upload image" },
-          { status: 500 }
-        );
+    let parsedJsonData = null;
+    if (body.jsonData) {
+      try {
+        parsedJsonData = typeof body.jsonData === 'string' ? JSON.parse(body.jsonData) : body.jsonData;
+      } catch (e) {
+        console.error("Failed to parse jsonData", e);
       }
     }
 
@@ -192,7 +234,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       updatedBy: user._id,
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
       imageUrl: imageUrl, // Save the image url for preview cards
-      jsonData: {
+      jsonData: parsedJsonData || {
         "version": "5.3.0",
         "objects": [
           {
@@ -286,12 +328,20 @@ export const POST = authMiddlewareAdmin(async (req) => {
             "editable": true
           }
         ],
-        "background": {
+        "backgroundImage": {
           "type": "image",
           "src": imageUrl // Correctly format for Fabric.js
         }
       }
     };
+
+    if (parsedJsonData && backgroundUrl) {
+      if (templateData.jsonData.backgroundImage) {
+        templateData.jsonData.backgroundImage.src = backgroundUrl;
+      } else {
+        templateData.jsonData.backgroundImage = { type: 'image', src: backgroundUrl };
+      }
+    }
 
     const newTemplate = await SocialMediaTemplate.create(templateData);
 
@@ -335,15 +385,26 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
     if (contentType.includes('multipart/form-data')) {
       // Handle FormData
       const formData = await req.formData();
-      body = Object.fromEntries(formData.entries());
 
-      // Convert File to base64 if present
-      const imageFile = formData.get('imageFile');
-      if (imageFile && imageFile instanceof File) {
-        const arrayBuffer = await imageFile.arrayBuffer();
+      body = {};
+      for (const [key, value] of formData.entries()) {
+        if (!(value instanceof File)) {
+          body[key] = value;
+        }
+      }
+
+      const previewImage = formData.get('previewImage');
+      const backgroundImage = formData.get('backgroundImage');
+
+      if (previewImage && typeof previewImage === 'string') {
+        body.previewImage = previewImage;
+      }
+
+      if (backgroundImage && backgroundImage instanceof File) {
+        // New file uploaded — convert to base64
+        const arrayBuffer = await backgroundImage.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
-        body.image = base64Image;
+        body.backgroundImage = `data:${backgroundImage.type};base64,${buffer.toString('base64')}`;
       }
     } else {
       // Handle JSON
@@ -402,9 +463,10 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
     }
 
     // Check for duplicate title (case insensitive, excluding current template)
+    const escapedTitle = title.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const duplicateTemplate = await SocialMediaTemplate.findOne({
       _id: { $ne: id },
-      title: { $regex: new RegExp(`^${title.trim()}$`, 'i') }
+      title: { $regex: new RegExp(`^${escapedTitle}$`, 'i') }
     });
 
     if (duplicateTemplate) {
@@ -417,76 +479,74 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       );
     }
 
+    // Parse updated jsonData if provided
+    let parsedJsonData = existingTemplate.jsonData;
+    if (body.jsonData) {
+      try {
+        parsedJsonData = typeof body.jsonData === 'string' ? JSON.parse(body.jsonData) : body.jsonData;
+      } catch (e) {
+        console.error("Failed to parse jsonData", e);
+      }
+    }
+
     // Update template data
+    const safeDescription = (description || '').toString().trim();
+    const safeStatus = (status || existingTemplate.status || 'Draft').toString();
     const updateData = {
       title: title.trim(),
       category: category.trim(),
       availableFor: availableFor.trim(),
-      description: description.trim(),
-      status,
+      description: safeDescription,
+      status: safeStatus,
       updatedBy: user._id,
-      isActive: body.isActive !== undefined ? body.isActive : existingTemplate.isActive
+      isActive: body.isActive !== undefined ? body.isActive : existingTemplate.isActive,
+      jsonData: parsedJsonData
     };
 
-    // Handle image upload if provided
-    if (image !== undefined) {
-      if (image) {
-        if (image.startsWith('http') || image.startsWith('/uploads/')) {
-          // Retain existing image, no upload necessary
-        } else if (!image.startsWith('data:image/')) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: 'Invalid image format. Must be a base64 encoded image.'
-            },
-            { status: 400 }
-          );
-        } else {
-          // Upload new image to VPS
-          const fileName = `social-media-template-${Date.now()}`;
-          const imageUrl = await uploadBase64(image, fileName);
+    // Handle background image upload if provided
+    if (body.backgroundImage !== undefined) {
+      if (body.backgroundImage && typeof body.backgroundImage === 'string' && body.backgroundImage.trim() !== '') {
+        if (body.backgroundImage.startsWith('data:image/')) {
+          const fileName = `social-media-template-bg-${Date.now()}`;
+          const bgUrl = await uploadBase64(body.backgroundImage, fileName);
 
-          if (!imageUrl) {
-            return NextResponse.json(
-              { success: false, message: "Failed to upload image" },
-              { status: 500 }
-            );
-          }
-
-          // Delete old image from VPS if it exists
-          if (existingTemplate.imageUrl) {
-            await deleteFile(existingTemplate.imageUrl);
-          }
-
-          // Update the imageUrl for the card preview
-          updateData.imageUrl = imageUrl;
-
-          // Update the background in jsonData
-          updateData.jsonData = {
-            ...existingTemplate.jsonData,
-            "background": {
-              "type": "image",
-              "src": imageUrl
+          if (bgUrl && updateData.jsonData) {
+            if (updateData.jsonData.backgroundImage) {
+              updateData.jsonData.backgroundImage.src = bgUrl;
+            } else {
+              updateData.jsonData.backgroundImage = { type: "image", src: bgUrl };
             }
-          };
+          }
         }
-      } else {
-        // If image is null/empty, remove it
-        updateData.imageUrl = '';
+      } else if (body.backgroundImage === '' || body.backgroundImage === null) {
+        // Background image explicitly cleared
+        if (updateData.jsonData) {
+           delete updateData.jsonData.backgroundImage;
+           delete updateData.jsonData.background;
+        }
+      }
+    }
 
-        // Delete old image from VPS if it exists
+    // Handle preview image upload if provided
+    if (body.previewImage !== undefined) {
+      if (body.previewImage && typeof body.previewImage === 'string' && body.previewImage.trim() !== '') {
+        if (body.previewImage.startsWith('data:image/')) {
+          const fileName = `social-media-template-preview-${Date.now()}`;
+          const previewUrl = await uploadBase64(body.previewImage, fileName);
+
+          if (previewUrl) {
+            if (existingTemplate.imageUrl && existingTemplate.imageUrl !== previewUrl) {
+              await deleteFile(existingTemplate.imageUrl);
+            }
+            updateData.imageUrl = previewUrl;
+          }
+        }
+      } else if (body.previewImage === '' || body.previewImage === null) {
+        // Preview explicitly cleared
+        updateData.imageUrl = '';
         if (existingTemplate.imageUrl) {
           await deleteFile(existingTemplate.imageUrl);
         }
-
-        // Update the background in jsonData
-        updateData.jsonData = {
-          ...existingTemplate.jsonData,
-          "background": {
-            "type": "image",
-            "src": ''
-          }
-        };
       }
     }
 

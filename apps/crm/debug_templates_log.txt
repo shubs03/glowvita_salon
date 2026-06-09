@@ -1,0 +1,10 @@
+=== DIAGNOSTIC DB TEMPLATES ===
+Time: 2026-06-05T08:49:41.645Z
+vendorId from req.user.userId: 69fad8c14e0484fe13261e48
+Title: "Birthdays", ID: 6a1e89ae9b64ea14ab168da6, vendorId: undefined, parentTemplateId: undefined, createdBy: 696a04595a656b61ce858806, isActive: true
+Title: "Birthday Template", ID: 6a227039c153480e9e010976, vendorId: undefined, parentTemplateId: undefined, createdBy: 696a04595a656b61ce858806, isActive: true
+Title: "Birthday Template - Edited", ID: 6a2271ee9941da9ad69f2e1e, vendorId: 69fad8c14e0484fe13261e48, parentTemplateId: 6a227039c153480e9e010976, createdBy: 69fad8c14e0484fe13261e48, isActive: true
+Title: "Birthday Template - Edited", ID: 6a2273b79941da9ad69f2e64, vendorId: 69fad8c14e0484fe13261e48, parentTemplateId: 6a227039c153480e9e010976, createdBy: 69fad8c14e0484fe13261e48, isActive: true
+Title: "Birthday Template - Edited", ID: 6a2273d39941da9ad69f2e6b, vendorId: 69fad8c14e0484fe13261e48, parentTemplateId: 6a227039c153480e9e010976, createdBy: 69fad8c14e0484fe13261e48, isActive: true
+Title: "Birthdays - Edited", ID: 6a228b355c794706ddebd68c, vendorId: 69fad8c14e0484fe13261e48, parentTemplateId: 6a1e89ae9b64ea14ab168da6, createdBy: 69fad8c14e0484fe13261e48, isActive: true
+=== END DIAGNOSTIC ===

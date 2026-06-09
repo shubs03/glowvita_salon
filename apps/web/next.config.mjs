@@ -64,7 +64,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'data//:base64dkjfgndkjgnbfgkjbnjkgnfjkbnjdkfgnvkjfdngvkjdfngkjndfkjn',
+        hostname: 'glowvitasalon.com',
         port: '',
         pathname: '/**',
       },

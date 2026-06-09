@@ -38,7 +38,9 @@ import {
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
-
+import Cookies from "js-cookie";
+import { NotificationDropdown } from "./NotificationDropdown";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface User {
   firstName?: string;
@@ -244,9 +246,16 @@ export function MarketingHeader({
                 )}
               </>
             )}
-
+            <div className="mx-2">
+              <ThemeToggle />
+            </div>
             {!isLoading && (
               <>
+                {isAuthenticated && user && (
+                  <div className="mr-2">
+                    <NotificationDropdown apiEndpoint="/api/notifications" />
+                  </div>
+                )}
                 {isAuthenticated && user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -336,7 +345,12 @@ export function MarketingHeader({
 
           {/* Mobile Nav Toggle */}
           <div className="lg:hidden flex items-center gap-2">
-
+            {!isLoading && isAuthenticated && user && (
+              <div className="mr-1">
+                <NotificationDropdown apiEndpoint="/api/notifications" />
+              </div>
+            )}
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"

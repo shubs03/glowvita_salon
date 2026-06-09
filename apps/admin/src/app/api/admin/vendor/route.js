@@ -4,6 +4,7 @@ import ClientModel from "@repo/lib/models/Vendor/Client.model";
 import PlanModel from "@repo/lib/models/admin/SubscriptionPlan";
 import RegionModel from "@repo/lib/models/admin/Region.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
+import { NotificationService } from "@repo/lib";
 import bcrypt from "bcryptjs";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 import { buildRegionQueryFromRequest, validateAndLockRegion, hasPermission, forbiddenResponse } from "@repo/lib";
@@ -335,6 +336,18 @@ export const POST = authMiddlewareAdmin(
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Trigger Registration Notification
+    (async () => {
+      try {
+        await NotificationService.sendRegistrationAlert(newVendor._id.toString(), 'vendor', {
+          name: newVendor.firstName,
+          role: 'Vendor'
+        });
+      } catch (err) {
+        console.error('Registration Notification Error:', err);
+      }
+    })();
 
     // Remove password from response
     const vendorData = newVendor.toObject();
@@ -715,6 +728,15 @@ export const PATCH = authMiddlewareAdmin(
         }
       }
 
+      // Trigger Notification for Vendor Approval
+      (async () => {
+        try {
+          await NotificationService.sendApprovalAlert(id, 'vendor', status);
+        } catch (err) {
+          console.error('Vendor Approval Notification Error:', err);
+        }
+      })();
+
       return Response.json({
         message: `Vendor ${status === "Approved" ? "Approved" : "Disapproved"} successfully`,
         vendor: updatedVendor,
@@ -782,6 +804,22 @@ export const PATCH = authMiddlewareAdmin(
       if (!updatedVendor) {
         return Response.json({ message: "Vendor not found" }, { status: 404 });
       }
+
+      // Trigger Notification for Document Status Update
+      (async () => {
+        try {
+          const docLabels = {
+            'aadharCard': 'Aadhar Card',
+            'udyogAadhar': 'Udyog Aadhar',
+            'udhayamCert': 'Udhayam Certificate',
+            'shopLicense': 'Shop License',
+            'panCard': 'PAN Card'
+          };
+          await NotificationService.sendDocumentAlert(vendorId, 'vendor', docLabels[documentType] || documentType, status, rejectionReason);
+        } catch (err) {
+          console.error('Document Status Notification Error:', err);
+        }
+      })();
 
       return Response.json({
         message: `Document ${status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Reset to Pending"} successfully`,

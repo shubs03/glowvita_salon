@@ -477,7 +477,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                               </span>
                               {template.price > 0 && (
                                 <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-semibold">
-                                  ${template.price.toFixed(2)}
+                                  ₹{template.price.toFixed(2)}
                                 </span>
                               )}
                             </div>
@@ -543,13 +543,13 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                       </div>
                       <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                         <Checkbox
-                          id="type-whatsapp"
-                          checked={campaignTypes.includes('WhatsApp')}
-                          onCheckedChange={(checked) => handleCampaignTypeToggle('WhatsApp', checked as boolean)}
+                          id="type-notification"
+                          checked={campaignTypes.includes('Notification')}
+                          onCheckedChange={(checked) => handleCampaignTypeToggle('Notification', checked as boolean)}
                           className="data-[state=checked]:bg-primary"
                         />
-                        <Label htmlFor="type-whatsapp" className="font-medium cursor-pointer flex-1">
-                          WhatsApp
+                        <Label htmlFor="type-notification" className="font-medium cursor-pointer flex-1">
+                          Notification
                         </Label>
                       </div>
                     </div>

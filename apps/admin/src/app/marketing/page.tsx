@@ -364,15 +364,14 @@ export default function PlatformMarketingPage() {
   };
 
   const handleSocialMediaTemplateSubmit = async (formData: FormData) => {
+    const isEdit = isEditSocialMediaTemplateMode && (selectedSocialMediaTemplate?.id || selectedSocialMediaTemplate?._id);
     try {
-      const isEdit = isEditSocialMediaTemplateMode && (selectedSocialMediaTemplate?.id || selectedSocialMediaTemplate?._id);
-      
       if (isEdit) {
-        // For updates, we need to send the ID in the query params and the data in the body
-        await updateSocialMediaTemplate({ 
-          id: selectedSocialMediaTemplate._id || selectedSocialMediaTemplate.id, 
-          ...Object.fromEntries(formData.entries()) 
-        }).unwrap();
+        const id = selectedSocialMediaTemplate._id || selectedSocialMediaTemplate.id;
+        // Build a fresh FormData so RTK Query sends it correctly as multipart
+        const updateFormData = new FormData();
+        formData.forEach((value, key) => updateFormData.append(key, value));
+        await updateSocialMediaTemplate({ id, data: updateFormData }).unwrap();
       } else {
         // For creates, send the FormData directly
         await createSocialMediaTemplate(formData).unwrap();
@@ -383,7 +382,11 @@ export default function PlatformMarketingPage() {
       setSelectedSocialMediaTemplate(null);
       refetchSocialMediaTemplates();
     } catch (error: any) {
+      const msg = error?.data?.message || error?.message || 'Failed to save template';
       console.error('Failed to save social media template:', error);
+      toast.error(msg);
+      // Re-throw so the form's own error handler is also aware
+      throw error;
     }
   };
   
@@ -697,30 +700,30 @@ export default function PlatformMarketingPage() {
                                             </span>
                                         </TableCell>
                                         <TableCell>
-                                            {(() => {
-                                                const imageSrc = template.imageUrl;
-                                                
-                                                if (imageSrc) {
-                                                    const isBase64 = imageSrc.startsWith('data:image');
-                                                    const src = isBase64 ? imageSrc : imageSrc.startsWith('http') || imageSrc.startsWith('/') ? imageSrc : `${process.env.NEXT_PUBLIC_API_URL || ''}/uploads/${imageSrc}`;
-                                                        
-                                                    return (
-                                                        <div className="h-20 w-20 rounded-md overflow-hidden border">
-                                                            <img 
-                                                                src={src}
-                                                                alt={template.title || 'Post image'} 
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        </div>
-                                                    );
-                                                }
-                                                
-                                                return (
-                                                    <div className="h-20 w-20 rounded-md bg-gray-100 flex items-center justify-center">
-                                                        <span className="text-gray-400 text-xs text-center">No image</span>
-                                                    </div>
-                                                );
-                                            })()}
+                                            {template.imageUrl ? (
+                                                <div className="h-20 w-20 rounded-md overflow-hidden border bg-gray-50">
+                                                    <img
+                                                        src={template.imageUrl}
+                                                        alt={template.title || 'Template preview'}
+                                                        className="h-full w-full object-cover"
+                                                        onError={(e) => {
+                                                            // Fallback: try relative path in case URL port differs
+                                                            const target = e.currentTarget;
+                                                            if (!target.dataset.fallback && target.src.startsWith('http')) {
+                                                                target.dataset.fallback = '1';
+                                                                try {
+                                                                    const u = new URL(target.src);
+                                                                    target.src = u.pathname;
+                                                                } catch { /* leave broken */ }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="h-20 w-20 rounded-md bg-gray-100 flex items-center justify-center">
+                                                    <span className="text-gray-400 text-xs text-center">No image</span>
+                                                </div>
+                                            )}
                                         </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end space-x-2">

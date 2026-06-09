@@ -70,8 +70,11 @@ export function SmsPackagesTab() {
     });
   };
 
-  // Use the active package SMS count as the "current balance"
-  const currentBalance = purchaseHistoryData?.data?.activePackageInfo?.packageSmsCount || 0;
+  // Calculate the total original SMS count of all active packages
+  const activePackages = purchaseHistoryData?.data?.purchases?.filter(
+    (p: PurchaseHistory) => p.status === 'active' && new Date(p.expiryDate) > new Date()
+  ) || [];
+  const currentBalance = activePackages.reduce((sum: number, pkg: PurchaseHistory) => sum + pkg.smsCount, 0);
 
   return (
     <Card>

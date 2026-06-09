@@ -5,6 +5,7 @@ import { createJwt } from '@repo/lib/auth';
 import { hashPassword } from '@repo/lib/hashing';
 import { cookies } from 'next/headers';
 import { ReferralModel, C2CSettingsModel } from '@repo/lib/models/admin/Reffer';
+import { NotificationService } from '@repo/lib';
 
 // Function to generate unique referral code
 const generateReferralCode = async (firstName, lastName) => {
@@ -186,7 +187,21 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Internal server error. Please try again later.' }, { status: 500 });
     }
 
-    // Create referral entry
+    // Trigger Registration Notification
+    (async () => {
+      try {
+        await NotificationService.sendRegistrationAlert(user._id.toString(), 'client', {
+          name: user.firstName,
+          role: 'Customer'
+        });
+        // Notify Admin
+        await NotificationService.sendAdminAlert('New User Registration', `New customer registered: ${user.firstName} ${user.lastName} (${user.emailAddress})`);
+      } catch (err) {
+        console.error('Registration Notification Error:', err);
+      }
+    })();
+
+    // Create referral entry if user was referred by someone
     if (referringUser && referralCode) {
       try {
         const { C2VSettingsModel, ReferralModel } = await import('@repo/lib/models/admin/Reffer');
@@ -220,6 +235,28 @@ export async function POST(req) {
           bonus: bonusString,
         });
 
+        console.log('Referral entry created successfully');
+
+        // Trigger Referral Notifications
+        (async () => {
+          try {
+            // Notify Referee
+            await NotificationService.sendReferralAlert(user._id.toString(), 'client', {
+              referrerName: referringUser.firstName,
+              rewardAmount: bonusAmount,
+              status: 'pending'
+            });
+
+            // Notify Referrer
+            await NotificationService.sendReferralAlert(referringUser._id.toString(), 'client', {
+              referrerName: user.firstName,
+              rewardAmount: bonusAmount,
+              status: 'new_referral'
+            });
+          } catch (err) {
+            console.error('Referral Notification Error:', err);
+          }
+        })();
         console.log(`Referral entry created: ${referringUserType} refers User (${referralType})`);
 
         // Check if bonus should be credited on signup

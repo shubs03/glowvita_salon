@@ -8,6 +8,7 @@ import {
   authMiddlewareCRM,
 } from "../../../../middlewareCrm";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+import { NotificationService } from "@repo/lib";
 
 // Predefined options for validation
 const validSpecialties = [
@@ -216,6 +217,24 @@ export const POST = authMiddlewareCrm(
       regionId: parentRegionId,
     });
 
+    // Trigger Offer Notification if Active
+    if (newOffer.status === 'Active') {
+      (async () => {
+        try {
+          // Typically vendors/doctors notify their own clients
+          // But for now, we can notify ALL_CLIENTS or implement filter by businessId
+          await NotificationService.sendOfferAlert('ALL_CLIENTS', 'client', {
+            title: `${businessName} Offer: ${newOffer.code}`,
+            message: `Special discount! Get ${newOffer.value}${newOffer.type === 'percentage' ? '%' : ' OFF'}.`,
+            offerCode: newOffer.code,
+            expiryDate: newOffer.expires
+          });
+        } catch (err) {
+          console.error('Offer Notification Error:', err);
+        }
+      })();
+    }
+
     return Response.json(
       { message: "Offer created successfully", offer: newOffer },
       { status: 201 }
@@ -419,6 +438,22 @@ export const PUT = authMiddlewareCrm(
         { ...updateData, updatedAt: new Date() },
         { new: true }
       );
+
+      // Trigger Offer Notification if status changed to Active
+      if (updatedOffer && offer.status !== 'Active' && updatedOffer.status === 'Active') {
+        (async () => {
+          try {
+            await NotificationService.sendOfferAlert('ALL_CLIENTS', 'client', {
+              title: `Offer Live: ${updatedOffer.code}`,
+              message: `New savings from ${updatedOffer.businessType}! Get ${updatedOffer.value}${updatedOffer.type === 'percentage' ? '%' : ' OFF'}.`,
+              offerCode: updatedOffer.code,
+              expiryDate: updatedOffer.expires
+            });
+          } catch (err) {
+            console.error('Offer Notification Error:', err);
+          }
+        })();
+      }
 
       return Response.json({ 
         success: true,

@@ -16,9 +16,8 @@ const adminNotificationSchema = new mongoose.Schema({
     enum: ['SMS', 'Email', 'Notification'],
   }],
   targetType: {
-    type: String,
+    type: [String],
     required: true,
-    enum: ['all_users', 'all_vendors', 'all_staff', 'all_admins', 'specific_users', 'specific_vendors'],
   },
   specificIds: [{
     type: String,
@@ -47,8 +46,11 @@ const adminNotificationSchema = new mongoose.Schema({
   },
 });
 
-const CustomPushNotificationAdminModel =
-  mongoose.models.adminCustomPushNotification ||
-  mongoose.model("adminCustomPushNotification", adminNotificationSchema);
+// Force delete model to ensure schema updates during development hot-reloading
+if (mongoose.models.adminCustomPushNotification) {
+  delete mongoose.models.adminCustomPushNotification;
+}
+
+const CustomPushNotificationAdminModel = mongoose.model("adminCustomPushNotification", adminNotificationSchema);
 
 export default CustomPushNotificationAdminModel;

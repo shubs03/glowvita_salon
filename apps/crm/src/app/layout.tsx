@@ -13,6 +13,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { CrmAuthInitializer } from '@/components/CrmAuthInitializer';
 import { Toaster } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import NotificationManager from '@/utils/NotificationManager';
+import { toast } from 'sonner';
 
 // Define types for the user and subscription data
 interface Subscription {
@@ -142,6 +144,32 @@ export default function RootLayout({
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password');
   const isNotFoundPage = pathname === '/not-found';
+
+  useEffect(() => {
+    // Initialize CRM Notifications
+    const setupCrmNotifications = async () => {
+      try {
+        await NotificationManager.requestPermission();
+        NotificationManager.onMessageListener((payload) => {
+          if (payload?.notification) {
+            toast(payload.notification.title, {
+              description: payload.notification.body,
+              action: payload.data?.url ? {
+                label: 'View',
+                onClick: () => window.location.href = payload.data.url
+              } : undefined
+            });
+          }
+        });
+      } catch (err) {
+        console.error('CRM Notification Setup Error:', err);
+      }
+    };
+
+    if (isPanelPage) {
+      setupCrmNotifications();
+    }
+  }, [isPanelPage]);
 
   let layoutContent: React.ReactNode;
 
