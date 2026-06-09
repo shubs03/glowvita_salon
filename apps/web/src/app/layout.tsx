@@ -30,7 +30,7 @@ export default function RootLayout({
     const setupNotifications = async () => {
       try {
         await NotificationManager.requestPermission();
-        NotificationManager.onMessageListener((payload) => {
+        NotificationManager.onMessageListener((payload: any) => {
           if (payload?.notification) {
             toast(payload.notification.title, {
               description: payload.notification.body,

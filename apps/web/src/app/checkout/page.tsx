@@ -531,13 +531,9 @@ export default function CheckoutPage() {
           throw new Error('Razorpay SDK not loaded');
         }
 
-
-
         // Determine method sequence based on selection
-        let displaySequence = ['block.upi', 'card', 'netbanking'];
-        if (paymentMethod === 'upi') displaySequence = ['block.upi'];
-        else if (paymentMethod === 'credit-card') displaySequence = ['card'];
-        else if (paymentMethod === 'netbanking') displaySequence = ['netbanking'];
+        // Show all payment methods (UPI, Card, NetBanking)
+        const displaySequence = ['block.upi', 'card', 'netbanking'];
 
         // Initialize Razorpay payment
         const options = {
