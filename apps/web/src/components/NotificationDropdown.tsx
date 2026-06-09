@@ -53,7 +53,7 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
 
     // INSTANT UPDATE: Listen for the sound signal to refresh the bell icon IMMEDIATELY
     const setupInstantSync = () => {
-      NotificationManager.onMessageListener((payload) => {
+      NotificationManager.onMessageListener((payload: any) => {
         console.log('[BellIcon] Instant signal received, refreshing count...');
         fetchNotifications();
       });
