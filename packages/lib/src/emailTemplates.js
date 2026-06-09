@@ -54,7 +54,9 @@ export const getCompletionTemplate = ({
     serviceName,
     appointmentId,
     appointmentDate,
+    appointmentTime,
     completedDate,
+    completedTime,
     orderTotal,
     location,
     businessAddress,
@@ -133,11 +135,11 @@ export const getCompletionTemplate = ({
                     </div>
                     <div class="order-row">
                         <div class="order-col-left">Appointment Date:</div>
-                        <div class="order-col-right">${appointmentDate || completedDate}</div>
+                        <div class="order-col-right">${appointmentDate || completedDate}${appointmentTime ? ` at ${appointmentTime}` : ''}</div>
                     </div>
                     <div class="order-row">
                         <div class="order-col-left">Completed on:</div>
-                        <div class="order-col-right">${completedDate}</div>
+                        <div class="order-col-right">${completedDate}${completedTime ? ` at ${completedTime}` : ''}</div>
                     </div>
                     
                     <div class="divider"></div>

@@ -238,12 +238,13 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                     } else if (updateObject.status === 'completed' || updateObject.status === 'completed without payment') {
                         // Prepare Invoice HTML
                         let invoiceHtml;
+                        let invoice;
                         try {
                             console.log('Generating invoice template...');
 
                             // Fetch formal invoice
                             const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                            const invoice = await InvoiceModel.findOne({ appointmentId: updatedAppointment._id });
+                            invoice = await InvoiceModel.findOne({ appointmentId: updatedAppointment._id });
 
                             if (invoice) {
                                 invoiceHtml = getInvoiceTemplate({
@@ -345,7 +346,9 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                             serviceName: updatedAppointment.serviceName,
                             appointmentId: updatedAppointment.invoiceNumber || updatedAppointment._id.toString(),
                             appointmentDate: new Date(updatedAppointment.date || updatedAppointment.startTime || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                            appointmentTime: updatedAppointment.startTime,
                             completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                            completedTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
                             orderTotal: invoice?.totalAmount || updatedAppointment.totalAmount,
                             location: updatedAppointment.homeServiceLocation?.address || businessName,
                             businessAddress,
