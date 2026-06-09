@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo
 import NewAppointmentForm, { type Appointment as FormAppointment } from "../app/calendar/components/NewAppointmentForm";
 import { toast } from 'sonner';
 import { useCollectPaymentMutation, useGetAppointmentsQuery, useGetVendorProfileQuery, useGetStaffQuery, useGetVendorWeddingPackagesQuery } from '@repo/store/services/api';
+import { glowvitaApi } from '@repo/store/api';
 import { AppointmentInvoice } from './AppointmentInvoice';
 
 interface PaymentDetails {
@@ -195,6 +196,47 @@ export function AppointmentDetailView({
   );
   const weddingPackages = useMemo(() => weddingPackagesData?.data || [], [weddingPackagesData]);
 
+  // Build a price map for wedding sub-services from the catalog for fallback lookup
+  const weddingServicePriceMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    const pkgs = Array.isArray(weddingPackagesData?.weddingPackages)
+      ? weddingPackagesData.weddingPackages
+      : Array.isArray(weddingPackagesData?.data)
+        ? weddingPackagesData.data
+        : Array.isArray(weddingPackages)
+          ? weddingPackages
+          : [];
+    pkgs.forEach((pkg: any) => {
+      const services = pkg.services || [];
+      services.forEach((s: any) => {
+        const id = s.serviceId || s._id || s.id;
+        const price = Number(s.price || s.discountedPrice || s.amount || 0);
+        if (id && price > 0) map[String(id)] = price;
+      });
+    });
+    return map;
+  }, [weddingPackagesData, weddingPackages]);
+
+  // Fetch vendor services for catalog price fallback lookup
+  const vendorIdForServices = (vendorProfile as any)?.data?._id || (vendorProfile as any)?._id || '';
+  const { data: vendorServicesResponse } = glowvitaApi.useGetVendorServicesQuery(
+    { vendorId: vendorIdForServices, page: 1, limit: 200 },
+    { skip: !vendorIdForServices }
+  );
+  const catalogPriceMap = useMemo(() => {
+    let servicesArr: any[] = [];
+    if (vendorServicesResponse?.data?.services) servicesArr = vendorServicesResponse.data.services;
+    else if (vendorServicesResponse?.services) servicesArr = vendorServicesResponse.services;
+    else if (Array.isArray(vendorServicesResponse?.data)) servicesArr = vendorServicesResponse.data;
+    else if (Array.isArray(vendorServicesResponse)) servicesArr = vendorServicesResponse;
+    const map: Record<string, number> = {};
+    servicesArr.forEach((s: any) => {
+      const id = s._id || s.id;
+      if (id && s.price != null) map[id] = Number(s.price);
+    });
+    return map;
+  }, [vendorServicesResponse]);
+
   // Tax settings are already stored in the appointment data, no need to fetch separately
   // const { data: taxSettings } = useGetTaxFeeSettingsQuery(undefined);
 
@@ -344,16 +386,23 @@ export function AppointmentDetailView({
   // Calculate totals for services and add-ons
   const { totalBaseAmount, totalAddOnsAmount } = useMemo(() => {
     if (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0) {
-      const base = liveAppointment.serviceItems.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
+      const base = liveAppointment.serviceItems.reduce((sum: number, item: any) =>
+        sum + (Number(item.amount) || Number(item.price) || 0), 0);
       const addOns = liveAppointment.serviceItems.reduce((sum: number, item: any) => {
         const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
         return sum + itemAddOns.reduce((aSum: number, a: any) => aSum + (Number(a.price) || 0), 0);
       }, 0);
       return { totalBaseAmount: base, totalAddOnsAmount: addOns };
     }
+    // Fallback: use amount, but if it's 0 fall back to totalAmount / finalAmount
+    const singleBase =
+      Number(liveAppointment.amount) ||
+      Number((liveAppointment as any).totalAmount) ||
+      Number((liveAppointment as any).finalAmount) ||
+      0;
     return {
-      totalBaseAmount: Number(liveAppointment.amount) || 0,
-      totalAddOnsAmount: Number(liveAppointment.addOnsAmount) || 0
+      totalBaseAmount: singleBase,
+      totalAddOnsAmount: Number((liveAppointment as any).addOnsAmount) || 0
     };
   }, [liveAppointment]);
 
@@ -1080,7 +1129,45 @@ export function AppointmentDetailView({
         phone: (liveAppointment.client as any)?.phone || liveAppointment.clientPhone || ''
       },
       status: liveAppointment.status,
-      items: liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
+      items: liveAppointment.isWeddingService && (liveAppointment as any).weddingPackageDetails?.packageServices?.length
+        ? [
+            {
+              name: liveAppointment.serviceName,
+              price: liveAppointment.amount,
+              quantity: 1,
+              totalPrice: liveAppointment.amount,
+              discount: discountAmount,
+              staff: (() => {
+                const teamMembers = (liveAppointment as any).teamMembers || (liveAppointment as any).staffMembers || (liveAppointment as any).weddingPackageDetails?.teamMembers;
+                if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
+                  const names = teamMembers.map(resolveName).filter(Boolean);
+                  if (names.length > 0) return names.join(', ');
+                }
+                return resolveName(liveAppointment.staffName) || liveAppointment.staffName;
+              })(),
+              duration: liveAppointment.duration,
+              type: 'service'
+            },
+            ...(liveAppointment as any).weddingPackageDetails.packageServices.map((pkgService: any) => {
+              const weddingCatalogPrice = weddingServicePriceMap[String(pkgService.serviceId || pkgService._id || '')] || 0;
+              const vendorCatalogPrice = catalogPriceMap[String(pkgService.serviceId || pkgService._id || '')] || catalogPriceMap[String(pkgService.service || '')] || 0;
+              const catalogPrice = weddingCatalogPrice || vendorCatalogPrice;
+              const originalPrice = pkgService.originalAmount ?? pkgService.price ?? (catalogPrice > 0 ? catalogPrice : null);
+              const chargedAmount = Number(pkgService.amount || pkgService.price || catalogPrice || 0);
+              return {
+                name: pkgService.serviceName,
+                price: originalPrice !== null ? Number(originalPrice) : chargedAmount,
+                discountedPrice: chargedAmount,
+                quantity: 1,
+                totalPrice: 0,
+                discount: 0,
+                staff: pkgService.staffName || 'Wedding Team',
+                duration: pkgService.duration,
+                type: 'wedding_included_service'
+              };
+            })
+          ]
+        : liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
         {
           name: item.serviceName,
           price: item.amount,
@@ -1164,7 +1251,7 @@ export function AppointmentDetailView({
       paymentMethod: (liveAppointment as any).paymentMethod || liveAppointment.payment?.paymentMethod || null,
       couponCode: (liveAppointment as any).couponCode || ''
     };
-  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount, staffList]);
+  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount, staffList, weddingServicePriceMap]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -2016,7 +2103,7 @@ export function AppointmentDetailView({
                                   startTime: appointment.startTime,
                                   endTime: appointment.endTime,
                                   duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length),
-                                  amount: srv.amount || 0,
+                                  amount: Number(srv.amount || srv.price || srv.originalAmount || weddingServicePriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.service || '')] || 0),
                                   addOns: []
                                 };
                               })
@@ -2041,7 +2128,7 @@ export function AppointmentDetailView({
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium font-mono">
-                                        {item.amount > 0 ? formatCurrency(item.amount) : 'Bundled'}
+                                        {formatCurrency(item.amount)}
                                       </p>
                                     </div>
                                   </div>
