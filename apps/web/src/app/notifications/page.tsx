@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Bell, ShoppingBag, Calendar, Info, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
 import { cn } from "@repo/ui/cn";
 import { useRouter } from "next/navigation";
-import MarketingHeader from "../../components/MarketingHeader";
+import { MarketingHeader } from "../../components/MarketingHeader";
 
 interface Notification {
   _id: string;
@@ -112,9 +112,15 @@ export default function NotificationsPage() {
     });
   };
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
+
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <MarketingHeader />
+      <MarketingHeader
+        isMobileMenuOpen={isMobileMenuOpen}
+        toggleMobileMenu={toggleMobileMenu}
+      />
       
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -182,7 +188,7 @@ export default function NotificationsPage() {
                                         )}>
                                             {notification.title}
                                         </h3>
-                                        <Badge variant="ghost" className="text-[10px] whitespace-nowrap bg-slate-100 text-slate-500">
+                                        <Badge variant="secondary" className="text-[10px] whitespace-nowrap bg-slate-100 text-slate-500">
                                             <Clock className="h-3 w-3 mr-1" />
                                             {formatFullDate(notification.createdAt)}
                                         </Badge>

@@ -114,7 +114,7 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
   // ── Load Fabric ────────────────────────────────────────────────────────────
   useEffect(() => {
-    import("fabric").then(m => setFab(m.fabric || m.default || m))
+    import("fabric").then((m: any) => setFab(m.fabric || m.default || m))
       .catch(() => toast.error("Could not load design editor."));
   }, []);
 
@@ -485,7 +485,7 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
       console.warn("toDataURL failed:", e);
     }
 
-    return { jsonData, previewImage };
+    return { jsonData, previewImage: previewImage || "" };
   }, []);
 
   useImperativeHandle(ref, () => ({

@@ -91,11 +91,19 @@ export function InvoiceUI({
     setIsPopupOpen(true);
   };
 
+  // Robust tax rate calculation
+  const numTax = Number(invoiceData.tax) || 0;
+  const numSubtotal = Number(invoiceData.subtotal) || 0;
+  const numDiscount = Number(invoiceData.discount) || 0;
+  const taxableAmount = (numSubtotal - numDiscount) > 0 ? (numSubtotal - numDiscount) : numSubtotal;
+  const calculatedTaxRate = (numTax > 0 && taxableAmount > 0) ? Math.round((numTax / taxableAmount) * 100) : 0;
+  const outerDisplayTaxRate = Number(taxRate) > 0 ? Number(taxRate) : calculatedTaxRate;
+
   // Determine tax label
   const taxLabel =
     taxType === "fixed"
       ? "Tax (Fixed):"
-      : `Tax (${taxRate}%):`;
+      : `Tax (${outerDisplayTaxRate}%):`;
 
   return (
     <div
@@ -220,49 +228,74 @@ export function InvoiceUI({
             </tr>
           </thead>
           <tbody>
-            {invoiceData.items.map((item: any, index: number) => (
-              <tr
-                key={index}
-                className="border border-black cursor-pointer hover:bg-gray-50"
-                onClick={() => handleItemClick(item)}
-              >
-                <td className="border border-black p-1 sm:p-2 print:p-1">
-                  <div
-                    className={`font-semibold text-xs sm:text-sm text-black print:text-xs ${
-                      item.type === "addon" ? "pl-4" : ""
-                    }`}
-                  >
-                    {item.type === "addon" ? "+ " : ""}
-                    {isProduct(item) ? item.productName : item.name}
-                  </div>
-                  {item.staff && !isProduct(item) && (
+            {invoiceData.items.map((item: any, index: number) => {
+              const displayTaxRate = typeof item.tax === 'number' ? item.tax : (typeof item.taxRate === 'number' ? item.taxRate : outerDisplayTaxRate);
+              return (
+                <tr
+                  key={index}
+                  className="border border-black cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleItemClick(item)}
+                >
+                  <td className="border border-black p-1 sm:p-2 print:p-1">
                     <div
-                      className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${
-                        item.type === "addon" ? "pl-4" : ""
+                      className={`font-semibold text-xs sm:text-sm text-black print:text-xs ${
+                        item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
                       }`}
                     >
-                      Staff: {item.staff}
+                      {item.type === "addon" ? "+ " : item.type === "wedding_included_service" ? "└ " : ""}
+                      {isProduct(item) ? item.productName : item.name}
                     </div>
+                    {item.staff && !isProduct(item) && (
+                      <div
+                        className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${
+                          item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
+                        }`}
+                      >
+                        Staff: {item.staff}
+                      </div>
+                    )}
+                  </td>
+                  
+                  {item.type === "wedding_included_service" ? (
+                    <>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                        <div className="flex flex-col items-end gap-0.5">
+                          {item.price > (item.discountedPrice ?? item.price) && (
+                            <span className="line-through text-gray-400 text-[10px] leading-none">
+                              ₹{Number(item.price).toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-green-700 leading-none">
+                            ₹{Number(item.discountedPrice ?? item.price).toFixed(2)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1"></td>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1"></td>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1"></td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                        {item.price === 0 ? "Included" : `₹${Number(item.price || 0).toFixed(2)}`}
+                      </td>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                        {item.quantity}
+                      </td>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                        {item.totalPrice === 0 ? "Included" : `₹${(
+                          ((item.price || 0) * (item.quantity || 1) * displayTaxRate) /
+                          100
+                        ).toFixed(2)}`}
+                      </td>
+                      <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">
+                        {item.totalPrice === 0 ? "Included" : `₹${Number(item.totalPrice || 0).toFixed(2)}`}
+                      </td>
+                    </>
                   )}
-                </td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
-                  ₹{(item.price || 0).toFixed(2)}
-                </td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
-                  {item.quantity}
-                </td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
-                  ₹
-                  {(
-                    ((item.price || 0) * (item.quantity || 1) * taxRate) /
-                    100
-                  ).toFixed(2)}
-                </td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">
-                  ₹{(item.totalPrice || 0).toFixed(2)}
-                </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
 
             {/* Subtotal */}
             <tr className="border border-black">

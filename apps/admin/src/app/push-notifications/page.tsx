@@ -84,7 +84,7 @@ export default function PushNotificationsPage() {
         setTitle(data.title || '');
         setContent(data.content || '');
         setTypes(data.types || []);
-        setTargetType(data.targetType || 'all_users');
+        setTargetType(Array.isArray(data.targetType) ? data.targetType : [data.targetType || 'all_users']);
         setSelectedTargets(getSelectedTargetsFromData(data));
       } else if (modalType === 'edit' || modalType === 'view') {
         setTitle(data?.title || '');
@@ -473,7 +473,7 @@ export default function PushNotificationsPage() {
                       <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder={`Search for a ${targetType.split('_')[1].slice(0, -1)}...`}
+                          placeholder={`Search for a ${targetType.includes('specific_users') ? 'user' : 'vendor'}...`}
                           className="pl-8"
                           value={searchQuery}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}

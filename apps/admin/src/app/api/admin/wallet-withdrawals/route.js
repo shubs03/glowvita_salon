@@ -11,8 +11,6 @@ import {
   initiateRazorpayPayout
 } from "@repo/lib/utils/razorpayPayout";
 import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_ACCOUNT_NUMBER } from "@repo/config/config";
-import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
-import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import mongoose from "mongoose";
 

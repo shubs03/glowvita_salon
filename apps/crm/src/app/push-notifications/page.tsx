@@ -436,7 +436,7 @@ export default function PushNotificationsPage() {
                       </div>
                       {searchQuery && (
                         <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-                          {filteredTargets.map((target) => (
+                          {filteredTargets.map((target: Client) => (
                             <div key={target.id} className="flex items-center justify-between py-1 hover:bg-muted p-1 rounded-sm cursor-pointer" onClick={() => handleSelectTarget(target)}>
                               <span>{target.name}</span>
                               <Plus className="h-4 w-4" />

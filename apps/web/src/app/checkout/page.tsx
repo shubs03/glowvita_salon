@@ -54,7 +54,7 @@ export default function CheckoutPage() {
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('pay-online');
+  const [paymentMethod, setPaymentMethod] = useState<string>('pay-online');
   const [addressError, setAddressError] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
@@ -531,13 +531,9 @@ export default function CheckoutPage() {
           throw new Error('Razorpay SDK not loaded');
         }
 
-
-
         // Determine method sequence based on selection
-        let displaySequence = ['block.upi', 'card', 'netbanking'];
-        if (paymentMethod === 'upi') displaySequence = ['block.upi'];
-        else if (paymentMethod === 'credit-card') displaySequence = ['card'];
-        else if (paymentMethod === 'netbanking') displaySequence = ['netbanking'];
+        // Show all payment methods (UPI, Card, NetBanking)
+        const displaySequence = ['block.upi', 'card', 'netbanking'];
 
         // Initialize Razorpay payment
         const options = {
