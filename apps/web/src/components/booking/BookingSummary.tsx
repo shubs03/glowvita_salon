@@ -8,7 +8,7 @@ import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, C
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@repo/ui/cn';
-import { Service, StaffMember, SalonInfo, ServiceStaffAssignment } from '@/hooks/useBookingData';
+import { Service, StaffMember, SalonInfo, ServiceStaffAssignment, convertDurationToMinutes } from '@/hooks/useBookingData';
 import { useParams } from 'next/navigation';
 import { useGetPublicVendorStaffQuery } from '@repo/store/api';
 
@@ -165,6 +165,30 @@ export function BookingSummary({
 
       return acc + servicePrice + addonsPrice;
     }, 0));
+
+  // Calculate total duration dynamically, accounting for customized wedding packages
+  const totalDuration = useMemo(() => {
+    if (weddingPackage) {
+      if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
+        return customizedPackageServices.reduce((acc, service) => {
+          const serviceDuration = convertDurationToMinutes(service.duration);
+          const quantity = (service as any).quantity || 1;
+          return acc + (serviceDuration * quantity);
+        }, 0);
+      }
+      return weddingPackage.duration || 0;
+    }
+    return selectedServices.reduce((acc, service) => {
+      let serviceDuration = convertDurationToMinutes(service.duration);
+      if (service.selectedAddons && service.selectedAddons.length > 0) {
+        const addonsDuration = service.selectedAddons.reduce((sum, addon) => {
+          return sum + (Number(addon.duration) || 0);
+        }, 0);
+        serviceDuration += addonsDuration;
+      }
+      return acc + serviceDuration;
+    }, 0);
+  }, [weddingPackage, weddingPackageMode, customizedPackageServices, selectedServices]);
 
   const total = priceBreakdown?.finalTotal ?? subtotal;
 
@@ -416,7 +440,7 @@ export function BookingSummary({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Duration</span>
-                    <span className="font-medium">{weddingPackage.duration} min</span>
+                    <span className="font-medium">{totalDuration} min</span>
                   </div>
                   {weddingPackage.staffCount && (
                     <div className="flex justify-between text-sm">
