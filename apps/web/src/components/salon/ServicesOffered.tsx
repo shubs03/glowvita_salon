@@ -258,12 +258,12 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
               <div className="flex items-start gap-4 h-full">
                 <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden flex-shrink-0 bg-secondary/30">
                   <Image
-                    src={service.image || `https://placehold.co/400x400/png?text=${encodeURIComponent(service.name)}`}
+                    src={service.image || (service.isWeddingPackage ? '/images/wedding package placeholder.png' : `https://placehold.co/400x400/png?text=${encodeURIComponent(service.name)}`)}
                     alt={service.name}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  {!service.image && (
+                  {!service.image && !service.isWeddingPackage && (
                     <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20">
                       <Plus className="w-8 h-8" />
                     </div>

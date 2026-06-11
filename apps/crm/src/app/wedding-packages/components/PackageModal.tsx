@@ -229,19 +229,12 @@ export function PackageModal({
           <div className="space-y-6 py-4">
             {/* Banner/Hero section */}
             <div className="relative w-full h-[180px] sm:h-[220px] rounded-xl overflow-hidden shadow-inner border border-muted">
-              {formData.image ? (
-                <Image
-                  src={formData.image}
-                  alt={formData.name || "Wedding package preview"}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-r from-rose-100/55 via-amber-50/40 to-pink-100/55 dark:from-rose-950/20 dark:via-neutral-900 dark:to-pink-950/20 flex flex-col items-center justify-center p-4 text-center">
-                  <Sparkles className="h-10 w-10 text-primary/40 mb-2 animate-pulse" />
-                  <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Premium Salon Package</span>
-                </div>
-              )}
+              <Image
+                src={formData.image || '/images/wedding package placeholder.png'}
+                alt={formData.name || "Wedding package preview"}
+                fill
+                className="object-cover"
+              />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 sm:p-5 flex flex-col justify-end">
                 <span className="text-white text-xs font-semibold tracking-wider uppercase bg-primary/80 px-2 py-0.5 rounded-full w-fit mb-1">Wedding Collection</span>
                 <h3 className="text-white text-lg sm:text-2xl font-bold">{formData.name || "Unnamed Package"}</h3>
