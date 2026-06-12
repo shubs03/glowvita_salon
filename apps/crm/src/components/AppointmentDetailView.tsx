@@ -107,7 +107,9 @@ interface Appointment {
     totalAmount?: number;
     totalDuration?: number;
     venueAddress?: string;
+    travelTime?: number;
   };
+  travelTime?: number;
 
   // Additional properties used in this component
   payment?: PaymentDetails;
@@ -1455,7 +1457,7 @@ export function AppointmentDetailView({
                   onEmailClick={() => {
                     toast.success('Invoice email sent to client');
                   }}
-                  onRebookClick={() => {
+                  onRebookClick={(liveAppointment.isWeddingService || liveAppointment.isHomeService) ? undefined : () => {
                     setIsRescheduling(true);
                     setActiveTab('details');
                   }}
@@ -1485,7 +1487,7 @@ export function AppointmentDetailView({
                       {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
                     </Button>
                   )}
-                  {liveAppointment.status !== 'completed' && !isPaidOnline && (
+                  {liveAppointment.status !== 'completed' && !isPaidOnline && !liveAppointment.isWeddingService && !liveAppointment.isHomeService && (
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
@@ -2249,7 +2251,7 @@ export function AppointmentDetailView({
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</p>
                           <div className="space-y-1">
                             <p className="text-lg font-semibold text-foreground">
-                              {new Date(appointment.date).toLocaleDateString('en-US', {
+                              {new Date(liveAppointment.date).toLocaleDateString('en-US', {
                                 weekday: 'long',
                                 year: 'numeric',
                                 month: 'long',
@@ -2258,11 +2260,11 @@ export function AppointmentDetailView({
                             </p>
                             <div className="flex items-center flex-wrap gap-y-1 text-foreground/80">
                               <Clock className="h-4 w-4 mr-1.5 text-foreground" />
-                              <span>{appointment.startTime} - {appointment.endTime}</span>
-                              <span className="ml-2 text-xs text-muted-foreground">({appointment.duration} min)</span>
-                              {(appointment as any).travelTime ? (
+                              <span>{liveAppointment.startTime} - {liveAppointment.endTime}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">({liveAppointment.duration} min)</span>
+                              {(liveAppointment.travelTime || liveAppointment.weddingPackageDetails?.travelTime) ? (
                                 <span className="ml-2 text-[11px] text-muted-foreground font-medium flex items-center bg-muted/50 px-1.5 py-0.5 rounded border border-muted">
-                                  🚗 Travel: {(appointment as any).travelTime} min
+                                  🚗 Travel: {liveAppointment.travelTime || liveAppointment.weddingPackageDetails?.travelTime} min
                                 </span>
                               ) : null}
                             </div>

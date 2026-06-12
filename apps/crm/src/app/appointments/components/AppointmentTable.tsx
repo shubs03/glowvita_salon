@@ -225,7 +225,7 @@ const AppointmentTable = ({
                         {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && !(
                           ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web') &&
                           ((appointment as any).paymentStatus === 'completed' || (appointment as any).paymentStatus === 'paid' || (appointment as any).payment?.paymentStatus === 'completed' || (appointment as any).payment?.paymentStatus === 'paid')
-                        ) && (
+                        ) && !appointment.isWeddingService && !appointment.isHomeService && (
                             <Button
                               variant="ghost"
                               size="sm"

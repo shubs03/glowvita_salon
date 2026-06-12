@@ -93,7 +93,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
       }, 0);
       return { totalBaseAmount: base, originalTotalBaseAmount: originalBase, totalAddOnsAmount: addOns };
     }
-    
+
     const catalogPrice = catalogPriceMap[appointment.service] ?? null;
     const singleOriginal = (appointment as any).originalAmount ?? (appointment as any).price ?? catalogPrice;
     const originalBase = singleOriginal !== null ? Number(singleOriginal) : (Number(appointment.amount) || 0);
@@ -132,7 +132,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
         phone: (appointment as any).client?.phone || (appointment as any).clientPhone || ''
       },
       status: appointment.status,
-      items: appointment.isWeddingService && appointment.weddingPackageDetails?.packageServices?.length ? 
+      items: appointment.isWeddingService && appointment.weddingPackageDetails?.packageServices?.length ?
         [
           {
             name: appointment.serviceName,
@@ -164,47 +164,47 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             };
           })
         ]
-      : appointment.serviceItems?.length ? (appointment.serviceItems as any[]).flatMap(item => [
-        {
-          name: item.serviceName,
-          price: item.amount,
-          quantity: 1,
-          totalPrice: item.amount,
-          discount: 0,
-          staff: item.staffName,
-          duration: item.duration,
-          type: 'service'
-        },
-        ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
-          name: `${addOn.name} (Add-on)`,
-          price: addOn.price,
-          quantity: 1,
-          totalPrice: addOn.price,
-          discount: 0,
-          duration: addOn.duration,
-          type: 'addon'
-        })) : [])
-      ]) : [
-        {
-          name: appointment.serviceName,
-          price: appointment.amount,
-          quantity: 1,
-          totalPrice: appointment.amount,
-          discount: (appointment as any).discountAmount || 0,
-          staff: appointment.staffName,
-          duration: appointment.duration,
-          type: 'service'
-        },
-        ...((appointment as any).addOns || []).map((addOn: any) => ({
-          name: `${addOn.name} (Add-on)`,
-          price: addOn.price,
-          quantity: 1,
-          totalPrice: addOn.price,
-          discount: 0,
-          duration: addOn.duration,
-          type: 'addon'
-        }))
-      ],
+        : appointment.serviceItems?.length ? (appointment.serviceItems as any[]).flatMap(item => [
+          {
+            name: item.serviceName,
+            price: item.amount,
+            quantity: 1,
+            totalPrice: item.amount,
+            discount: 0,
+            staff: item.staffName,
+            duration: item.duration,
+            type: 'service'
+          },
+          ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
+            name: `${addOn.name} (Add-on)`,
+            price: addOn.price,
+            quantity: 1,
+            totalPrice: addOn.price,
+            discount: 0,
+            duration: addOn.duration,
+            type: 'addon'
+          })) : [])
+        ]) : [
+          {
+            name: appointment.serviceName,
+            price: appointment.amount,
+            quantity: 1,
+            totalPrice: appointment.amount,
+            discount: (appointment as any).discountAmount || 0,
+            staff: appointment.staffName,
+            duration: appointment.duration,
+            type: 'service'
+          },
+          ...((appointment as any).addOns || []).map((addOn: any) => ({
+            name: `${addOn.name} (Add-on)`,
+            price: addOn.price,
+            quantity: 1,
+            totalPrice: addOn.price,
+            discount: 0,
+            duration: addOn.duration,
+            type: 'addon'
+          }))
+        ],
       subtotal: Number(totalBaseAmount + totalAddOnsAmount),
       originalSubtotal: Number(originalTotalBaseAmount + totalAddOnsAmount),
       discount: Number(discountAmount > 0 ? discountAmount : (originalTotalBaseAmount > totalBaseAmount ? originalTotalBaseAmount - totalBaseAmount : 0)),
@@ -332,7 +332,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
               Invoice
             </Button>
           )}
-          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !(
+          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !appointment.isWeddingService && !appointment.isHomeService && !(
             ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web' || (appointment as any).bookingSource === 'web' || String((appointment as any).paymentMethod).toLowerCase() === 'pay online' || String((appointment as any).payment?.paymentMethod).toLowerCase() === 'pay online') &&
             (String((appointment as any).paymentStatus).toLowerCase() === 'completed' || String((appointment as any).paymentStatus).toLowerCase() === 'paid' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'completed' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'paid')
           ) && (
@@ -361,9 +361,14 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             <div className="text-lg font-medium">
               {format(new Date(appointment.date), 'MMMM d, yyyy')}
             </div>
-            <div className="flex items-center text-sm text-gray-600 mt-1">
-              <Clock className="h-4 w-4 mr-2 text-gray-400" />
-              {appointment.startTime} - {appointment.endTime} ({appointment.duration} min)
+            <div className="flex items-center text-sm text-gray-600 mt-1 flex-wrap gap-y-1">
+              <Clock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+              <span>{appointment.startTime} - {appointment.endTime} ({appointment.duration} min)</span>
+              {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime) ? (
+                <span className="ml-2 text-xs text-muted-foreground font-medium flex items-center bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                  🚗 Travel Time: {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime)} min
+                </span>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -594,11 +599,11 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
               </div>
             )}
             {remainingAmount > 0 && appointment.status !== 'cancelled' && onPaymentCollect && (
-              <Button 
+              <Button
                 onClick={onPaymentCollect}
                 className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white gap-2"
               >
-                 <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
+                <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
               </Button>
             )}
           </CardContent>
