@@ -85,7 +85,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   // Listen for real-time notifications to show popups (popups are for the foreground)
   useEffect(() => {
     if (isAdminAuthenticated) {
-      const unsubscribe = NotificationManager.onMessageListener((payload) => {
+      const unsubscribe = NotificationManager.onMessageListener((payload: any) => {
         console.log('[AdminLayout] FCM Message Received:', payload);
         const title = payload.notification?.title || payload.data?.title || 'System Alert';
         const body = payload.notification?.body || payload.data?.body || 'New update received';

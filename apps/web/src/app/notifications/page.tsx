@@ -22,8 +22,11 @@ interface Notification {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const apiEndpoint = '/api/notifications';
+
+  const toggleMobileMenu = useCallback(() => setIsMobileMenuOpen(prev => !prev), []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -114,7 +117,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <MarketingHeader />
+      <MarketingHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
       
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">

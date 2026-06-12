@@ -99,19 +99,19 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const vendors = await VendorModel.find(regionFilter).select('businessName ownerName contactNumber email regionId');
         console.log(`[Settlements] Found ${vendors.length} vendors in region`);
 
+        const vendorIds = vendors.map(vendor => vendor._id);
+
         // Build appointment query: date + region
         const appointmentMatchFilter = {
+            vendorId: { $in: vendorIds },
             date: { $gte: startDate, $lte: endDate },
             status: { $in: ['completed', 'partially-completed'] },
             $or: [
                 { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
                 { paymentMethod: 'Pay at Salon' },
                 { mode: 'online' }
-            ],
-            ...regionFilter
+            ]
         };
-
-        const vendorIds = vendors.map(vendor => vendor._id);
 
         const orderMatchFilter = {
             vendorId: { $in: vendorIds },
@@ -127,24 +127,36 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const openingStatsArray = await AppointmentModel.aggregate([
             {
                 $match: {
+                    vendorId: { $in: vendorIds },
                     date: { $lt: startDate },
                     status: { $in: ['completed', 'partially-completed'] },
                     $or: [
                         { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
                         { paymentMethod: 'Pay at Salon' },
                         { mode: 'online' }
-                    ],
-                    ...regionFilter
+                    ]
                 }
             },
             {
                 $group: {
                     _id: "$vendorId",
                     adminOwesVendor: {
-                        $sum: { $cond: [{ $eq: ["$paymentMethod", "Pay Online"] }, "$totalAmount", 0] }
+                        $sum: { 
+                            $cond: [
+                                { $eq: ["$paymentMethod", "Pay Online"] }, 
+                                { $subtract: ["$totalAmount", { $add: [{ $ifNull: ["$platformFee", 0] }, { $ifNull: ["$serviceTax", 0] }] }] }, 
+                                0
+                            ] 
+                        }
                     },
                     vendorOwesAdmin: {
-                        $sum: { $cond: [{ $eq: ["$paymentMethod", "Pay at Salon"] }, { $add: ["$platformFee", "$serviceTax"] }, 0] }
+                        $sum: { 
+                            $cond: [
+                                { $eq: ["$paymentMethod", "Pay at Salon"] }, 
+                                { $add: [{ $ifNull: ["$platformFee", 0] }, { $ifNull: ["$serviceTax", 0] }] }, 
+                                0
+                            ] 
+                        }
                     }
                 }
             }
@@ -178,7 +190,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             if (p._id) {
                 const vId = p._id.toString();
                 const current = openingBalancesMap.get(vId) || 0;
-                openingBalancesMap.set(vId, current + (p.paidToVendor - p.paidToAdmin));
+                openingBalancesMap.set(vId, current - (p.paidToVendor - p.paidToAdmin));
             }
         });
 
@@ -201,7 +213,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                         $sum: {
                             $cond: [
                                 { $eq: ['$paymentMethod', 'pay-online'] },
-                                { $subtract: ['$totalAmount', { $add: ['$platformFeeAmount', '$gstAmount'] }] },
+                                { $subtract: ['$totalAmount', { $add: [{ $ifNull: ['$platformFeeAmount', 0] }, { $ifNull: ['$gstAmount', 0] }] }] },
                                 0
                             ]
                         }
@@ -210,7 +222,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                         $sum: {
                             $cond: [
                                 { $eq: ['$paymentMethod', 'cash-on-delivery'] },
-                                { $add: ['$platformFeeAmount', '$gstAmount'] },
+                                { $add: [{ $ifNull: ['$platformFeeAmount', 0] }, { $ifNull: ['$gstAmount', 0] }] },
                                 0
                             ]
                         }
@@ -289,7 +301,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             settlement.serviceTaxTotal += appt.serviceTax || 0;
 
             if (appt.paymentMethod === 'Pay Online') {
-                settlement.adminOwesVendor += serviceAmount;
+                settlement.adminOwesVendor += (serviceAmount - fees);
             } else {
                 settlement.vendorOwesAdmin += fees;
             }
