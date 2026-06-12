@@ -8,7 +8,7 @@ import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { X, Phone, Mail, MapPin, Clock, Calendar, User, Scissors, DollarSign, UserCheck, CreditCard, Wallet, Smartphone, History, CalendarPlus, ClipboardList, Printer, Download } from "lucide-react";
+import { X, Phone, Mail, MapPin, Clock, Calendar, User, Scissors, DollarSign, UserCheck, CreditCard, Wallet, Smartphone, History, CalendarPlus, ClipboardList, Printer, Download, Home, Building2 } from "lucide-react";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { Badge } from "@repo/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
@@ -1131,115 +1131,115 @@ export function AppointmentDetailView({
       status: liveAppointment.status,
       items: liveAppointment.isWeddingService && (liveAppointment as any).weddingPackageDetails?.packageServices?.length
         ? [
-            {
-              name: liveAppointment.serviceName,
-              price: liveAppointment.amount,
-              quantity: 1,
-              totalPrice: liveAppointment.amount,
-              discount: discountAmount,
-              staff: (() => {
-                const teamMembers = (liveAppointment as any).teamMembers || (liveAppointment as any).staffMembers || (liveAppointment as any).weddingPackageDetails?.teamMembers;
-                if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
-                  const names = teamMembers.map(resolveName).filter(Boolean);
-                  if (names.length > 0) return names.join(', ');
-                }
-                return resolveName(liveAppointment.staffName) || liveAppointment.staffName;
-              })(),
-              duration: liveAppointment.duration,
-              type: 'service'
-            },
-            ...(liveAppointment as any).weddingPackageDetails.packageServices.map((pkgService: any) => {
-              const weddingCatalogPrice = weddingServicePriceMap[String(pkgService.serviceId || pkgService._id || '')] || 0;
-              const vendorCatalogPrice = catalogPriceMap[String(pkgService.serviceId || pkgService._id || '')] || catalogPriceMap[String(pkgService.service || '')] || 0;
-              const catalogPrice = weddingCatalogPrice || vendorCatalogPrice;
-              const originalPrice = pkgService.originalAmount ?? pkgService.price ?? (catalogPrice > 0 ? catalogPrice : null);
-              const chargedAmount = Number(pkgService.amount || pkgService.price || catalogPrice || 0);
-              return {
-                name: pkgService.serviceName,
-                price: originalPrice !== null ? Number(originalPrice) : chargedAmount,
-                discountedPrice: chargedAmount,
-                quantity: 1,
-                totalPrice: 0,
-                discount: 0,
-                staff: pkgService.staffName || 'Wedding Team',
-                duration: pkgService.duration,
-                type: 'wedding_included_service'
-              };
-            })
-          ]
-        : liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
-        {
-          name: item.serviceName,
-          price: item.amount,
-          quantity: 1,
-          totalPrice: item.amount,
-          discount: 0,
-          staff: resolveName(item.staffName || item.staff),
-          duration: item.duration,
-          type: 'service'
-        },
-        ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
-          name: `${addOn.name} (Add-on)`,
-          price: addOn.price,
-          quantity: 1,
-          totalPrice: addOn.price,
-          discount: 0,
-          duration: addOn.duration,
-          type: 'addon'
-        })) : [])
-      ]) : [
-        {
-          name: liveAppointment.serviceName,
-          price: liveAppointment.amount,
-          quantity: 1,
-          totalPrice: liveAppointment.amount,
-          discount: liveAppointment.discount,
-          staff: (() => {
-            // For wedding services, check multiple possible data sources for staff names
-            if (liveAppointment.isWeddingService) {
-              // Check if teamMembers (preferred) or staffMembers array exists at root level
-              const teamMembers = (liveAppointment as any).teamMembers || (liveAppointment as any).staffMembers;
+          {
+            name: liveAppointment.serviceName,
+            price: liveAppointment.amount,
+            quantity: 1,
+            totalPrice: liveAppointment.amount,
+            discount: discountAmount,
+            staff: (() => {
+              const teamMembers = (liveAppointment as any).teamMembers || (liveAppointment as any).staffMembers || (liveAppointment as any).weddingPackageDetails?.teamMembers;
               if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
-                const staffNames = teamMembers.map(resolveName).filter(Boolean);
-                if (staffNames.length > 0) {
-                  return staffNames.join(', ');
+                const names = teamMembers.map(resolveName).filter(Boolean);
+                if (names.length > 0) return names.join(', ');
+              }
+              return resolveName(liveAppointment.staffName) || liveAppointment.staffName;
+            })(),
+            duration: liveAppointment.duration,
+            type: 'service'
+          },
+          ...(liveAppointment as any).weddingPackageDetails.packageServices.map((pkgService: any) => {
+            const weddingCatalogPrice = weddingServicePriceMap[String(pkgService.serviceId || pkgService._id || '')] || 0;
+            const vendorCatalogPrice = catalogPriceMap[String(pkgService.serviceId || pkgService._id || '')] || catalogPriceMap[String(pkgService.service || '')] || 0;
+            const catalogPrice = weddingCatalogPrice || vendorCatalogPrice;
+            const originalPrice = pkgService.originalAmount ?? pkgService.price ?? (catalogPrice > 0 ? catalogPrice : null);
+            const chargedAmount = Number(pkgService.amount || pkgService.price || catalogPrice || 0);
+            return {
+              name: pkgService.serviceName,
+              price: originalPrice !== null ? Number(originalPrice) : chargedAmount,
+              discountedPrice: chargedAmount,
+              quantity: 1,
+              totalPrice: 0,
+              discount: 0,
+              staff: pkgService.staffName || 'Wedding Team',
+              duration: pkgService.duration,
+              type: 'wedding_included_service'
+            };
+          })
+        ]
+        : liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
+          {
+            name: item.serviceName,
+            price: item.amount,
+            quantity: 1,
+            totalPrice: item.amount,
+            discount: 0,
+            staff: resolveName(item.staffName || item.staff),
+            duration: item.duration,
+            type: 'service'
+          },
+          ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
+            name: `${addOn.name} (Add-on)`,
+            price: addOn.price,
+            quantity: 1,
+            totalPrice: addOn.price,
+            discount: 0,
+            duration: addOn.duration,
+            type: 'addon'
+          })) : [])
+        ]) : [
+          {
+            name: liveAppointment.serviceName,
+            price: liveAppointment.amount,
+            quantity: 1,
+            totalPrice: liveAppointment.amount,
+            discount: liveAppointment.discount,
+            staff: (() => {
+              // For wedding services, check multiple possible data sources for staff names
+              if (liveAppointment.isWeddingService) {
+                // Check if teamMembers (preferred) or staffMembers array exists at root level
+                const teamMembers = (liveAppointment as any).teamMembers || (liveAppointment as any).staffMembers;
+                if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
+                  const staffNames = teamMembers.map(resolveName).filter(Boolean);
+                  if (staffNames.length > 0) {
+                    return staffNames.join(', ');
+                  }
+                }
+
+                // Check weddingPackageDetails.teamMembers
+                const pkgTeamMembers = (liveAppointment as any).weddingPackageDetails?.teamMembers;
+                if (pkgTeamMembers && Array.isArray(pkgTeamMembers) && pkgTeamMembers.length > 0) {
+                  const staffNames = pkgTeamMembers.map(resolveName).filter(Boolean);
+                  if (staffNames.length > 0) {
+                    return staffNames.join(', ');
+                  }
                 }
               }
+              // Fallback to the main staffName
+              const mainStaff = resolveName(liveAppointment.staffName) || liveAppointment.staffName;
 
-              // Check weddingPackageDetails.teamMembers
-              const pkgTeamMembers = (liveAppointment as any).weddingPackageDetails?.teamMembers;
-              if (pkgTeamMembers && Array.isArray(pkgTeamMembers) && pkgTeamMembers.length > 0) {
-                const staffNames = pkgTeamMembers.map(resolveName).filter(Boolean);
-                if (staffNames.length > 0) {
-                  return staffNames.join(', ');
+              // If mainStaff still looks like a list of IDs (comma separated), try to resolve each
+              if (typeof mainStaff === 'string' && mainStaff.includes(',')) {
+                const parts = mainStaff.split(',').map(s => s.trim());
+                if (parts.some(p => /^[a-f\d]{24}$/i.test(p))) {
+                  return parts.map(p => resolveName(p)).join(', ');
                 }
               }
-            }
-            // Fallback to the main staffName
-            const mainStaff = resolveName(liveAppointment.staffName) || liveAppointment.staffName;
-
-            // If mainStaff still looks like a list of IDs (comma separated), try to resolve each
-            if (typeof mainStaff === 'string' && mainStaff.includes(',')) {
-              const parts = mainStaff.split(',').map(s => s.trim());
-              if (parts.some(p => /^[a-f\d]{24}$/i.test(p))) {
-                return parts.map(p => resolveName(p)).join(', ');
-              }
-            }
-            return mainStaff;
-          })(),
-          duration: liveAppointment.duration,
-          type: 'service'
-        },
-        ...((liveAppointment as any).addOns || []).map((addOn: any) => ({
-          name: `${addOn.name} (Add-on)`,
-          price: addOn.price,
-          quantity: 1,
-          totalPrice: addOn.price,
-          discount: 0,
-          duration: addOn.duration,
-          type: 'addon'
-        }))
-      ],
+              return mainStaff;
+            })(),
+            duration: liveAppointment.duration,
+            type: 'service'
+          },
+          ...((liveAppointment as any).addOns || []).map((addOn: any) => ({
+            name: `${addOn.name} (Add-on)`,
+            price: addOn.price,
+            quantity: 1,
+            totalPrice: addOn.price,
+            discount: 0,
+            duration: addOn.duration,
+            type: 'addon'
+          }))
+        ],
       subtotal: totalBaseAmount + totalAddOnsAmount,
       originalSubtotal: totalBaseAmount + totalAddOnsAmount,
       discount: discountAmount,
@@ -2064,7 +2064,7 @@ export function AppointmentDetailView({
                           </p>
                           {(((appointment.serviceItems || []).length > 1) || (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices && (appointment.weddingPackageDetails as any).packageServices.length > 1)) ? (
                             <p className="text-lg font-semibold text-foreground">
-                              {appointment.isWeddingService 
+                              {appointment.isWeddingService
                                 ? `${appointment.weddingPackageDetails?.packageName || appointment.serviceName || 'Wedding Package'} (${(appointment.weddingPackageDetails as any)?.packageServices?.length || 0} Services)`
                                 : `Multi-Service (${(appointment.serviceItems || []).length} Services)`}
                             </p>
@@ -2082,31 +2082,31 @@ export function AppointmentDetailView({
                           ? appointment.serviceItems
                           : (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices)
                             ? (appointment.weddingPackageDetails as any).packageServices.map((srv: any, idx: number) => {
-                                const member = (appointment.weddingPackageDetails as any)?.teamMembers?.[idx];
-                                let staffName = 'Wedding Team';
-                                if (member) {
-                                  if (typeof member === 'object') {
-                                    staffName = member.name || member.firstName || member.staffName || 'Wedding Team';
-                                  } else if (typeof member === 'string') {
-                                    if (/^[a-f\d]{24}$/i.test(member.trim())) {
-                                      const staff = staffList.find((s: any) => String(s._id) === member.trim() || String(s.id) === member.trim());
-                                      staffName = staff ? (staff.name || staff.firstName || staff.fullName) : member;
-                                    } else {
-                                      staffName = member;
-                                    }
+                              const member = (appointment.weddingPackageDetails as any)?.teamMembers?.[idx];
+                              let staffName = 'Wedding Team';
+                              if (member) {
+                                if (typeof member === 'object') {
+                                  staffName = member.name || member.firstName || member.staffName || 'Wedding Team';
+                                } else if (typeof member === 'string') {
+                                  if (/^[a-f\d]{24}$/i.test(member.trim())) {
+                                    const staff = staffList.find((s: any) => String(s._id) === member.trim() || String(s.id) === member.trim());
+                                    staffName = staff ? (staff.name || staff.firstName || staff.fullName) : member;
+                                  } else {
+                                    staffName = member;
                                   }
                                 }
-                                return {
-                                  _id: srv._id || srv.serviceId || String(idx),
-                                  serviceName: srv.serviceName,
-                                  staffName: staffName,
-                                  startTime: appointment.startTime,
-                                  endTime: appointment.endTime,
-                                  duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length),
-                                  amount: Number(srv.amount || srv.price || srv.originalAmount || weddingServicePriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.service || '')] || 0),
-                                  addOns: []
-                                };
-                              })
+                              }
+                              return {
+                                _id: srv._id || srv.serviceId || String(idx),
+                                serviceName: srv.serviceName,
+                                staffName: staffName,
+                                startTime: appointment.startTime,
+                                endTime: appointment.endTime,
+                                duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length),
+                                amount: Number(srv.amount || srv.price || srv.originalAmount || weddingServicePriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.service || '')] || 0),
+                                addOns: []
+                              };
+                            })
                             : [];
 
                         if (servicesList.length === 0) return null;
@@ -2256,10 +2256,15 @@ export function AppointmentDetailView({
                                 day: 'numeric'
                               })}
                             </p>
-                            <div className="flex items-center text-foreground/80">
+                            <div className="flex items-center flex-wrap gap-y-1 text-foreground/80">
                               <Clock className="h-4 w-4 mr-1.5 text-foreground" />
                               <span>{appointment.startTime} - {appointment.endTime}</span>
                               <span className="ml-2 text-xs text-muted-foreground">({appointment.duration} min)</span>
+                              {(appointment as any).travelTime ? (
+                                <span className="ml-2 text-[11px] text-muted-foreground font-medium flex items-center bg-muted/50 px-1.5 py-0.5 rounded border border-muted">
+                                  🚗 Travel: {(appointment as any).travelTime} min
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -2341,38 +2346,81 @@ export function AppointmentDetailView({
                       </div>
                     )}
 
-                    {/* Address Section for Wedding/Home Services */}
-                    {(appointment.isWeddingService || appointment.isHomeService) && (
-                      <div className="bg-background p-3 rounded-lg border shadow-sm border-primary/20 bg-primary/5">
-                        <div className="flex items-start space-x-3">
-                          <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
-                            {appointment.isWeddingService ? (
-                              <MapPin className="h-5 w-5 text-pink-500" />
-                            ) : (
-                              <MapPin className="h-5 w-5 text-blue-500" />
-                            )}
+                    {/* Address Section */}
+                    {(() => {
+                      const venueAddr = appointment.isWeddingService ? (appointment.weddingPackageDetails?.venueAddress || appointment.homeServiceLocation?.address) : null;
+                      const isVenueWedding = appointment.isWeddingService && !!venueAddr;
+                      const isHomeService = appointment.isHomeService && !appointment.isWeddingService;
+
+                      if (isVenueWedding) {
+                        // Wedding at venue — show venue address
+                        return (
+                          <div className="bg-background p-3 rounded-lg border shadow-sm border-pink-200 dark:border-pink-800/30 bg-pink-50/50 dark:bg-pink-900/10">
+                            <div className="flex items-start space-x-3">
+                              <div className="p-2 bg-pink-100 dark:bg-pink-900/20 rounded-lg mt-0.5">
+                                <MapPin className="h-5 w-5 text-pink-500" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                                  📍 Wedding Address
+                                </p>
+                                <p className="font-semibold text-foreground">Wedding Service Venue</p>
+                                <p className="text-foreground/90 mt-1">{venueAddr}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                              {appointment.isWeddingService ? '📍 Venue Address' : '🏠 Home Address'}
-                            </p>
-                            <p className="font-semibold text-foreground">
-                              {appointment.isWeddingService ? 'Wedding Service Venue' : 'Home Service Location'}
-                            </p>
-                            <p className="text-foreground/90 mt-1">
-                              {(appointment.isWeddingService ? appointment.weddingPackageDetails?.venueAddress : appointment.homeServiceLocation?.address) ||
-                                appointment.homeServiceLocation?.address ||
-                                'Address not specified'}
-                            </p>
-                            {(appointment.homeServiceLocation?.city || appointment.homeServiceLocation?.landmark) && (
-                              <p className="text-sm text-muted-foreground mt-0.5">
-                                {[appointment.homeServiceLocation.landmark, appointment.homeServiceLocation.city].filter(Boolean).join(', ')}
+                        );
+                      }
+
+                      if (isHomeService) {
+                        // Home service — show home address
+                        return (
+                          <div className="bg-background p-3 rounded-lg border shadow-sm border-blue-200 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-900/10">
+                            <div className="flex items-start space-x-3">
+                              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg mt-0.5">
+                                <Home className="h-5 w-5 text-blue-500" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                                  🏠 Home Address
+                                </p>
+                                <p className="font-semibold text-foreground">Home Service Location</p>
+                                <p className="text-foreground/90 mt-1">
+                                  {appointment.homeServiceLocation?.address || 'Address not specified'}
+                                </p>
+                                {(appointment.homeServiceLocation?.city || appointment.homeServiceLocation?.landmark) && (
+                                  <p className="text-sm text-muted-foreground mt-0.5">
+                                    {[appointment.homeServiceLocation.landmark, appointment.homeServiceLocation.city].filter(Boolean).join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Salon (regular or wedding at salon) — show salon address
+                      const salonAddr = [vendorProfile?.data?.address, vendorProfile?.data?.city, vendorProfile?.data?.state, vendorProfile?.data?.pincode]
+                        .filter(Boolean).join(', ') || 'Salon address not available';
+                      return (
+                        <div className="bg-background p-3 rounded-lg border shadow-sm border-primary/20 bg-primary/5">
+                          <div className="flex items-start space-x-3">
+                            <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                                🏪 Salon Address
                               </p>
-                            )}
+                              <p className="font-semibold text-foreground">
+                                {appointment.isWeddingService ? 'Wedding at Salon' : 'In-Salon Appointment'}
+                              </p>
+                              <p className="text-foreground/90 mt-1">{salonAddr}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
