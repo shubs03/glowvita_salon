@@ -28,7 +28,7 @@ interface AppointmentInvoiceProps {
     taxRate: number;
     isOrderSaved: boolean;
     onEmailClick: () => void;
-    onRebookClick: () => void;
+    onRebookClick?: () => void;
 }
 
 export function AppointmentInvoice({
