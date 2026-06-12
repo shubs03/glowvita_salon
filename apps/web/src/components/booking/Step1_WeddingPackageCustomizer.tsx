@@ -209,13 +209,13 @@ export function Step1_WeddingPackageCustomizer({
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative w-full md:w-32 h-32 rounded-md overflow-hidden flex-shrink-0">
                         <Image
-                            src={weddingPackage.image || `https://placehold.co/200x200/png?text=${encodeURIComponent(weddingPackage.name)}`}
+                            src={weddingPackage.image || '/images/wedding package placeholder.png'}
                             alt={weddingPackage.name}
                             fill
                             className="object-cover"
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = `https://placehold.co/200x200/png?text=Package`;
+                                target.src = '/images/wedding package placeholder.png';
                             }}
                         />
                     </div>

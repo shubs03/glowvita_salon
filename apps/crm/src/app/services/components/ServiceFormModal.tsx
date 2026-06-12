@@ -691,24 +691,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
 
   const renderBookingTab = () => (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="bookingInterval">Booking Interval</Label>
-        <Select
-          value={String(formData.bookingInterval || "")}
-          onValueChange={(value) => handleSelectChange("bookingInterval", Number(value))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select interval" />
-          </SelectTrigger>
-          <SelectContent>
-            {[5, 10, 15, 20, 25, 30, 45, 60, 90, 120].map((i) => (
-              <SelectItem key={i} value={String(i)}>
-                {i} minutes
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
       <div className="flex items-center space-x-2">
         <Switch
           id="onlineBooking"
@@ -834,10 +816,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                   <div className="flex items-start justify-between py-1.5">
                     <span className="text-sm font-medium text-muted-foreground">Online Booking:</span>
                     <span className="text-sm font-semibold">{service?.onlineBooking ? 'Enabled' : 'Disabled'}</span>
-                  </div>
-                  <div className="flex items-start justify-between py-1.5">
-                    <span className="text-sm font-medium text-muted-foreground">Booking Interval:</span>
-                    <span className="text-sm font-semibold">{service?.bookingInterval || 0} minutes</span>
                   </div>
                   <div className="flex items-start justify-between py-1.5">
                     <span className="text-sm font-medium text-muted-foreground">Staff Commission:</span>

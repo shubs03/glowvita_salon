@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
-import { Calendar as CalendarIcon, User, Clock, MapPin, Home } from 'lucide-react';
+import { Calendar as CalendarIcon, User, Clock, MapPin, Home, Building2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { Appointment } from './NewAppointmentForm';
 import { glowvitaApi } from '@repo/store/api';
@@ -13,6 +13,7 @@ import { useAppDispatch } from '@repo/store/hooks';
 import { setSelectedAppointment } from '@repo/store/slices/appointmentSlice';
 import { toast } from 'sonner';
 import { isSameDay } from 'date-fns';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 interface AppointmentListSectionProps {
   appointments: Appointment[];
@@ -31,6 +32,12 @@ export default function AppointmentListSection({
 }: AppointmentListSectionProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { user } = useCrmAuth();
+
+  // Build salon address from logged-in vendor's profile
+  const salonAddress = [user?.address, user?.city, user?.state, user?.pincode]
+    .filter(Boolean)
+    .join(', ') || 'Salon address not available';
 
   return (
     <Card className="flex-1 flex flex-col min-h-0">
@@ -76,7 +83,7 @@ export default function AppointmentListSection({
                         {appointment.isWeddingService && (
                           <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-200 border-pink-200 text-[10px] px-1.5 h-4">Wedding</Badge>
                         )}
-                        {appointment.isHomeService && (
+                        {appointment.isHomeService && !appointment.isWeddingService && (
                           <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 text-[10px] px-1.5 h-4">Home</Badge>
                         )}
                       </div>
@@ -103,6 +110,11 @@ export default function AppointmentListSection({
                         <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
                           {appointment.duration}m
                         </span>
+                        {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime) ? (
+                          <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                            🚗 {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime)}m
+                          </span>
+                        ) : null}
                       </div>
                     </div>
 
@@ -128,27 +140,54 @@ export default function AppointmentListSection({
                     </div>
                   </div>
 
-                  {/* Address Section for Wedding/Home Services */}
-                  {(appointment.isWeddingService || appointment.isHomeService) && (
-                    <div className="flex items-start gap-2 p-2 bg-primary/5 border border-primary/10 rounded-lg text-sm mt-2">
-                      {appointment.isWeddingService ? (
-                        <MapPin className="h-4 w-4 text-pink-500 mt-0.5" />
-                      ) : (
-                        <Home className="h-4 w-4 text-blue-500 mt-0.5" />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-semibold text-foreground">
-                          {appointment.isWeddingService ? '📍 Venue Address:' : '🏠 Home Address:'}
-                        </p>
-                        <p className="text-muted-foreground mt-0.5">
-                          {appointment.isWeddingService
-                            ? (appointment.weddingPackageDetails?.venueAddress || appointment.homeServiceLocation?.address || 'Address not specified')
-                            : (appointment.homeServiceLocation?.address || 'Address not specified')}
-                          {(!appointment.isWeddingService && appointment.homeServiceLocation?.city) ? `, ${appointment.homeServiceLocation.city}` : ''}
-                        </p>
+                  {/* Address Section */}
+                  {(() => {
+                    const venueAddr = appointment.isWeddingService ? (appointment.weddingPackageDetails?.venueAddress || appointment.homeServiceLocation?.address) : null;
+                    const isVenue = appointment.isWeddingService && !!venueAddr;
+                    const isHome = appointment.isHomeService && !appointment.isWeddingService;
+
+                    if (isVenue) {
+                      // Wedding at venue — show venue address
+                      return (
+                        <div className="flex items-start gap-2 p-2 bg-pink-50 dark:bg-pink-900/10 border border-pink-200 dark:border-pink-800/30 rounded-lg text-sm mt-2">
+                          <MapPin className="h-4 w-4 text-pink-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground">📍 Wedding Address:</p>
+                            <p className="text-muted-foreground mt-0.5">
+                              {venueAddr}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (isHome) {
+                      // Home service — show home address
+                      return (
+                        <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-lg text-sm mt-2">
+                          <Home className="h-4 w-4 text-blue-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground">🏠 Home Address:</p>
+                            <p className="text-muted-foreground mt-0.5">
+                              {appointment.homeServiceLocation?.address || 'Address not specified'}
+                              {appointment.homeServiceLocation?.city ? `, ${appointment.homeServiceLocation.city}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Salon (regular or wedding at salon) — show salon address
+                    return (
+                      <div className="flex items-start gap-2 p-2 bg-primary/5 border border-primary/10 rounded-lg text-sm mt-2">
+                        <Building2 className="h-4 w-4 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">🏪 Salon Address:</p>
+                          <p className="text-muted-foreground mt-0.5">{salonAddress}</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             ))

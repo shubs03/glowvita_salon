@@ -8,7 +8,7 @@ import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, C
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@repo/ui/cn';
-import { Service, StaffMember, SalonInfo, ServiceStaffAssignment } from '@/hooks/useBookingData';
+import { Service, StaffMember, SalonInfo, ServiceStaffAssignment, convertDurationToMinutes } from '@/hooks/useBookingData';
 import { useParams } from 'next/navigation';
 import { useGetPublicVendorStaffQuery } from '@repo/store/api';
 
@@ -89,13 +89,13 @@ export function BookingSummary({
     } else if ((staffData as any)?.staff && Array.isArray((staffData as any).staff)) {
       staffArray = (staffData as any).staff;
     }
-    
+
     if (staffArray.length > 0) {
       staffArray.forEach((staff: any) => {
         if (staff) {
           const rawId = staff._id || staff.id || staff.staffId;
           const staffId = rawId && typeof rawId === 'object' && rawId.$oid ? rawId.$oid : rawId;
-          const staffName = staff.fullName || staff.name || staff.staffName || staff.firstName 
+          const staffName = staff.fullName || staff.name || staff.staffName || staff.firstName
             || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
           if (staffId && staffName) {
             lookup[String(staffId)] = staffName;
@@ -109,7 +109,7 @@ export function BookingSummary({
   // Helper function to get staff name from ID/object with fallback
   const getStaffName = (staff: any): string => {
     if (!staff) return 'Staff Member';
-    
+
     let idStr = '';
     if (typeof staff === 'string') {
       idStr = staff;
@@ -127,7 +127,7 @@ export function BookingSummary({
     }
 
     if (staff && typeof staff === 'object' && !staff.$oid) {
-      const name = staff.fullName || staff.name || staff.staffName || staff.firstName 
+      const name = staff.fullName || staff.name || staff.staffName || staff.firstName
         || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
       if (name) return name;
     }
@@ -166,6 +166,30 @@ export function BookingSummary({
       return acc + servicePrice + addonsPrice;
     }, 0));
 
+  // Calculate total duration dynamically, accounting for customized wedding packages
+  const totalDuration = useMemo(() => {
+    if (weddingPackage) {
+      if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
+        return customizedPackageServices.reduce((acc, service) => {
+          const serviceDuration = convertDurationToMinutes(service.duration);
+          const quantity = (service as any).quantity || 1;
+          return acc + (serviceDuration * quantity);
+        }, 0);
+      }
+      return weddingPackage.duration || 0;
+    }
+    return selectedServices.reduce((acc, service) => {
+      let serviceDuration = convertDurationToMinutes(service.duration);
+      if (service.selectedAddons && service.selectedAddons.length > 0) {
+        const addonsDuration = service.selectedAddons.reduce((sum, addon) => {
+          return sum + (Number(addon.duration) || 0);
+        }, 0);
+        serviceDuration += addonsDuration;
+      }
+      return acc + serviceDuration;
+    }, 0);
+  }, [weddingPackage, weddingPackageMode, customizedPackageServices, selectedServices]);
+
   const total = priceBreakdown?.finalTotal ?? subtotal;
 
   // Use provided salon info or fallback
@@ -174,7 +198,7 @@ export function BookingSummary({
     rating: "4.5",
     reviews: 0,
     address: "Loading address...",
-    image: "https://picsum.photos/seed/salon/400/400"
+    image: "/images/salon-placeholder.png"
   };
 
   const isWeddingPackage = !!weddingPackage;
@@ -276,19 +300,19 @@ export function BookingSummary({
         <div className="p-4 flex flex-col h-full">
           {isExpanded && (
             <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
-                <div className="relative w-12 h-12 flex-shrink-0">
-                  <Image
-                    src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
-                    alt={currentSalonInfo.name}
-                    fill
-                    className="rounded-lg shadow-md object-cover"
-                    data-ai-hint="salon exterior"
-                  />
-                </div>
-                <div>
-                  <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
-                  <p className="text-sm text-muted-foreground line-clamp-1">{currentSalonInfo.address}</p>
-                </div>
+              <div className="relative w-12 h-12 flex-shrink-0">
+                <Image
+                  src={currentSalonInfo.image || "/images/salon-placeholder.png"}
+                  alt={currentSalonInfo.name}
+                  fill
+                  className="rounded-lg shadow-md object-cover"
+                  data-ai-hint="salon exterior"
+                />
+              </div>
+              <div>
+                <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
+                <p className="text-sm text-muted-foreground line-clamp-1">{currentSalonInfo.address}</p>
+              </div>
               <Separator />
               {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
                 serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
@@ -370,7 +394,7 @@ export function BookingSummary({
         <div className="flex items-center gap-4">
           <div className="relative w-16 h-16 flex-shrink-0">
             <Image
-              src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
+              src={currentSalonInfo.image || "/images/salon-placeholder.png"}
               alt={currentSalonInfo.name}
               fill
               className="rounded-lg shadow-md border-2 border-background object-cover"
@@ -416,7 +440,7 @@ export function BookingSummary({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Duration</span>
-                    <span className="font-medium">{weddingPackage.duration} min</span>
+                    <span className="font-medium">{totalDuration} min</span>
                   </div>
                   {weddingPackage.staffCount && (
                     <div className="flex justify-between text-sm">

@@ -733,7 +733,9 @@ export default function CalendarPage() {
                 )}
 
               {appointment.status !== "completed" &&
-                appointment.status !== "completed without payment" && (
+                appointment.status !== "completed without payment" &&
+                !appointment.isWeddingService &&
+                !appointment.isHomeService && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

@@ -16,7 +16,7 @@ interface CanvasTemplateEditorProps {
 }
 
 export interface CanvasTemplateEditorRef {
-  applyDesign: () => { jsonData: any; previewImage: string } | null;
+  applyDesign: () => { jsonData: any; previewImage: string | null } | null;
 }
 
 // Convert a single URL to a data URL (avoids CORS taint on canvas)
@@ -133,7 +133,7 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
   // ── Load Fabric ────────────────────────────────────────────────────────────
   useEffect(() => {
-    import("fabric").then(m => setFab(m.fabric || m.default || m))
+    import("fabric").then(m => setFab((m as any).fabric || (m as any).default || m))
       .catch(() => toast.error("Could not load design editor."));
   }, []);
 
@@ -585,7 +585,7 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
     const data = getDesignData();
     if (data && data.jsonData) {
-      onSaveTemplate({ jsonData: data.jsonData, previewImage: data.previewImage ?? '' });
+      onSaveTemplate?.({ jsonData: data.jsonData, previewImage: data.previewImage ?? '' });
       toast.success("Design applied! You can now save the template.");
     } else {
       toast.error("Could not capture canvas state. Please close and reopen the editor.");

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from "@repo/lib/db";
 import SmsTransaction from "@repo/lib/models/Marketing/SmsPurchaseHistory.model";
 import Campaign from "@repo/lib/models/Marketing/Campaign.model";
-import { authMiddlewareAdmin } from "../../../../../middlewareAdmin.js";
+import { authMiddlewareAdmin } from "@/middlewareAdmin";
 
 export const GET = authMiddlewareAdmin(async (req) => {
   try {

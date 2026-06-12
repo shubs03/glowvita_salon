@@ -23,6 +23,7 @@ export interface SocialMediaTemplate {
   description: string;
   imageFile?: File | null;
   image?: string;
+  imageUrl?: string;
   previewImage?: string;
   jsonData?: any;
   category: string;
@@ -418,7 +419,6 @@ function SocialMediaTemplateFormContent({
                   initialJsonData={formData.jsonData || undefined}
                   onSaveTemplate={handleCanvasTemplateData}
                   width={680}
-                  height={500}
                 />
               </div>
 

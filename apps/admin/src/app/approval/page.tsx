@@ -996,7 +996,19 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentWeddingPackages.map((pkg: WeddingPackage) => (
                         <TableRow key={pkg._id}>
-                          <TableCell className="font-normal text-xs max-w-[120px] truncate">{pkg.name || 'N/A'}</TableCell>
+                          <TableCell className="max-w-[150px]">
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src="/images/wedding%20package%20placeholder.png"
+                                alt={pkg.name || 'Wedding Package'}
+                                width={32}
+                                height={32}
+                                className="rounded-md cursor-pointer object-cover aspect-square bg-muted"
+                                onClick={() => handleImageClick("/images/wedding%20package%20placeholder.png")}
+                              />
+                              <span className="font-normal text-xs truncate max-w-[120px]">{pkg.name || 'N/A'}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-xs max-w-[100px] truncate">{pkg.vendorName || 'N/A'}</TableCell>
                           <TableCell className="text-xs">
                             <div className="flex flex-col">
@@ -1937,19 +1949,44 @@ export default function VendorApprovalPage() {
                 const pkg = currentDetails as WeddingPackage;
                 return (
                   <div className="space-y-6">
-                    <div className="pb-6 border-b flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold font-headline text-primary">{pkg.name || 'N/A'}</h3>
-                        <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
-                          Created by <span className="text-foreground font-bold underline decoration-primary/20">{pkg.vendorName || 'N/A'}</span>
-                        </p>
+                    <div className="flex flex-col md:flex-row gap-8 pb-6 border-b">
+                      <div className="mx-auto md:mx-0">
+                        <Card className="overflow-hidden border-none shadow-xl w-fit bg-muted cursor-pointer" onClick={() => handleImageClick("/images/wedding%20package%20placeholder.png")}>
+                          <Image
+                            src="/images/wedding%20package%20placeholder.png"
+                            alt={pkg.name || 'Wedding Package'}
+                            width={150}
+                            height={150}
+                            className="object-cover rounded-2xl aspect-square"
+                          />
+                        </Card>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-lg font-medium text-primary">₹{pkg.discountedPrice?.toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground font-normal uppercase line-through opacity-50">₹{pkg.totalPrice?.toFixed(2)}</div>
-                        <Badge className="bg-green-100 text-green-700 border-none font-black text-[10px] uppercase tracking-tighter">
-                          Package Discount Applied
-                        </Badge>
+                      <div className="flex-1 space-y-6">
+                        <div className="space-y-2">
+                          <h3 className="text-2xl font-bold font-headline text-primary">{pkg.name || 'N/A'}</h3>
+                          <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
+                            Created by <span className="text-foreground font-bold underline decoration-primary/20">{pkg.vendorName || 'N/A'}</span>
+                          </p>
+                        </div>
+
+                        <div className="flex items-end gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 w-fit">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pricing</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg font-bold text-primary">₹{pkg.discountedPrice?.toFixed(2)}</span>
+                              {pkg.discountedPrice && pkg.discountedPrice < pkg.totalPrice && (
+                                <span className="text-sm text-muted-foreground line-through opacity-50 font-normal">₹{pkg.totalPrice?.toFixed(2)}</span>
+                              )}
+                            </div>
+                          </div>
+                          {pkg.discountedPrice && pkg.discountedPrice < pkg.totalPrice && (
+                            <div className="pl-4 border-l border-primary/20 space-y-1 flex items-center h-full">
+                              <Badge className="bg-green-100 text-green-700 border-none font-black text-[10px] uppercase tracking-tighter">
+                                Package Discount Applied
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1959,7 +1996,7 @@ export default function VendorApprovalPage() {
                       </h4>
                       <div className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
                         {pkg.description && pkg.description !== 'hi' && (
-                          <div className="mb-4 pb-4 border-b border-primary/10">
+                          <div className="mb-4 pb-4 border-b border-primary/10 text-foreground font-medium">
                             {pkg.description}
                           </div>
                         )}

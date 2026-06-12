@@ -532,7 +532,7 @@ export const useSalonInfo = (salonId: string) => {
       address: salon.address || '',
       rating: salon.rating || '4.5',
       reviews: salon.reviewCount || salon.reviews || 0,
-      image: salon.profileImage || salon.logo || (salon.gallery && salon.gallery.length > 0 ? salon.gallery[0] : (salon.image || `https://picsum.photos/seed/${salon.businessName?.replace(/\s/g, "") || "salon"}/400/400`)),
+      image: salon.profileImage || salon.logo || (salon.gallery && salon.gallery.length > 0 ? salon.gallery[0] : (salon.image || "/images/salon-placeholder.png")),
       phone: salon.phone || salon.contactNumber,
       regionId: salon.regionId?.toString() || salon.regionId
     } as SalonInfo;
