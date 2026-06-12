@@ -332,7 +332,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
               Invoice
             </Button>
           )}
-          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !(
+          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !appointment.isWeddingService && !appointment.isHomeService && !(
             ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web' || (appointment as any).bookingSource === 'web' || String((appointment as any).paymentMethod).toLowerCase() === 'pay online' || String((appointment as any).payment?.paymentMethod).toLowerCase() === 'pay online') &&
             (String((appointment as any).paymentStatus).toLowerCase() === 'completed' || String((appointment as any).paymentStatus).toLowerCase() === 'paid' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'completed' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'paid')
           ) && (

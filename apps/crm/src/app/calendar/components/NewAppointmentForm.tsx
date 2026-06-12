@@ -2867,6 +2867,7 @@ export default function NewAppointmentForm({
               onChange={(e) => handleEndTimeChange(e.target.value)}
               className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
               required
+              disabled
             />
           </div>
         </div>

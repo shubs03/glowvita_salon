@@ -1457,7 +1457,7 @@ export function AppointmentDetailView({
                   onEmailClick={() => {
                     toast.success('Invoice email sent to client');
                   }}
-                  onRebookClick={() => {
+                  onRebookClick={(liveAppointment.isWeddingService || liveAppointment.isHomeService) ? undefined : () => {
                     setIsRescheduling(true);
                     setActiveTab('details');
                   }}
@@ -1487,7 +1487,7 @@ export function AppointmentDetailView({
                       {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
                     </Button>
                   )}
-                  {liveAppointment.status !== 'completed' && !isPaidOnline && (
+                  {liveAppointment.status !== 'completed' && !isPaidOnline && !liveAppointment.isWeddingService && !liveAppointment.isHomeService && (
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
