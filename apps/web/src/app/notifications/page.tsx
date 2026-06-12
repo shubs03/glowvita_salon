@@ -115,9 +115,6 @@ export default function NotificationsPage() {
     });
   };
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
-
   return (
     <div className="min-h-screen bg-slate-50/50">
       <MarketingHeader
