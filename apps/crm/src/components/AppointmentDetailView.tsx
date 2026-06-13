@@ -2401,27 +2401,8 @@ export function AppointmentDetailView({
                         );
                       }
 
-                      // Salon (regular or wedding at salon) — show salon address
-                      const salonAddr = [vendorProfile?.data?.address, vendorProfile?.data?.city, vendorProfile?.data?.state, vendorProfile?.data?.pincode]
-                        .filter(Boolean).join(', ') || 'Salon address not available';
-                      return (
-                        <div className="bg-background p-3 rounded-lg border shadow-sm border-primary/20 bg-primary/5">
-                          <div className="flex items-start space-x-3">
-                            <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
-                              <Building2 className="h-5 w-5 text-primary" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                                🏪 Salon Address
-                              </p>
-                              <p className="font-semibold text-foreground">
-                                {appointment.isWeddingService ? 'Wedding at Salon' : 'In-Salon Appointment'}
-                              </p>
-                              <p className="text-foreground/90 mt-1">{salonAddr}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
+                      // Regular salon appointment — no address needed
+                      return null;
                     })()}
                   </div>
                 </div>

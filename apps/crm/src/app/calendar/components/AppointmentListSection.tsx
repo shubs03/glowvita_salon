@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
-import { Calendar as CalendarIcon, User, Clock, MapPin, Home, Building2 } from 'lucide-react';
+import { Calendar as CalendarIcon, User, Clock, MapPin, Home } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { Appointment } from './NewAppointmentForm';
 import { glowvitaApi } from '@repo/store/api';
@@ -34,10 +34,6 @@ export default function AppointmentListSection({
   const dispatch = useAppDispatch();
   const { user } = useCrmAuth();
 
-  // Build salon address from logged-in vendor's profile
-  const salonAddress = [user?.address, user?.city, user?.state, user?.pincode]
-    .filter(Boolean)
-    .join(', ') || 'Salon address not available';
 
   return (
     <Card className="flex-1 flex flex-col min-h-0">
@@ -177,16 +173,8 @@ export default function AppointmentListSection({
                       );
                     }
 
-                    // Salon (regular or wedding at salon) — show salon address
-                    return (
-                      <div className="flex items-start gap-2 p-2 bg-primary/5 border border-primary/10 rounded-lg text-sm mt-2">
-                        <Building2 className="h-4 w-4 text-primary mt-0.5" />
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">🏪 Salon Address:</p>
-                          <p className="text-muted-foreground mt-0.5">{salonAddress}</p>
-                        </div>
-                      </div>
-                    );
+                    // Regular salon appointment — no address needed
+                    return null;
                   })()}
                 </div>
               </div>

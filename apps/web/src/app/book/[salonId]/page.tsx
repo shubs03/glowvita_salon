@@ -4451,7 +4451,7 @@ function BookingPageContent() {
                     <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm">{salonInfo?.name}</div>
-                      <div className="text-muted-foreground text-xs mt-1 line-clamp-2">{salonInfo?.address}</div>
+                      {/* Salon address removed as per request */}
                     </div>
                   </div>
                 </CardContent>
@@ -4525,8 +4525,8 @@ function BookingPageContent() {
                     <div className="col-span-2 flex items-start gap-2 p-2 border-b">
                       <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs line-clamp-2">{serviceLocation?.address || salonInfo?.address || 'Salon'}</div>
-                        <div className="text-[10px] text-muted-foreground">{serviceLocation ? 'Home Service' : 'Salon'}</div>
+                        <div className="font-semibold text-xs line-clamp-2">{serviceLocation?.address ? serviceLocation.address : 'At Salon'}</div>
+                        <div className="text-[10px] text-muted-foreground">{serviceLocation ? 'Home Service Location' : 'Location'}</div>
                       </div>
                     </div>
                   </div>

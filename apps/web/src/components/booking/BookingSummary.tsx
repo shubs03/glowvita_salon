@@ -311,7 +311,7 @@ export function BookingSummary({
               </div>
               <div>
                 <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
-                <p className="text-sm text-muted-foreground line-clamp-1">{currentSalonInfo.address}</p>
+                {/* Salon address removed as per request */}
               </div>
               <Separator />
               {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
@@ -555,6 +555,29 @@ export function BookingSummary({
                   ) : weddingVenueType === 'venue' && (serviceLocation as any)?.address ? (
                     <div>
                       <p className="font-medium text-sm">Wedding Venue</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(serviceLocation as any).address}
+                        {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="font-medium text-sm text-muted-foreground">Not selected</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Regular or Home Service Location Display */}
+          {!isWeddingPackage && isHomeService && (
+            <div className="p-3 bg-secondary/50 rounded-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  {serviceLocation && (serviceLocation as any).address ? (
+                    <div>
+                      <p className="font-medium text-sm">Home Service</p>
                       <p className="text-xs text-muted-foreground">
                         {(serviceLocation as any).address}
                         {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
