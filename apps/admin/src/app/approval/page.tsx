@@ -121,6 +121,8 @@ type Service = {
   discountedPrice?: number;
   status: "pending" | "approved" | "disapproved";
   description: string;
+  serviceImage?: string;
+  image?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -909,7 +911,19 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentServices.map((service: Service) => (
                         <TableRow key={service._id}>
-                          <TableCell className="font-normal text-xs max-w-[120px] truncate">{service.name || 'N/A'}</TableCell>
+                          <TableCell className="max-w-[150px]">
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src={service.serviceImage || service.image || 'https://placehold.co/400x400?text=No+Image'}
+                                alt={service.name || 'Service'}
+                                width={32}
+                                height={32}
+                                className="rounded-md cursor-pointer object-cover aspect-square bg-muted"
+                                onClick={() => handleImageClick(service.serviceImage || service.image || 'https://placehold.co/400x400?text=No+Image')}
+                              />
+                              <span className="font-normal text-xs truncate max-w-[120px]">{service.name || 'N/A'}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-xs max-w-[100px] truncate">{service.vendorName || 'N/A'}</TableCell>
                           <TableCell className="text-xs">
                             <div className="flex flex-col">
@@ -1919,18 +1933,33 @@ export default function VendorApprovalPage() {
                 const service = currentDetails as Service;
                 return (
                   <div className="space-y-6">
-                    <div className="pb-6 border-b flex justify-between items-start">
-                      <div>
-                        <h3 className="text-2xl font-bold font-headline">{service.name || 'N/A'}</h3>
-                        <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
-                          By {service.vendorName || 'Independent Vendor'}
-                        </p>
+                    <div className="flex flex-col md:flex-row gap-8 pb-6 border-b">
+                      <div className="mx-auto md:mx-0">
+                        <Card className="overflow-hidden border-none shadow-xl w-fit bg-muted cursor-pointer" onClick={() => handleImageClick(service.serviceImage || service.image || 'https://placehold.co/400x400?text=No+Image')}>
+                          <Image
+                            src={service.serviceImage || service.image || 'https://placehold.co/400x400?text=No+Image'}
+                            alt={service.name || 'Service'}
+                            width={150}
+                            height={150}
+                            className="object-cover rounded-2xl aspect-square"
+                          />
+                        </Card>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-medium text-primary">₹{service.price?.toFixed(2)}</div>
-                        <Badge variant="outline" className="uppercase font-bold tracking-tighter text-[10px] mt-1">
-                          Base Price
-                        </Badge>
+                      <div className="flex-1 space-y-6">
+                        <div className="space-y-2">
+                          <h3 className="text-2xl font-bold font-headline text-primary">{service.name || 'N/A'}</h3>
+                          <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
+                            By <span className="text-foreground font-bold underline decoration-primary/20">{service.vendorName || 'Independent Vendor'}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-end gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 w-fit">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Base Price</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg font-bold text-primary">₹{typeof service.price === 'number' ? service.price.toFixed(2) : 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="bg-secondary/20 rounded-2xl p-6 space-y-4">

@@ -1125,7 +1125,16 @@ export function AppointmentDetailView({
         return `INV-${dateStr}-${salonName}-${uniqueId}`;
       })(),
       date: liveAppointment.date instanceof Date ? liveAppointment.date.toLocaleDateString() : String(liveAppointment.date).split('T')[0],
-      time: liveAppointment.startTime,
+      time: (() => {
+        if (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0) {
+          const firstItem = liveAppointment.serviceItems[0];
+          const lastItem = liveAppointment.serviceItems[liveAppointment.serviceItems.length - 1];
+          if (firstItem.startTime && lastItem.endTime) {
+            return `${firstItem.startTime} - ${lastItem.endTime}`;
+          }
+        }
+        return liveAppointment.startTime;
+      })(),
       client: {
         fullName: liveAppointment.clientName,
         phone: (liveAppointment.client as any)?.phone || liveAppointment.clientPhone || ''
@@ -2260,8 +2269,26 @@ export function AppointmentDetailView({
                             </p>
                             <div className="flex items-center flex-wrap gap-y-1 text-foreground/80">
                               <Clock className="h-4 w-4 mr-1.5 text-foreground" />
-                              <span>{liveAppointment.startTime} - {liveAppointment.endTime}</span>
-                              <span className="ml-2 text-xs text-muted-foreground">({liveAppointment.duration} min)</span>
+                              {(() => {
+                                let start = liveAppointment.startTime;
+                                let end = liveAppointment.endTime;
+                                let dur = liveAppointment.duration;
+                                if (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0) {
+                                  const firstItem = liveAppointment.serviceItems[0];
+                                  const lastItem = liveAppointment.serviceItems[liveAppointment.serviceItems.length - 1];
+                                  if (firstItem.startTime && lastItem.endTime) {
+                                    start = firstItem.startTime;
+                                    end = lastItem.endTime;
+                                  }
+                                  dur = liveAppointment.serviceItems.reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+                                }
+                                return (
+                                  <>
+                                    <span>{start} - {end}</span>
+                                    <span className="ml-2 text-xs text-muted-foreground">({dur} min)</span>
+                                  </>
+                                );
+                              })()}
                               {(liveAppointment.travelTime || liveAppointment.weddingPackageDetails?.travelTime) ? (
                                 <span className="ml-2 text-[11px] text-muted-foreground font-medium flex items-center bg-muted/50 px-1.5 py-0.5 rounded border border-muted">
                                   🚗 Travel: {liveAppointment.travelTime || liveAppointment.weddingPackageDetails?.travelTime} min
