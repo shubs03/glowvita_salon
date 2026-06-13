@@ -126,7 +126,16 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
         return `INV-${dateStr}-${salonName}-${uniqueId}`;
       })(),
       date: appointment.date instanceof Date ? appointment.date.toLocaleDateString() : String(appointment.date).split('T')[0],
-      time: appointment.startTime,
+      time: (() => {
+        if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+          const firstItem = appointment.serviceItems[0];
+          const lastItem = appointment.serviceItems[appointment.serviceItems.length - 1];
+          if (firstItem.startTime && lastItem.endTime) {
+            return `${firstItem.startTime} - ${lastItem.endTime}`;
+          }
+        }
+        return appointment.startTime;
+      })(),
       client: {
         fullName: appointment.clientName,
         phone: (appointment as any).client?.phone || (appointment as any).clientPhone || ''
@@ -363,7 +372,21 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             </div>
             <div className="flex items-center text-sm text-gray-600 mt-1 flex-wrap gap-y-1">
               <Clock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-              <span>{appointment.startTime} - {appointment.endTime} ({appointment.duration} min)</span>
+              {(() => {
+                let start = appointment.startTime;
+                let end = appointment.endTime;
+                let dur = appointment.duration;
+                if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+                  const firstItem = appointment.serviceItems[0];
+                  const lastItem = appointment.serviceItems[appointment.serviceItems.length - 1];
+                  if (firstItem.startTime && lastItem.endTime) {
+                    start = firstItem.startTime;
+                    end = lastItem.endTime;
+                  }
+                  dur = appointment.serviceItems.reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+                }
+                return <span>{start} - {end} ({dur} min)</span>;
+              })()}
               {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime) ? (
                 <span className="ml-2 text-xs text-muted-foreground font-medium flex items-center bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                   🚗 Travel Time: {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime)} min

@@ -22,6 +22,7 @@ type Appointment = {
   duration?: string;
   price?: string;
   mode?: 'online' | 'offline'; // Booking mode
+  serviceItems?: any[];
 };
 
 interface AppointmentCardProps {
@@ -288,7 +289,18 @@ export default function AppointmentCard({
         </div>
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 font-bold bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
           <Clock className="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" />
-          <span className="tracking-wide">{appointment.startTime} - {appointment.endTime}</span>
+          <span className="tracking-wide">
+            {(() => {
+              if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+                const firstItem = appointment.serviceItems[0];
+                const lastItem = appointment.serviceItems[appointment.serviceItems.length - 1];
+                if (firstItem.startTime && lastItem.endTime) {
+                  return `${firstItem.startTime} - ${lastItem.endTime}`;
+                }
+              }
+              return `${appointment.startTime} - ${appointment.endTime}`;
+            })()}
+          </span>
         </div>
       </div>
 
@@ -315,10 +327,18 @@ export default function AppointmentCard({
         <div className={`text-base font-extrabold px-4 py-2 rounded-full ${accent} bg-opacity-20 shadow-md`}>
           {appointment.serviceName || appointment.service}
         </div>
-        {appointment.duration && (
+        {(appointment.duration || (appointment.serviceItems && appointment.serviceItems.length > 0)) && (
           <span className="text-base text-gray-700 dark:text-gray-300 font-bold flex items-center bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
             <Clock className="w-5 h-5 mr-2" />
-            {appointment.duration}
+            {(() => {
+              if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+                const total = appointment.serviceItems.reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+                return `${total} min`;
+              }
+              return appointment.duration && !String(appointment.duration).includes('min')
+                ? `${appointment.duration} min`
+                : appointment.duration;
+            })()}
           </span>
         )}
       </div>
