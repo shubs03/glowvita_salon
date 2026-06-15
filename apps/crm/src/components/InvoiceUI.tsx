@@ -50,15 +50,31 @@ export function InvoiceUI({
 }: InvoiceUIProps) {
   const vendorPhone =
     vendorProfile?.data?.phone || vendorProfile?.data?.mobile || "N/A";
-  const vendorAddress =
-    [
-      vendorProfile?.data?.address,
-      vendorProfile?.data?.city,
-      vendorProfile?.data?.state,
-      vendorProfile?.data?.pincode,
-    ]
-      .filter(Boolean)
-      .join(", ") || "N/A";
+  // Normalize address: move pincode to after country name if it appears before it.
+  // e.g. "Maharashtra 422002, India" → "Maharashtra, India, 422002"
+  const normalizeAddress = (addr: string): string => {
+    // Regex: captures a 6-digit pincode that appears before ", India"
+    return addr.replace(/\s+(\d{6}),\s*(India)/gi, ", $2, $1");
+  };
+
+  const vendorAddress = (() => {
+    const fullAddress = vendorProfile?.data?.address;
+    if (fullAddress) {
+      // Full address already includes city/state/pincode — normalize order
+      return normalizeAddress(fullAddress);
+    }
+    // No full address stored — build from individual fields
+    return (
+      [
+        vendorProfile?.data?.city,
+        vendorProfile?.data?.state,
+        "India",
+        vendorProfile?.data?.pincode,
+      ]
+        .filter(Boolean)
+        .join(", ") || "N/A"
+    );
+  })();
 
   const formatAddress = (address: string) => {
     if (!address || address === "N/A") return address;
@@ -224,13 +240,16 @@ export function InvoiceUI({
           <tbody>
             {invoiceData.items.map((item: any, index: number) => {
               const displayTaxRate = typeof item.tax === 'number' ? item.tax : (typeof item.taxRate === 'number' ? item.taxRate : outerDisplayTaxRate);
-              
+
               const itemPrice = Number(item.price || 0);
               let discountedUnitPrice = itemPrice;
               const itemQuantity = Number(item.quantity || 1);
               const calculatedUnitFromTotal = Number(item.totalPrice || 0) / itemQuantity;
-              
-              if (item.salePrice && Number(item.salePrice) > 0) {
+
+              // If the final total price indicates a lower unit price, it's the definitive discounted price.
+              if (calculatedUnitFromTotal > 0 && calculatedUnitFromTotal < itemPrice) {
+                discountedUnitPrice = calculatedUnitFromTotal;
+              } else if (item.salePrice && Number(item.salePrice) > 0) {
                 discountedUnitPrice = Number(item.salePrice);
               } else if (item.discountedPrice !== undefined && item.discountedPrice !== null) {
                 discountedUnitPrice = Number(item.discountedPrice);
@@ -242,11 +261,6 @@ export function InvoiceUI({
                 }
               }
 
-              // Fallback: If no explicit discount found, try deriving it from the final totalPrice
-              if (discountedUnitPrice === itemPrice && calculatedUnitFromTotal > 0 && calculatedUnitFromTotal < itemPrice) {
-                discountedUnitPrice = calculatedUnitFromTotal;
-              }
-
               discountedUnitPrice = Math.max(0, discountedUnitPrice);
 
               return (
@@ -256,24 +270,22 @@ export function InvoiceUI({
                 >
                   <td className="border border-black p-1 sm:p-2 print:p-1">
                     <div
-                      className={`font-semibold text-xs sm:text-sm text-black print:text-xs ${
-                        item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
-                      }`}
+                      className={`font-semibold text-xs sm:text-sm text-black print:text-xs ${item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
+                        }`}
                     >
                       {item.type === "addon" ? "+ " : item.type === "wedding_included_service" ? "└ " : ""}
                       {isProduct(item) ? item.productName : item.name}
                     </div>
                     {item.staff && !isProduct(item) && (
                       <div
-                        className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${
-                          item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
-                        }`}
+                        className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
+                          }`}
                       >
                         Staff: {item.staff}
                       </div>
                     )}
                   </td>
-                  
+
                   {item.type === "wedding_included_service" ? (
                     <>
                       <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
