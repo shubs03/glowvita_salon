@@ -1019,11 +1019,11 @@ const ProductMasterManager = () => {
                                     <TableCell className="text-muted-foreground">{item.brand || '-'}</TableCell>
                                     <TableCell className="text-muted-foreground">{item.productForm || '-'}</TableCell>
                                     <TableCell>
-                                        {item.productImage ? (
-                                            <img src={item.productImage} alt={item.name} className="h-12 w-12 object-cover rounded" />
-                                        ) : (
-                                            <span className="text-muted-foreground">No image</span>
-                                        )}
+                                        <img
+                                            src={item.productImage || "/images/product-placeholder.png"}
+                                            alt={item.name}
+                                            className="h-12 w-12 object-cover rounded"
+                                        />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
