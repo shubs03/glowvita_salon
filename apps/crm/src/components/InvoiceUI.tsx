@@ -83,13 +83,7 @@ export function InvoiceUI({
   const isProduct = (item: any) =>
     item.hasOwnProperty("productName") && item.hasOwnProperty("stock");
 
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-
-  const handleItemClick = (item: any) => {
-    setSelectedItem(item);
-    setIsPopupOpen(true);
-  };
+  // Remove popup state as it's no longer needed
 
   // Robust tax rate calculation
   const numTax = Number(invoiceData.tax) || 0;
@@ -230,11 +224,35 @@ export function InvoiceUI({
           <tbody>
             {invoiceData.items.map((item: any, index: number) => {
               const displayTaxRate = typeof item.tax === 'number' ? item.tax : (typeof item.taxRate === 'number' ? item.taxRate : outerDisplayTaxRate);
+              
+              const itemPrice = Number(item.price || 0);
+              let discountedUnitPrice = itemPrice;
+              const itemQuantity = Number(item.quantity || 1);
+              const calculatedUnitFromTotal = Number(item.totalPrice || 0) / itemQuantity;
+              
+              if (item.salePrice && Number(item.salePrice) > 0) {
+                discountedUnitPrice = Number(item.salePrice);
+              } else if (item.discountedPrice !== undefined && item.discountedPrice !== null) {
+                discountedUnitPrice = Number(item.discountedPrice);
+              } else if (item.discount) {
+                if (item.discountType === "percentage") {
+                  discountedUnitPrice = itemPrice - (itemPrice * Number(item.discount)) / 100;
+                } else {
+                  discountedUnitPrice = itemPrice - Number(item.discount);
+                }
+              }
+
+              // Fallback: If no explicit discount found, try deriving it from the final totalPrice
+              if (discountedUnitPrice === itemPrice && calculatedUnitFromTotal > 0 && calculatedUnitFromTotal < itemPrice) {
+                discountedUnitPrice = calculatedUnitFromTotal;
+              }
+
+              discountedUnitPrice = Math.max(0, discountedUnitPrice);
+
               return (
                 <tr
                   key={index}
-                  className="border border-black cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleItemClick(item)}
+                  className="border border-black"
                 >
                   <td className="border border-black p-1 sm:p-2 print:p-1">
                     <div
@@ -260,13 +278,13 @@ export function InvoiceUI({
                     <>
                       <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
                         <div className="flex flex-col items-end gap-0.5">
-                          {item.price > (item.discountedPrice ?? item.price) && (
+                          {itemPrice > discountedUnitPrice && (
                             <span className="line-through text-gray-400 text-[10px] leading-none">
-                              ₹{Number(item.price).toFixed(2)}
+                              ₹{itemPrice.toFixed(2)}
                             </span>
                           )}
-                          <span className="text-green-700 leading-none">
-                            ₹{Number(item.discountedPrice ?? item.price).toFixed(2)}
+                          <span className={itemPrice > discountedUnitPrice ? "text-green-700 leading-none" : "leading-none"}>
+                            ₹{discountedUnitPrice.toFixed(2)}
                           </span>
                         </div>
                       </td>
@@ -277,14 +295,27 @@ export function InvoiceUI({
                   ) : (
                     <>
                       <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
-                        {item.price === 0 ? "Included" : `₹${Number(item.price || 0).toFixed(2)}`}
+                        {itemPrice === 0 ? (
+                          "Included"
+                        ) : (
+                          <div className="flex flex-col items-end gap-0.5">
+                            {itemPrice > discountedUnitPrice && (
+                              <span className="line-through text-gray-400 text-[10px] leading-none">
+                                ₹{itemPrice.toFixed(2)}
+                              </span>
+                            )}
+                            <span className={itemPrice > discountedUnitPrice ? "text-green-700 leading-none" : "leading-none"}>
+                              ₹{discountedUnitPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
                         {item.quantity}
                       </td>
                       <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
                         {item.totalPrice === 0 ? "Included" : `₹${(
-                          ((item.price || 0) * (item.quantity || 1) * displayTaxRate) /
+                          ((itemPrice) * (item.quantity || 1) * displayTaxRate) /
                           100
                         ).toFixed(2)}`}
                       </td>
@@ -339,23 +370,6 @@ export function InvoiceUI({
               </td>
             </tr>
 
-            {/* Discount */}
-            <tr className="border border-black">
-              <td
-                className="border border-black p-1 sm:p-2 text-right font-semibold text-green-600 text-xs sm:text-sm print:text-xs print:p-1"
-                colSpan={4}
-              >
-                Discount
-                {invoiceData.couponCode
-                  ? ` (${invoiceData.couponCode})`
-                  : ""}
-                :
-              </td>
-              <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-green-600 print:text-xs print:p-1">
-                -₹{(invoiceData.discount || 0).toFixed(2)}
-              </td>
-            </tr>
-
             {/* Total */}
             <tr className="border border-black bg-gray-200">
               <td
@@ -402,94 +416,7 @@ export function InvoiceUI({
         </div>
       </div>
 
-      {/* Item Detail Popup */}
-      {isPopupOpen && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base sm:text-lg font-bold">Item Details</h3>
-              <button
-                onClick={() => setIsPopupOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-semibold">Item Name</p>
-                <p className="text-sm">
-                  {isProduct(selectedItem)
-                    ? selectedItem.productName
-                    : selectedItem.name}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-semibold">Price</p>
-                  <p className="text-sm">
-                    ₹{(selectedItem.price || 0).toFixed(2)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Quantity</p>
-                  <p className="text-sm">{selectedItem.quantity}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-semibold">Discount</p>
-                  <p className="text-sm">
-                    {selectedItem.discount ? (
-                      selectedItem.discountType === "percentage" ? (
-                        `${selectedItem.discount}%`
-                      ) : (
-                        `₹${selectedItem.discount}`
-                      )
-                    ) : (
-                      "0"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Total</p>
-                  <p className="text-sm">
-                    ₹{(selectedItem.totalPrice || 0).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              {isProduct(selectedItem) ? (
-                <div>
-                  <p className="text-sm font-semibold">Stock</p>
-                  <p className="text-sm">{selectedItem.stock}</p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm font-semibold">Duration</p>
-                  <p className="text-sm">{selectedItem.duration} min</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Item Detail Popup removed */}
     </div>
   );
 }
