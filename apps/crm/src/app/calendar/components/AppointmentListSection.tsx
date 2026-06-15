@@ -83,28 +83,57 @@ export default function AppointmentListSection({
                           <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 text-[10px] px-1.5 h-4">Home</Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground truncate mt-1">
-                        {appointment.isWeddingService
-                          ? `${appointment.weddingPackageDetails?.packageName || appointment.serviceName} (Wedding)`
-                          : appointment.isHomeService
-                            ? `${appointment.serviceName} (Home Service)`
-                            : (appointment.serviceName || 'No service specified')}
-                      </p>
+                      {appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0 ? (
+                        <div className="flex flex-col gap-2 mt-2">
+                          {appointment.serviceItems.map((item: any, idx: number) => (
+                            <div key={idx} className="flex flex-col text-sm border-l-2 border-primary/30 pl-2">
+                              <span className="font-medium text-foreground">{item.serviceName}</span>
+                              <div className="flex items-center gap-1.5 text-muted-foreground text-xs mt-0.5">
+                                <Clock className="h-3 w-3 flex-shrink-0" />
+                                <span>{item.startTime}-{item.endTime}</span>
+                                {item.staffName && (
+                                  <>
+                                    <span className="text-muted-foreground/50 mx-0.5">•</span>
+                                    <User className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{item.staffName}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground truncate mt-1">
+                          {appointment.isWeddingService
+                            ? `${appointment.weddingPackageDetails?.packageName || appointment.serviceName} (Wedding)`
+                            : appointment.isHomeService
+                              ? `${appointment.serviceName} (Home Service)`
+                              : (appointment.serviceName || 'No service specified')}
+                        </p>
+                      )}
                     </div>
 
                     {/* Second Column - Staff Name, Date and Time */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
-                      </div>
+                      {!appointment.isMultiService && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <User className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                         <Clock className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">
-                          {new Date(appointment.date).toLocaleDateString()} • {appointment.startTime}-{appointment.endTime}
+                          {new Date(appointment.date).toLocaleDateString()} • {
+                            appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0
+                              ? `${[...appointment.serviceItems].sort((a: any, b: any) => a.startTime.localeCompare(b.startTime))[0]?.startTime}-${[...appointment.serviceItems].sort((a: any, b: any) => a.endTime.localeCompare(b.endTime)).pop()?.endTime}`
+                              : `${appointment.startTime}-${appointment.endTime}`
+                          }
                         </span>
                         <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                          {appointment.duration}m
+                          {appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0
+                            ? appointment.serviceItems.reduce((acc: number, item: any) => acc + (Number(item.duration) || 0), 0)
+                            : appointment.duration}m
                         </span>
                         {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime) ? (
                           <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full inline-flex items-center gap-1">
