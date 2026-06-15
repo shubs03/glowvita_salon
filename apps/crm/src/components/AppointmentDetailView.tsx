@@ -2280,7 +2280,7 @@ export function AppointmentDetailView({
                                     start = firstItem.startTime;
                                     end = lastItem.endTime;
                                   }
-                                  dur = liveAppointment.serviceItems.reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+                                  dur = liveAppointment.serviceItems.reduce((sum: number, item: any) => sum + (Number(item.duration) || 0), 0);
                                 }
                                 return (
                                   <>
