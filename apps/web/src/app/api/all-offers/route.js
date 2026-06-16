@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 import AdminOfferModel from '@repo/lib/models/admin/AdminOffers.model.js';
-import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model.js';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model.js';
-import DoctorModel from '@repo/lib/models/Vendor/Docters.model.js';
-import SupplierModel from '@repo/lib/models/Vendor/Supplier.model.js';
 import connectDB from '@repo/lib/db';
 import mongoose from 'mongoose';
 
@@ -12,15 +9,9 @@ export async function GET(request) {
   try {
     await connectDB();
 
-    // Register lowercase aliases for refPath resolution
+    // Register lowercase Vendor alias in case it's needed by AdminOffer model lookups
     if (mongoose.models.Vendor && !mongoose.models.vendor) {
       mongoose.model('vendor', mongoose.models.Vendor.schema);
-    }
-    if (mongoose.models.Doctor && !mongoose.models.doctor) {
-      mongoose.model('doctor', mongoose.models.Doctor.schema);
-    }
-    if (mongoose.models.Supplier && !mongoose.models.supplier) {
-      mongoose.model('supplier', mongoose.models.Supplier.schema);
     }
 
     const { searchParams } = new URL(request.url);
@@ -88,42 +79,12 @@ export async function GET(request) {
       isAdminGlobal: !offer.regionId,
     }));
 
-    // Get all active CRM offers (vendor-specific offers)
-    let crmOffers = [];
-    let crmQuery = { businessType: 'vendor' };
-    
-    if (vendorId) {
-      crmQuery.businessId = vendorId;
-    } else if (regionId) {
-      crmQuery.regionId = regionId;
-    }
-
-    crmOffers = await CRMOfferModel.find(crmQuery)
-      .populate({ path: 'businessId', select: 'businessName' })
-      .lean();
-
-    // Process CRM offers to update status based on current date
-    const activeCrmOffers = crmOffers.filter(offer => {
-      const now = new Date();
-      const started = offer.startDate <= now;
-      const notExpired = !offer.expires || offer.expires >= now;
-      return started && notExpired;
-    }).map(offer => ({
-      ...offer,
-      status: 'Active', // Ensure frontend sees it as active
-      isVendorOffer: true,
-      businessType: offer.businessType,
-      businessId: offer.businessId,
-    }));
-
-    // Return both admin offers and CRM/vendor offers
-    const allActiveOffers = [...activeAdminOffers, ...activeCrmOffers];
-
+    // Return only admin offers — CRM/vendor offers are excluded from the public landing page
     return NextResponse.json(
       {
         success: true,
-        data: allActiveOffers,
-        count: allActiveOffers.length
+        data: activeAdminOffers,
+        count: activeAdminOffers.length
       },
       { status: 200 }
     );
