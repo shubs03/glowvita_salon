@@ -29,8 +29,10 @@ function cleanupExpiredLocks() {
   }
 }
 
-// Run cleanup every 5 minutes
-setInterval(cleanupExpiredLocks, 5 * 60 * 1000);
+// Run cleanup every 5 minutes — only in server runtime, not during Next.js build phase
+if (typeof process !== 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
+  setInterval(cleanupExpiredLocks, 5 * 60 * 1000);
+}
 
 /**
  * Generate a unique lock key
@@ -445,14 +447,15 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
 
       // Populate top-level fields from the primary service item
       const primaryService = tempAppointmentData.serviceItems[0];
+      const lastService = tempAppointmentData.serviceItems[tempAppointmentData.serviceItems.length - 1];
       tempAppointmentData.service = primaryService.service;
       tempAppointmentData.serviceName = primaryService.serviceName;
       tempAppointmentData.staff = primaryService.staff;
       tempAppointmentData.staffName = primaryService.staffName;
       tempAppointmentData.startTime = primaryService.startTime;
-      tempAppointmentData.endTime = primaryService.endTime;
+      tempAppointmentData.endTime = lastService.endTime;
       // Use totalDuration (base + addons) for the top-level duration field
-      tempAppointmentData.duration = primaryService.totalDuration || primaryService.duration;
+      tempAppointmentData.duration = tempAppointmentData.serviceItems.reduce((sum, item) => sum + (item.totalDuration || item.duration), 0);
       tempAppointmentData.amount = primaryService.amount;
 
       // Sync addOns and addOnsAmount from primary service

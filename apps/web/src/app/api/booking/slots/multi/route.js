@@ -5,8 +5,6 @@ import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorServicesModel from '@repo/lib/models/Vendor/VendorServices.model';
 import { calculateVendorTravelTime } from '@repo/lib/modules/scheduling/EnhancedTravelUtils';
 
-await _db();
-
 /**
  * Unified Multi-Service Slot Discovery API
  * 
@@ -91,6 +89,14 @@ function hasAppointmentConflict(appointments, staffId, date, startMinutes, endMi
   const dateString = date.toISOString().split('T')[0];
 
   return appointments.some(appointment => {
+    // Check if appointment is on the same date
+    const appointmentDateString = new Date(appointment.date).toISOString().split('T')[0];
+    if (appointmentDateString !== dateString) return false;
+
+    // Check if appointment status is active
+    const status = (appointment.status || '').toLowerCase();
+    if (!['confirmed', 'pending', 'scheduled', 'temp-locked'].includes(status)) return false;
+
     // Check if appointment is for this staff member (either primary or secondary service)
     const isPrimaryStaff = (appointment.staff && typeof appointment.staff === 'object'
       ? appointment.staff._id?.toString() || appointment.staff.id?.toString()
@@ -105,15 +111,42 @@ function hasAppointmentConflict(appointments, staffId, date, startMinutes, endMi
 
     if (!isPrimaryStaff && !isSecondaryStaff) return false;
 
-    // Check if appointment is on the same date
-    const appointmentDateString = new Date(appointment.date).toISOString().split('T')[0];
-    if (appointmentDateString !== dateString) return false;
+    // If it is multi-service, we check the specific service item intervals
+    if (appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0) {
+      let checkedAnyItem = false;
+      for (const item of appointment.serviceItems) {
+        const itemStaffId = (item.staff && typeof item.staff === 'object'
+          ? item.staff._id?.toString() || item.staff.id?.toString()
+          : item.staff?.toString());
 
-    // Check if appointment status is active
-    const status = (appointment.status || '').toLowerCase();
-    if (!['confirmed', 'pending', 'scheduled', 'temp-locked'].includes(status)) return false;
+        if (itemStaffId === staffId?.toString()) {
+          checkedAnyItem = true;
+          const itemStart = timeToMinutes(item.startTime);
+          const itemEnd = timeToMinutes(item.endTime);
 
-    // Check for time overlap including travel time for external services
+          const isFirstService = appointment.serviceItems[0] === item;
+          const isLastService = appointment.serviceItems[appointment.serviceItems.length - 1] === item;
+
+          const aptTravelTime = appointment.travelTime || (appointment.isHomeService ? 30 : 0);
+          const aptBufferBefore = isFirstService ? (Number(appointment.bufferBefore) || 0) : 0;
+          const aptBufferAfter = isLastService ? (Number(appointment.bufferAfter) || 0) : 0;
+          const travelBefore = isFirstService && appointment.isHomeService ? aptTravelTime : 0;
+          const travelAfter = isLastService && appointment.isHomeService ? aptTravelTime : 0;
+
+          const blockedStart = itemStart - travelBefore - aptBufferBefore;
+          const blockedEnd = itemEnd + travelAfter + aptBufferAfter;
+
+          if (startMinutes < blockedEnd && endMinutes > blockedStart) {
+            return true;
+          }
+        }
+      }
+      if (checkedAnyItem) {
+        return false;
+      }
+    }
+
+    // Fallback for single service
     const aptStart = timeToMinutes(appointment.startTime);
     const aptEnd = timeToMinutes(appointment.endTime);
 
@@ -165,89 +198,184 @@ function checkStaffAvailability(staff, date, fullBlockedStart, fullBlockedEnd, e
   return true;
 }
 
-// Main validation: Check if a complete sequence is valid
-async function validateSequence(assignments, startMinutes, date, existingAppointments, allActiveStaff, isHomeService, travelTimeInfo, bufferBefore = 0, bufferAfter = 0) {
+// Helper: Get the time window when a staff member is occupied in a proposed sequence
+function getStaffWindowInSequence(staffId, assignments, startMinutes, isHomeService, travelTimeInfo, bufferBefore, bufferAfter) {
   const travelTimeMinutes = (isHomeService && travelTimeInfo) ? travelTimeInfo.timeInMinutes : 0;
+  let firstServiceIndex = -1;
+  let lastServiceIndex = -1;
 
-  // Calculate total duration for the entire sequence including all addons
-  let totalServiceDuration = 0;
-  assignments.forEach(a => {
+  let currentMinutes = startMinutes;
+  const serviceTimes = [];
+
+  for (let i = 0; i < assignments.length; i++) {
+    const a = assignments[i];
     const base = parseDuration(a.service.duration);
     const addons = (a.addOnDetails || []).reduce((sum, ad) => sum + parseDuration(ad.duration, 0), 0);
-    totalServiceDuration += (base + addons);
-  });
+    const duration = base + addons;
 
-  // Calculate the FULL professional blocked period [Start - TravelTo - BufferBefore, Start + Duration + TravelBack + BufferAfter]
-  const fullBlockedStart = startMinutes - travelTimeMinutes - bufferBefore;
-  const fullBlockedEnd = startMinutes + totalServiceDuration + travelTimeMinutes + bufferAfter;
+    serviceTimes.push({
+      start: currentMinutes,
+      end: currentMinutes + duration
+    });
 
-  // Find a suitable professional for 'any' assignments
-  let anyProfessionalCandidate = null;
+    currentMinutes += duration;
+  }
+
+  // Find the first and last service index for this staffId
+  for (let i = 0; i < assignments.length; i++) {
+    const a = assignments[i];
+    const itemStaffId = a.staff?._id?.toString() || a.staff?.id?.toString() || a.staffId?.toString();
+    if (itemStaffId === staffId?.toString()) {
+      if (firstServiceIndex === -1) firstServiceIndex = i;
+      lastServiceIndex = i;
+    }
+  }
+
+  if (firstServiceIndex === -1) {
+    return null; // Staff member not in sequence
+  }
+
+  let windowStart = serviceTimes[firstServiceIndex].start;
+  let windowEnd = serviceTimes[lastServiceIndex].end;
+
+  // Apply travel/buffer before if this staff member performs the first service
+  if (firstServiceIndex === 0) {
+    windowStart -= (travelTimeMinutes + bufferBefore);
+  }
+
+  // Apply travel/buffer after if this staff member performs the last service
+  if (lastServiceIndex === assignments.length - 1) {
+    windowEnd += (travelTimeMinutes + bufferAfter);
+  }
+
+  return { start: windowStart, end: windowEnd };
+}
+
+// Main validation: Check if a complete sequence is valid
+async function validateSequence(assignments, startMinutes, date, existingAppointments, allActiveStaff, isHomeService, travelTimeInfo, bufferBefore = 0, bufferAfter = 0) {
   const hasAnyAssignment = assignments.some(a => a.staff.isAny);
 
   if (hasAnyAssignment) {
-    // Try each active staff to see if they can handle the FULL sequence
+    // Try to find a candidate from allActiveStaff who can fulfill the "Any Professional" slots
     for (const candidate of allActiveStaff) {
-      if (checkStaffAvailability(candidate, date, fullBlockedStart, fullBlockedEnd, existingAppointments)) {
-        anyProfessionalCandidate = candidate;
-        break;
+      // Create a temporary fully-specified assignments array where 'any' is replaced by candidate
+      const testAssignments = assignments.map(a => {
+        if (a.staff.isAny) {
+          return { ...a, staff: candidate };
+        }
+        return a;
+      });
+
+      // Get all unique staff members in this proposed assignment
+      const uniqueStaffMap = new Map();
+      testAssignments.forEach(a => {
+        const id = a.staff?._id?.toString() || a.staff?.id?.toString();
+        if (id) uniqueStaffMap.set(id, a.staff);
+      });
+
+      let allStaffAvailable = true;
+      for (const [staffId, staffObj] of uniqueStaffMap.entries()) {
+        const window = getStaffWindowInSequence(staffId, testAssignments, startMinutes, isHomeService, travelTimeInfo, bufferBefore, bufferAfter);
+        if (!window || !checkStaffAvailability(staffObj, date, window.start, window.end, existingAppointments)) {
+          allStaffAvailable = false;
+          break;
+        }
+      }
+
+      if (allStaffAvailable) {
+        // We found a valid candidate! Build sequence and return
+        const sequence = [];
+        let currentMinutes = startMinutes;
+
+        for (const assignment of testAssignments) {
+          const { service, staff, staffId: originalStaffId, addOnDetails = [] } = assignment;
+          const staffId = staff._id || staff.id || originalStaffId;
+
+          const baseDuration = parseDuration(service.duration);
+          const addonsDuration = addOnDetails.reduce((sum, addon) => sum + parseDuration(addon.duration, 0), 0);
+          const serviceDuration = baseDuration + addonsDuration;
+
+          const serviceEndMinutes = currentMinutes + serviceDuration;
+
+          sequence.push({
+            serviceId: service._id.toString(),
+            serviceName: service.name,
+            staffId: staffId.toString(),
+            staffName: staff.fullName,
+            startTime: minutesToTime(currentMinutes),
+            endTime: minutesToTime(serviceEndMinutes),
+            duration: serviceDuration,
+            baseDuration,
+            addonsDuration,
+            addOns: addOnDetails.map(a => ({
+              id: a._id.toString(),
+              name: a.name,
+              duration: a.duration,
+              price: a.price
+            }))
+          });
+
+          currentMinutes = serviceEndMinutes;
+        }
+
+        return { valid: true, sequence, totalEndMinutes: currentMinutes };
       }
     }
 
-    // If no one can handle 'any', this slot is invalid
-    if (!anyProfessionalCandidate) {
-      return { valid: false, reason: 'No professional available for "Any Professional" selection' };
-    }
-  }
-
-  // Double check availability for specific staff assignments
-  for (const a of assignments) {
-    if (!a.staff.isAny) {
-      if (!checkStaffAvailability(a.staff, date, fullBlockedStart, fullBlockedEnd, existingAppointments)) {
-        return { valid: false, reason: `${a.staff.fullName} is not available for the full duration` };
-      }
-    }
-  }
-
-  const sequence = [];
-  let currentMinutes = startMinutes;
-
-  for (const assignment of assignments) {
-    const { service, staff: originalStaff, staffId: originalStaffId, addOnDetails = [] } = assignment;
-    const staff = originalStaff.isAny ? anyProfessionalCandidate : originalStaff;
-    const staffId = staff._id || staff.id || originalStaffId;
-
-    // Calculate total duration for this service including its addons
-    const baseDuration = parseDuration(service.duration);
-    const addonsDuration = addOnDetails.reduce((sum, addon) => sum + parseDuration(addon.duration, 0), 0);
-    const serviceDuration = baseDuration + addonsDuration;
-
-    const serviceEndMinutes = currentMinutes + serviceDuration;
-
-    // Add to sequence
-    sequence.push({
-      serviceId: service._id.toString(),
-      serviceName: service.name,
-      staffId: staffId.toString(),
-      staffName: staff.fullName,
-      startTime: minutesToTime(currentMinutes),
-      endTime: minutesToTime(serviceEndMinutes),
-      duration: serviceDuration,
-      baseDuration,
-      addonsDuration,
-      addOns: addOnDetails.map(a => ({
-        id: a._id.toString(),
-        name: a.name,
-        duration: a.duration,
-        price: a.price
-      }))
+    // If we tried all active staff and none could make a valid sequence
+    return { valid: false, reason: 'No professional available for "Any Professional" selection' };
+  } else {
+    // No "any" assignments, check specific assignments directly
+    const uniqueStaffMap = new Map();
+    assignments.forEach(a => {
+      const id = a.staff?._id?.toString() || a.staff?.id?.toString();
+      if (id) uniqueStaffMap.set(id, a.staff);
     });
 
-    // Move to next service start time
-    currentMinutes = serviceEndMinutes;
-  }
+    for (const [staffId, staffObj] of uniqueStaffMap.entries()) {
+      const window = getStaffWindowInSequence(staffId, assignments, startMinutes, isHomeService, travelTimeInfo, bufferBefore, bufferAfter);
+      if (!window || !checkStaffAvailability(staffObj, date, window.start, window.end, existingAppointments)) {
+        return { valid: false, reason: `${staffObj.fullName || 'Staff'} is not available for their assigned window` };
+      }
+    }
 
-  return { valid: true, sequence, totalEndMinutes: currentMinutes };
+    // All specific staff are available! Build the sequence.
+    const sequence = [];
+    let currentMinutes = startMinutes;
+
+    for (const assignment of assignments) {
+      const { service, staff, staffId: originalStaffId, addOnDetails = [] } = assignment;
+      const staffId = staff._id || staff.id || originalStaffId;
+
+      const baseDuration = parseDuration(service.duration);
+      const addonsDuration = addOnDetails.reduce((sum, addon) => sum + parseDuration(addon.duration, 0), 0);
+      const serviceDuration = baseDuration + addonsDuration;
+
+      const serviceEndMinutes = currentMinutes + serviceDuration;
+
+      sequence.push({
+        serviceId: service._id.toString(),
+        serviceName: service.name,
+        staffId: staffId.toString(),
+        staffName: staff.fullName,
+        startTime: minutesToTime(currentMinutes),
+        endTime: minutesToTime(serviceEndMinutes),
+        duration: serviceDuration,
+        baseDuration,
+        addonsDuration,
+        addOns: addOnDetails.map(a => ({
+          id: a._id.toString(),
+          name: a.name,
+          duration: a.duration,
+          price: a.price
+        }))
+      });
+
+      currentMinutes = serviceEndMinutes;
+    }
+
+    return { valid: true, sequence, totalEndMinutes: currentMinutes };
+  }
 }
 
 // Generate candidate slots

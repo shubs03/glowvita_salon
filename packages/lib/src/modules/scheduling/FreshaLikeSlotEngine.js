@@ -345,6 +345,40 @@ async function validateAndFilterSlots({
 
       // Check for conflicts with existing appointments using the pre-calculated slotBlockedStart/End
       for (const appointment of existingAppointments) {
+        if (appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0) {
+          let checkedAnyItem = false;
+          for (const item of appointment.serviceItems) {
+            const itemStaffId = (item.staff && typeof item.staff === 'object'
+              ? item.staff._id?.toString() || item.staff.id?.toString()
+              : item.staff?.toString());
+
+            if (itemStaffId === staffId?.toString()) {
+              checkedAnyItem = true;
+              const itemStart = timeToMinutes(item.startTime);
+              const itemEnd = timeToMinutes(item.endTime);
+
+              const isFirstService = appointment.serviceItems[0] === item;
+              const isLastService = appointment.serviceItems[appointment.serviceItems.length - 1] === item;
+
+              const aptTravelTime = appointment.travelTime || (appointment.isHomeService ? 30 : 0);
+              const aptBufferBefore = isFirstService ? (Number(appointment.bufferBefore) || 0) : 0;
+              const aptBufferAfter = isLastService ? (Number(appointment.bufferAfter) || 0) : 0;
+              const travelBefore = isFirstService && appointment.isHomeService ? aptTravelTime : 0;
+              const travelAfter = isLastService && appointment.isHomeService ? aptTravelTime : 0;
+
+              const blockedStart = itemStart - travelBefore - aptBufferBefore;
+              const blockedEnd = itemEnd + travelAfter + aptBufferAfter;
+
+              if (slotBlockedStart < blockedEnd && slotBlockedEnd > blockedStart) {
+                return false;
+              }
+            }
+          }
+          if (checkedAnyItem) {
+            continue; // Go to next appointment if we checked items and found no conflict
+          }
+        }
+
         const aptStartMinutes = timeToMinutes(appointment.startTime);
         const aptEndMinutes = timeToMinutes(appointment.endTime);
 
@@ -1040,6 +1074,41 @@ async function validateWeddingPackageSlot({
 
       // Check for conflicts with existing appointments using full window logic
       for (const appointment of staffAppointments) {
+        if (appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0) {
+          let checkedAnyItem = false;
+          for (const item of appointment.serviceItems) {
+            const itemStaffId = (item.staff && typeof item.staff === 'object'
+              ? item.staff._id?.toString() || item.staff.id?.toString()
+              : item.staff?.toString());
+
+            if (itemStaffId === staffIdStr) {
+              checkedAnyItem = true;
+              const itemStart = timeToMinutes(item.startTime);
+              const itemEnd = timeToMinutes(item.endTime);
+
+              const isFirstService = appointment.serviceItems[0] === item;
+              const isLastService = appointment.serviceItems[appointment.serviceItems.length - 1] === item;
+
+              const aptTravel = Number(appointment.travelTime) || 0;
+              const aptBufBefore = isFirstService ? (Number(appointment.bufferBefore) || 0) : 0;
+              const aptBufAfter = isLastService ? (Number(appointment.bufferAfter) || 0) : 0;
+              const travelBefore = isFirstService && appointment.isHomeService ? aptTravel : 0;
+              const travelAfter = isLastService && appointment.isHomeService ? aptTravel : 0;
+
+              const blockedStart = itemStart - travelBefore - aptBufBefore;
+              const blockedEnd = itemEnd + travelAfter + aptBufAfter;
+
+              if (slotTotalStart < blockedEnd && slotTotalEnd > blockedStart) {
+                console.log(`Slot window conflicts with multi-service item window ${minutesToTime(blockedStart)}-${minutesToTime(blockedEnd)}`);
+                return false;
+              }
+            }
+          }
+          if (checkedAnyItem) {
+            continue;
+          }
+        }
+
         const aptStartMinutes = timeToMinutes(appointment.startTime);
         const aptEndMinutes = timeToMinutes(appointment.endTime);
         const aptTravel = Number(appointment.travelTime) || 0;

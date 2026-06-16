@@ -65,6 +65,7 @@ export interface Appointment {
   finalAmount?: number;
   isHomeService?: boolean;
   isWeddingService?: boolean;
+  isMultiService?: boolean;
   homeServiceLocation?: {
     address?: string;
     city?: string;
