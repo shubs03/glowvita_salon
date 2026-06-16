@@ -178,6 +178,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 serviceItems: { $exists: true, $ne: [] }
               }
             },
+            {
+              $addFields: {
+                actualTotalServiceAmount: { $sum: "$serviceItems.amount" }
+              }
+            },
             { $unwind: "$serviceItems" },
             {
               $match: {
@@ -200,6 +205,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 platformFee: "$platformFee",
                 serviceTax: "$serviceTax",
                 totalAmount: "$totalAmount",
+                actualTotalServiceAmount: "$actualTotalServiceAmount",
                 // Include service items for multi-service handling
                 serviceItems: "$serviceItems",
                 isMultiService: "$isMultiService"
@@ -243,41 +249,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
               initialValue: 0,
               in: {
                 $cond: {
-                  if: {
-                    $and: [
-                      { $eq: ["$$this.mode", "online"] }, // Only for online mode
-                      { $ne: ["$$this.platformFee", 0] },   // Only if platform fee is not zero
-                      { $ne: ["$$this.serviceTax", 0] }     // Only if service tax is not zero
+                  if: { $eq: ["$$this.isMultiService", true] },
+                  then: {
+                    // For multi-service, distribute platform fee proportionally
+                    $add: [
+                      "$$value",
+                      {
+                        $cond: {
+                          if: { $gt: ["$$this.actualTotalServiceAmount", 0] },
+                          then: {
+                            $multiply: [
+                              { $ifNull: ["$$this.platformFee", 0] },
+                              { $divide: [{ $ifNull: ["$$this.amount", 0] }, "$$this.actualTotalServiceAmount"] }
+                            ]
+                          },
+                          else: 0
+                        }
+                      }
                     ]
                   },
-                  then: {
-                    $cond: {
-                      if: { $eq: ["$$this.isMultiService", true] },
-                      then: {
-                        // For multi-service, distribute platform fee proportionally
-                        $add: [
-                          "$$value",
-                          {
-                            $cond: {
-                              if: { $gt: ["$$this.totalAmount", 0] },
-                              then: {
-                                $multiply: [
-                                  "$$this.platformFee",
-                                  { $divide: ["$$this.amount", "$$this.totalAmount"] }
-                                ]
-                              },
-                              else: 0
-                            }
-                          }
-                        ]
-                      },
-                      else: {
-                        // For single-service, use the full platform fee
-                        $add: ["$$value", "$$this.platformFee"]
-                      }
-                    }
-                  },
-                  else: "$$value"
+                  else: {
+                    // For single-service, use the full platform fee
+                    $add: ["$$value", { $ifNull: ["$$this.platformFee", 0] }]
+                  }
                 }
               }
             }
@@ -288,41 +282,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
               initialValue: 0,
               in: {
                 $cond: {
-                  if: {
-                    $and: [
-                      { $eq: ["$$this.mode", "online"] }, // Only for online mode
-                      { $ne: ["$$this.platformFee", 0] },   // Only if platform fee is not zero
-                      { $ne: ["$$this.serviceTax", 0] }     // Only if service tax is not zero
+                  if: { $eq: ["$$this.isMultiService", true] },
+                  then: {
+                    // For multi-service, distribute service tax proportionally
+                    $add: [
+                      "$$value",
+                      {
+                        $cond: {
+                          if: { $gt: ["$$this.actualTotalServiceAmount", 0] },
+                          then: {
+                            $multiply: [
+                              { $ifNull: ["$$this.serviceTax", 0] },
+                              { $divide: [{ $ifNull: ["$$this.amount", 0] }, "$$this.actualTotalServiceAmount"] }
+                            ]
+                          },
+                          else: 0
+                        }
+                      }
                     ]
                   },
-                  then: {
-                    $cond: {
-                      if: { $eq: ["$$this.isMultiService", true] },
-                      then: {
-                        // For multi-service, distribute service tax proportionally
-                        $add: [
-                          "$$value",
-                          {
-                            $cond: {
-                              if: { $gt: ["$$this.totalAmount", 0] },
-                              then: {
-                                $multiply: [
-                                  "$$this.serviceTax",
-                                  { $divide: ["$$this.amount", "$$this.totalAmount"] }
-                                ]
-                              },
-                              else: 0
-                            }
-                          }
-                        ]
-                      },
-                      else: {
-                        // For single-service, use the full service tax
-                        $add: ["$$value", "$$this.serviceTax"]
-                      }
-                    }
-                  },
-                  else: "$$value"
+                  else: {
+                    // For single-service, use the full service tax
+                    $add: ["$$value", { $ifNull: ["$$this.serviceTax", 0] }]
+                  }
                 }
               }
             }
@@ -440,6 +422,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 serviceItems: { $exists: true, $ne: [] }
               }
             },
+            {
+              $addFields: {
+                actualTotalServiceAmount: { $sum: "$serviceItems.amount" }
+              }
+            },
             { $unwind: "$serviceItems" },
             {
               $match: {
@@ -462,6 +449,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 platformFee: "$platformFee",
                 serviceTax: "$serviceTax",
                 totalAmount: "$totalAmount",
+                actualTotalServiceAmount: "$actualTotalServiceAmount",
                 // Include service items for multi-service handling
                 serviceItems: "$serviceItems",
                 isMultiService: "$isMultiService",
@@ -507,41 +495,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
               initialValue: 0,
               in: {
                 $cond: {
-                  if: {
-                    $and: [
-                      { $eq: ["$$this.mode", "online"] }, // Only for online mode
-                      { $ne: ["$$this.platformFee", 0] },   // Only if platform fee is not zero
-                      { $ne: ["$$this.serviceTax", 0] }     // Only if service tax is not zero
+                  if: { $eq: ["$$this.isMultiService", true] },
+                  then: {
+                    // For multi-service, distribute platform fee proportionally
+                    $add: [
+                      "$$value",
+                      {
+                        $cond: {
+                          if: { $gt: ["$$this.actualTotalServiceAmount", 0] },
+                          then: {
+                            $multiply: [
+                              { $ifNull: ["$$this.platformFee", 0] },
+                              { $divide: [{ $ifNull: ["$$this.amount", 0] }, "$$this.actualTotalServiceAmount"] }
+                            ]
+                          },
+                          else: 0
+                        }
+                      }
                     ]
                   },
-                  then: {
-                    $cond: {
-                      if: { $eq: ["$$this.isMultiService", true] },
-                      then: {
-                        // For multi-service, distribute platform fee proportionally
-                        $add: [
-                          "$$value",
-                          {
-                            $cond: {
-                              if: { $gt: ["$$this.totalAmount", 0] },
-                              then: {
-                                $multiply: [
-                                  "$$this.platformFee",
-                                  { $divide: ["$$this.amount", "$$this.totalAmount"] }
-                                ]
-                              },
-                              else: 0
-                            }
-                          }
-                        ]
-                      },
-                      else: {
-                        // For single-service, use the full platform fee
-                        $add: ["$$value", "$$this.platformFee"]
-                      }
-                    }
-                  },
-                  else: "$$value"
+                  else: {
+                    // For single-service, use the full platform fee
+                    $add: ["$$value", { $ifNull: ["$$this.platformFee", 0] }]
+                  }
                 }
               }
             }
@@ -552,41 +528,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
               initialValue: 0,
               in: {
                 $cond: {
-                  if: {
-                    $and: [
-                      { $eq: ["$$this.mode", "online"] }, // Only for online mode
-                      { $ne: ["$$this.platformFee", 0] },   // Only if platform fee is not zero
-                      { $ne: ["$$this.serviceTax", 0] }     // Only if service tax is not zero
+                  if: { $eq: ["$$this.isMultiService", true] },
+                  then: {
+                    // For multi-service, distribute service tax proportionally
+                    $add: [
+                      "$$value",
+                      {
+                        $cond: {
+                          if: { $gt: ["$$this.actualTotalServiceAmount", 0] },
+                          then: {
+                            $multiply: [
+                              { $ifNull: ["$$this.serviceTax", 0] },
+                              { $divide: [{ $ifNull: ["$$this.amount", 0] }, "$$this.actualTotalServiceAmount"] }
+                            ]
+                          },
+                          else: 0
+                        }
+                      }
                     ]
                   },
-                  then: {
-                    $cond: {
-                      if: { $eq: ["$$this.isMultiService", true] },
-                      then: {
-                        // For multi-service, distribute service tax proportionally
-                        $add: [
-                          "$$value",
-                          {
-                            $cond: {
-                              if: { $gt: ["$$this.totalAmount", 0] },
-                              then: {
-                                $multiply: [
-                                  "$$this.serviceTax",
-                                  { $divide: ["$$this.amount", "$$this.totalAmount"] }
-                                ]
-                              },
-                              else: 0
-                            }
-                          }
-                        ]
-                      },
-                      else: {
-                        // For single-service, use the full service tax
-                        $add: ["$$value", "$$this.serviceTax"]
-                      }
-                    }
-                  },
-                  else: "$$value"
+                  else: {
+                    // For single-service, use the full service tax
+                    $add: ["$$value", { $ifNull: ["$$this.serviceTax", 0] }]
+                  }
                 }
               }
             }

@@ -367,9 +367,6 @@ export const SellingServicesReportTable = () => {
               <span className="mr-3 font-medium text-primary/80 whitespace-nowrap">Vendor:
                 {(data?.aggregatedTotals?.vendorServiceAmountFormatted || '₹0.00')}
               </span>
-              <span className="font-medium whitespace-nowrap">Supplier:
-                {(data?.aggregatedTotals?.supplierServiceAmountFormatted || '₹0.00')}
-              </span>
             </div>
           </CardContent>
         </Card>
