@@ -56,12 +56,47 @@ export async function checkStaffConflict({
     const reqEnd = timeToMinutes(endTime);
 
     for (const apt of existingAppointments) {
-      const aptStart = timeToMinutes(apt.startTime);
-      const aptEnd = timeToMinutes(apt.endTime);
+      if (apt.isMultiService && apt.serviceItems && apt.serviceItems.length > 0) {
+        let checkedAnyItem = false;
+        // Check conflicts for each service item assigned to this staff
+        for (const item of apt.serviceItems) {
+          const itemStaffId = (item.staff && typeof item.staff === 'object')
+            ? item.staff._id?.toString() || item.staff.id?.toString()
+            : item.staff?.toString();
 
-      // Overlap condition: (start1 < end2) && (end1 > start2)
-      if (reqStart < aptEnd && reqEnd > aptStart) {
-        return apt;
+          if (itemStaffId === staffId?.toString()) {
+            checkedAnyItem = true;
+            const itemStart = timeToMinutes(item.startTime);
+            const itemEnd = timeToMinutes(item.endTime);
+
+            // Overlap condition
+            if (reqStart < itemEnd && reqEnd > itemStart) {
+              return apt;
+            }
+          }
+        }
+        // Fallback if the staff is the primary staff but not explicitly in serviceItems
+        if (!checkedAnyItem) {
+          const primaryStaffId = (apt.staff && typeof apt.staff === 'object')
+            ? apt.staff._id?.toString() || apt.staff.id?.toString()
+            : apt.staff?.toString();
+          if (primaryStaffId === staffId?.toString()) {
+            const aptStart = timeToMinutes(apt.startTime);
+            const aptEnd = timeToMinutes(apt.endTime);
+            if (reqStart < aptEnd && reqEnd > aptStart) {
+              return apt;
+            }
+          }
+        }
+      } else {
+        // Single service appointment conflict check
+        const aptStart = timeToMinutes(apt.startTime);
+        const aptEnd = timeToMinutes(apt.endTime);
+
+        // Overlap condition: (start1 < end2) && (end1 > start2)
+        if (reqStart < aptEnd && reqEnd > aptStart) {
+          return apt;
+        }
       }
     }
 
