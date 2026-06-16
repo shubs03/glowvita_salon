@@ -607,10 +607,10 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                 {appointment.status === 'Cancelled' && appointment.cancellationReason && (
                     <div className="bg-red-50 border border-red-200 rounded-md p-3">
                         <div className="flex items-start gap-2">
-                            <Info className="h-5 w-5 text-red-500 mt-0.5" />
-                            <div>
+                            <Info className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
                                 <p className="font-semibold text-red-800 text-sm">Cancellation Reason</p>
-                                <p className="text-sm text-red-700">{appointment.cancellationReason}</p>
+                                <p className="text-sm text-red-700 break-words whitespace-pre-wrap overflow-wrap-anywhere">{appointment.cancellationReason}</p>
                             </div>
                         </div>
                     </div>

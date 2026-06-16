@@ -412,11 +412,12 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {isOrderCancellable(order.status) && (
+                          {order.status !== 'Cancelled' && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className={`text-red-500 ${!isOrderCancellable(order.status) ? 'opacity-50 cursor-not-allowed' : 'hover:text-red-700 hover:bg-red-50'}`}
+                              disabled={!isOrderCancellable(order.status)}
                               onClick={() => handleCancelClick(order)}
                             >
                               <X className="h-4 w-4" />
