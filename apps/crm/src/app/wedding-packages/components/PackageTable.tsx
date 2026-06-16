@@ -94,7 +94,13 @@ export function PackageTable({
                           className="h-10 w-10 rounded-md object-cover"
                         />
                       ) : (
-                        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
+                        <Image
+                          src="/images/wedding package placeholder.png"
+                          alt={pkg.name}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 rounded-md object-cover"
+                        />
                       )}
                       <span className="font-medium">{pkg.name}</span>
                     </div>

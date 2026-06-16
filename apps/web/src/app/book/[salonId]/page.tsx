@@ -1502,7 +1502,10 @@ function BookingPageContent() {
     try {
       const isCustomized = weddingPackageMode === 'customized';
       const packageDuration = isCustomized
-        ? customizedPackageServices.reduce((total, service) => total + convertDurationToMinutes(service.duration), 0)
+        ? customizedPackageServices.reduce((total, service) => {
+            const qty = (service as any).quantity || 1;
+            return total + (convertDurationToMinutes(service.duration) * qty);
+          }, 0)
         : selectedWeddingPackage.duration || 0;
       const endTime = calculateEndTime(selectedTime, packageDuration);
 
@@ -1536,18 +1539,23 @@ function BookingPageContent() {
         paymentStatus: 'pending',
         status: 'scheduled',
         notes: `Wedding Package: ${selectedWeddingPackage.name} (${weddingPackageMode === 'customized' ? 'Customized' : 'Default'})`,
-        serviceItems: (isCustomized ? customizedPackageServices : selectedWeddingPackage.services).map((service: any) => ({
-          service: service.id || service.serviceId || service._id,
-          serviceName: service.name || service.serviceName,
-          staff: selectedStaff?.id || null,
-          staffName: selectedStaff?.name || "Any Professional",
-          startTime: selectedTime,
-          endTime: endTime,
-          duration: convertDurationToMinutes(service.duration || selectedWeddingPackage.duration / (selectedWeddingPackage.services?.length || 1)),
-          amount: service.discountedPrice !== null && service.discountedPrice !== undefined ?
+        serviceItems: (isCustomized ? customizedPackageServices : selectedWeddingPackage.services).map((service: any) => {
+          const qty = isCustomized ? (service.quantity || 1) : 1;
+          const singleDuration = convertDurationToMinutes(service.duration || selectedWeddingPackage.duration / (selectedWeddingPackage.services?.length || 1));
+          const singleAmount = service.discountedPrice !== null && service.discountedPrice !== undefined ?
             Number(service.discountedPrice) :
-            Number(service.price || (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice) / (selectedWeddingPackage.services?.length || 1))
-        })),
+            Number(service.price || (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice) / (selectedWeddingPackage.services?.length || 1));
+          return {
+            service: service.id || service.serviceId || service._id,
+            serviceName: service.name || service.serviceName,
+            staff: selectedStaff?.id || null,
+            staffName: selectedStaff?.name || "Any Professional",
+            startTime: selectedTime,
+            endTime: endTime,
+            duration: singleDuration * qty,
+            amount: singleAmount * qty
+          };
+        }),
         isMultiService: true,
         isHomeService: bookingMode === 'home' && !!serviceLocation,
         isWeddingService: true,
@@ -1696,13 +1704,21 @@ function BookingPageContent() {
         }, 0)
         : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice);
 
+      const customizedDuration = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
+        ? customizedPackageServices.reduce((acc, service) => {
+          const serviceDuration = convertDurationToMinutes(service.duration);
+          const quantity = (service as any).quantity || 1;
+          return acc + (serviceDuration * quantity);
+        }, 0)
+        : selectedWeddingPackage.duration;
+
       // Create a service-like object from wedding package
       primaryService = {
         id: selectedWeddingPackage.id || selectedWeddingPackage._id,
         name: selectedWeddingPackage.name,
         price: customizedSubtotal,
         discountedPrice: customizedSubtotal,
-        duration: selectedWeddingPackage.duration,
+        duration: customizedDuration,
         category: 'Wedding Package',
         description: selectedWeddingPackage.description
       };
@@ -2658,12 +2674,21 @@ function BookingPageContent() {
       if (isWeddingPackageBooking && selectedWeddingPackage) {
         // Create a service-like object from wedding package
         const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services;
+        // Calculate customized subtotal and duration if applicable
+        const customizedDuration = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
+          ? customizedPackageServices.reduce((acc, service) => {
+            const serviceDuration = convertDurationToMinutes(service.duration);
+            const quantity = (service as any).quantity || 1;
+            return acc + (serviceDuration * quantity);
+          }, 0)
+          : selectedWeddingPackage.duration;
+
         primaryService = {
           id: selectedWeddingPackage.id || selectedWeddingPackage._id,
           name: selectedWeddingPackage.name,
           price: selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice,
           discountedPrice: selectedWeddingPackage.discountedPrice,
-          duration: selectedWeddingPackage.duration,
+          duration: customizedDuration,
           category: 'Wedding Package',
           description: selectedWeddingPackage.description
         };
@@ -4426,7 +4451,7 @@ function BookingPageContent() {
                     <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm">{salonInfo?.name}</div>
-                      <div className="text-muted-foreground text-xs mt-1 line-clamp-2">{salonInfo?.address}</div>
+                      {/* Salon address removed as per request */}
                     </div>
                   </div>
                 </CardContent>
@@ -4500,8 +4525,8 @@ function BookingPageContent() {
                     <div className="col-span-2 flex items-start gap-2 p-2 border-b">
                       <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs line-clamp-2">{serviceLocation?.address || salonInfo?.address || 'Salon'}</div>
-                        <div className="text-[10px] text-muted-foreground">{serviceLocation ? 'Home Service' : 'Salon'}</div>
+                        <div className="font-semibold text-xs line-clamp-2">{serviceLocation?.address ? serviceLocation.address : 'At Salon'}</div>
+                        <div className="text-[10px] text-muted-foreground">{serviceLocation ? 'Home Service Location' : 'Location'}</div>
                       </div>
                     </div>
                   </div>

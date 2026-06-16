@@ -1,6 +1,6 @@
 import { Button } from "@repo/ui/button";
 import { Mail, Calendar, UserCheck } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { toast } from 'sonner';
 
 interface InvoiceData {
@@ -28,7 +28,7 @@ interface AppointmentInvoiceProps {
     taxRate: number;
     isOrderSaved: boolean;
     onEmailClick: () => void;
-    onRebookClick: () => void;
+    onRebookClick?: () => void;
 }
 
 export function AppointmentInvoice({
@@ -92,6 +92,14 @@ export function AppointmentInvoice({
         setSelectedItem(item);
         setIsPopupOpen(true);
     };
+
+    // Robust tax rate calculation
+    const numTax = Number(invoiceData.tax) || 0;
+    const numSubtotal = Number(invoiceData.subtotal) || 0;
+    const numDiscount = Number(invoiceData.discount) || 0;
+    const taxableAmount = (numSubtotal - numDiscount) > 0 ? (numSubtotal - numDiscount) : numSubtotal;
+    const calculatedTaxRate = (numTax > 0 && taxableAmount > 0) ? Math.round((numTax / taxableAmount) * 100) : 0;
+    const displayTaxRate = Number(taxRate) > 0 ? Number(taxRate) : calculatedTaxRate;
 
     return (
         <div id="invoice-content" className="max-w-4xl mx-auto p-4 sm:p-6 bg-white font-sans print:p-0 print:max-w-none print:w-full rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
@@ -178,35 +186,63 @@ export function AppointmentInvoice({
                         </tr>
                     </thead>
                     <tbody>
-                        {invoiceData.items.map((item: any, index: number) => (
-                            <tr
-                                key={index}
-                                className="border border-black cursor-pointer hover:bg-gray-50"
-                                onClick={() => handleItemClick(item)}
-                            >
-                                <td className="border border-black p-1 sm:p-2 print:p-1">
-                                    <div className={`font-semibold text-xs sm:text-sm text-black print:text-xs ${item.type === 'addon' ? 'pl-4' : ''}`}>
-                                        {item.type === 'addon' ? '+ ' : ''}
-                                        {isProduct(item) ? item.productName : item.name}
-                                    </div>
-                                    {item.staff && !isProduct(item) && (
-                                        <div className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${item.type === 'addon' ? 'pl-4' : ''}`}>
-                                            Staff: {item.staff}
+                        {invoiceData.items.map((item: any, index: number) => {
+                            const displayTaxRate = typeof item.tax === 'number' ? item.tax : (typeof item.taxRate === 'number' ? item.taxRate : taxRate);
+                            return (
+                                <tr
+                                    key={index}
+                                    className="border border-black cursor-pointer hover:bg-gray-50"
+                                    onClick={() => handleItemClick(item)}
+                                >
+                                    <td className="border border-black p-1 sm:p-2 print:p-1">
+                                        <div className={`font-semibold text-xs sm:text-sm text-black print:text-xs ${item.type === 'addon' || item.type === 'wedding_included_service' ? 'pl-4' : ''}`}>
+                                            {item.type === 'addon' ? '+ ' : item.type === 'wedding_included_service' ? '└ ' : ''}
+                                            {isProduct(item) ? item.productName : item.name}
                                         </div>
+                                        {item.staff && !isProduct(item) && (
+                                            <div className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${item.type === 'addon' || item.type === 'wedding_included_service' ? 'pl-4' : ''}`}>
+                                                Staff: {item.staff}
+                                            </div>
+                                        )}
+                                    </td>
+                                    
+                                    {item.type === 'wedding_included_service' ? (
+                                        <>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                                                <div className="flex flex-col items-end gap-0.5">
+                                                    {item.price > (item.discountedPrice ?? item.price) && (
+                                                        <span className="line-through text-gray-400 text-[10px] leading-none">₹{Number(item.price).toFixed(2)}</span>
+                                                    )}
+                                                    <span className="text-green-700 leading-none">₹{Number(item.discountedPrice ?? item.price).toFixed(2)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1"></td>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1"></td>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1"></td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                                                {item.price === 0 ? "Included" : `₹${Number(item.price).toFixed(2)}`}
+                                            </td>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">{item.quantity}</td>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                                                {item.totalPrice === 0 ? "Included" : `₹${((item.price * item.quantity * displayTaxRate) / 100).toFixed(2)}`}
+                                            </td>
+                                            <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">
+                                                {item.totalPrice === 0 ? "Included" : `₹${Number(item.totalPrice).toFixed(2)}`}
+                                            </td>
+                                        </>
                                     )}
-                                </td>
-                                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{item.price.toFixed(2)}</td>
-                                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">{item.quantity}</td>
-                                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{((item.price * item.quantity * taxRate) / 100).toFixed(2)}</td>
-                                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{item.totalPrice.toFixed(2)}</td>
-                            </tr>
-                        ))}
+                                </tr>
+                            );
+                        })}
                         <tr className="border border-black">
                             <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Subtotal:</td>
                             <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</td>
                         </tr>
                         <tr className="border border-black">
-                            <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Tax ({taxRate}%):</td>
+                            <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Tax ({displayTaxRate}%):</td>
                             <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.tax.toFixed(2)}</td>
                         </tr>
                         <tr className="border border-black">

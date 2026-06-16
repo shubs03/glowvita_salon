@@ -114,7 +114,8 @@ export const GET = authMiddlewareCrm(async (req) => {
 
         const prevPayments = await VendorSettlementPaymentModel.find({
             vendorId: vendorObjectId,
-            paymentDate: { $lt: startDate }
+            paymentDate: { $lt: startDate },
+            verified: { $ne: false }
         });
 
         let openingAdminOwesVendor = 0;
@@ -123,10 +124,11 @@ export const GET = authMiddlewareCrm(async (req) => {
         let openingPaidToAdmin = 0;
 
         prevAppointments.forEach(appt => {
+            const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
             if (appt.paymentMethod === 'Pay Online') {
-                openingAdminOwesVendor += (appt.totalAmount || 0);
+                openingAdminOwesVendor += ((appt.totalAmount || 0) - fees);
             } else {
-                openingVendorOwesAdmin += (appt.platformFee || 0) + (appt.serviceTax || 0);
+                openingVendorOwesAdmin += fees;
             }
         });
 
@@ -145,7 +147,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         });
 
         // Opening Balance (Positive = Admin owes Vendor, Negative = Vendor owes Admin)
-        const openingNetBalance = (openingAdminOwesVendor - openingVendorOwesAdmin) + (openingPaidToVendor - openingPaidToAdmin);
+        const openingNetBalance = (openingAdminOwesVendor - openingVendorOwesAdmin) - (openingPaidToVendor - openingPaidToAdmin);
 
         // 2. Fetch current period appointments
         const appointments = await AppointmentModel.find({
@@ -262,7 +264,7 @@ export const GET = authMiddlewareCrm(async (req) => {
             settlement.serviceTaxTotal += appt.serviceTax || 0;
 
             if (appt.paymentMethod === 'Pay Online') {
-                settlement.adminOwesVendor += serviceAmount;
+                settlement.adminOwesVendor += (serviceAmount - fees);
             } else {
                 settlement.vendorOwesAdmin += fees;
             }
@@ -323,9 +325,9 @@ export const GET = authMiddlewareCrm(async (req) => {
             const totalNetBalance = settlement.openingBalance + periodNet;
 
             const totalPaidToVendorInPeriod = settlement.paymentHistory
-                .filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0);
+                .filter(p => p.type === "Payment to Vendor" && p.verified !== false).reduce((acc, p) => acc + p.amount, 0);
             const totalPaidToAdminInPeriod = settlement.paymentHistory
-                .filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
+                .filter(p => p.type === "Payment to Admin" && p.verified !== false).reduce((acc, p) => acc + p.amount, 0);
 
             const closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
 

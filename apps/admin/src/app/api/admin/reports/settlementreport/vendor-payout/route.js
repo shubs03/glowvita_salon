@@ -135,9 +135,42 @@ export const GET = authMiddlewareAdmin(async (req) => {
           servicePlatformFee: { $sum: { $ifNull: ["$appointments.platformFee", 0] } },
           serviceTax: { $sum: { $ifNull: ["$appointments.serviceTax", 0] } },
           serviceTotalAmount: { $sum: { $ifNull: ["$appointments.finalAmount", 0] } },
-          completedTotal: { $sum: { $cond: [{ $eq: ["$appointments.status", "completed"] }, "$appointments.totalAmount", 0] } },
-          pendingTotal: { $sum: { $cond: [{ $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, "$appointments.totalAmount", 0] } },
-          refundableTotal: { $sum: { $cond: [{ $eq: ["$appointments.status", "cancelled"] }, "$appointments.finalAmount", 0] } },
+          completedTotal: { 
+            $sum: { 
+              $cond: [
+                { $eq: ["$appointments.status", "completed"] }, 
+                { $subtract: [
+                    { $ifNull: ["$appointments.totalAmount", 0] },
+                    { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
+                ]}, 
+                0
+              ] 
+            } 
+          },
+          pendingTotal: { 
+            $sum: { 
+              $cond: [
+                { $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, 
+                { $subtract: [
+                    { $ifNull: ["$appointments.totalAmount", 0] },
+                    { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
+                ]}, 
+                0
+              ] 
+            } 
+          },
+          refundableTotal: { 
+            $sum: { 
+              $cond: [
+                { $eq: ["$appointments.status", "cancelled"] }, 
+                { $subtract: [
+                    { $ifNull: ["$appointments.finalAmount", 0] },
+                    { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
+                ]}, 
+                0
+              ] 
+            } 
+          },
           appointmentCount: { $sum: { $cond: [{ $ifNull: ["$appointments._id", false] }, 1, 0] } },
           completedAppointments: { $sum: { $cond: [{ $eq: ["$appointments.status", "completed"] }, 1, 0] } },
           pendingAppointments: { $sum: { $cond: [{ $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, 1, 0] } },

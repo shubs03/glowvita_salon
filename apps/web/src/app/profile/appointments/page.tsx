@@ -60,6 +60,16 @@ interface Appointment {
     paymentMethod?: string;
     paymentStatus?: string;
     amountPaid?: number;
+    isHomeService?: boolean;
+    homeServiceLocation?: {
+        address?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+        lat?: number;
+        lng?: number;
+    };
+    isWeddingService?: boolean;
 }
 
 interface AppointmentCardProps {
@@ -624,6 +634,18 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         </div>
                     </div>
                 </div>
+
+                {((appointment.isHomeService || appointment.isWeddingService) && appointment.homeServiceLocation) && (
+                    <div className="flex items-center gap-3 mt-4">
+                        <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <div>
+                            <p className="text-sm font-medium">Location</p>
+                            <p className="text-sm text-muted-foreground">
+                                {`${appointment.homeServiceLocation.address || ''} ${appointment.homeServiceLocation.city || ''} ${appointment.homeServiceLocation.state || ''} ${appointment.homeServiceLocation.pincode || ''}`.trim() || 'Home Address'}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <Separator />
 

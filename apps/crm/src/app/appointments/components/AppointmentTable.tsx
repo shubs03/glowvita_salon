@@ -136,10 +136,27 @@ const AppointmentTable = ({
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="h-3 w-3" />
-                        {appointment.startTime} - {appointment.endTime}
+                        {(() => {
+                          if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+                            const firstItem = appointment.serviceItems[0];
+                            const lastItem = appointment.serviceItems[appointment.serviceItems.length - 1];
+                            if (firstItem.startTime && lastItem.endTime) {
+                              return `${firstItem.startTime} - ${lastItem.endTime}`;
+                            }
+                          }
+                          return `${appointment.startTime} - ${appointment.endTime}`;
+                        })()}
                       </div>
                     </TableCell>
-                    <TableCell>{appointment.duration} min</TableCell>
+                    <TableCell>
+                      {(() => {
+                        if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+                          const total = appointment.serviceItems.reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+                          return `${total} min`;
+                        }
+                        return `${appointment.duration} min`;
+                      })()}
+                    </TableCell>
                     <TableCell>₹{totalAmount.toFixed(2)}</TableCell>
                     <TableCell>
                       {paidAmount > 0 && remainingAmount > 0 ? (
@@ -225,7 +242,7 @@ const AppointmentTable = ({
                         {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && !(
                           ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web') &&
                           ((appointment as any).paymentStatus === 'completed' || (appointment as any).paymentStatus === 'paid' || (appointment as any).payment?.paymentStatus === 'completed' || (appointment as any).payment?.paymentStatus === 'paid')
-                        ) && (
+                        ) && !appointment.isWeddingService && !appointment.isHomeService && (
                             <Button
                               variant="ghost"
                               size="sm"

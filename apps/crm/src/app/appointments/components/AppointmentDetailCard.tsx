@@ -79,11 +79,13 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
   // Calculate totals for services and add-ons
   const { totalBaseAmount, originalTotalBaseAmount, totalAddOnsAmount } = useMemo(() => {
     if (appointment.serviceItems && appointment.serviceItems.length > 0) {
-      const base = appointment.serviceItems.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
+      const base = appointment.serviceItems.reduce((sum: number, item: any) =>
+        sum + (Number(item.amount) || Number(item.price) || 0), 0);
       const originalBase = appointment.serviceItems.reduce((sum: number, item: any) => {
         const catalogPrice = catalogPriceMap[item.service] ?? null;
         const originalPrice = item.originalAmount ?? (item as any).price ?? catalogPrice;
-        return sum + (originalPrice !== null ? Number(originalPrice) : (Number(item.amount) || 0));
+        const charged = Number(item.amount) || Number(item.price) || 0;
+        return sum + (originalPrice !== null ? Number(originalPrice) : charged);
       }, 0);
       const addOns = appointment.serviceItems.reduce((sum: number, item: any) => {
         const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
@@ -91,13 +93,20 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
       }, 0);
       return { totalBaseAmount: base, originalTotalBaseAmount: originalBase, totalAddOnsAmount: addOns };
     }
-    
+
     const catalogPrice = catalogPriceMap[appointment.service] ?? null;
     const singleOriginal = (appointment as any).originalAmount ?? (appointment as any).price ?? catalogPrice;
     const originalBase = singleOriginal !== null ? Number(singleOriginal) : (Number(appointment.amount) || 0);
 
+    // Fallback: use amount, but if it's 0 fall back to totalAmount / finalAmount
+    const singleBase =
+      Number(appointment.amount) ||
+      Number((appointment as any).totalAmount) ||
+      Number((appointment as any).finalAmount) ||
+      0;
+
     return {
-      totalBaseAmount: Number(appointment.amount) || 0,
+      totalBaseAmount: singleBase,
       originalTotalBaseAmount: originalBase,
       totalAddOnsAmount: Number((appointment as any).addOnsAmount) || 0
     };
@@ -117,53 +126,94 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
         return `INV-${dateStr}-${salonName}-${uniqueId}`;
       })(),
       date: appointment.date instanceof Date ? appointment.date.toLocaleDateString() : String(appointment.date).split('T')[0],
-      time: appointment.startTime,
+      time: (() => {
+        if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+          const firstItem = appointment.serviceItems[0];
+          const lastItem = appointment.serviceItems[appointment.serviceItems.length - 1];
+          if (firstItem.startTime && lastItem.endTime) {
+            return `${firstItem.startTime} - ${lastItem.endTime}`;
+          }
+        }
+        return appointment.startTime;
+      })(),
       client: {
         fullName: appointment.clientName,
         phone: (appointment as any).client?.phone || (appointment as any).clientPhone || ''
       },
       status: appointment.status,
-      items: appointment.serviceItems?.length ? (appointment.serviceItems as any[]).flatMap(item => [
-        {
-          name: item.serviceName,
-          price: item.amount,
-          quantity: 1,
-          totalPrice: item.amount,
-          discount: 0,
-          staff: item.staffName,
-          duration: item.duration,
-          type: 'service'
-        },
-        ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
-          name: `${addOn.name} (Add-on)`,
-          price: addOn.price,
-          quantity: 1,
-          totalPrice: addOn.price,
-          discount: 0,
-          duration: addOn.duration,
-          type: 'addon'
-        })) : [])
-      ]) : [
-        {
-          name: appointment.serviceName,
-          price: appointment.amount,
-          quantity: 1,
-          totalPrice: appointment.amount,
-          discount: (appointment as any).discountAmount || 0,
-          staff: appointment.staffName,
-          duration: appointment.duration,
-          type: 'service'
-        },
-        ...((appointment as any).addOns || []).map((addOn: any) => ({
-          name: `${addOn.name} (Add-on)`,
-          price: addOn.price,
-          quantity: 1,
-          totalPrice: addOn.price,
-          discount: 0,
-          duration: addOn.duration,
-          type: 'addon'
-        }))
-      ],
+      items: appointment.isWeddingService && appointment.weddingPackageDetails?.packageServices?.length ?
+        [
+          {
+            name: appointment.serviceName,
+            price: appointment.amount,
+            quantity: 1,
+            totalPrice: appointment.amount,
+            discount: (appointment as any).discountAmount || 0,
+            staff: appointment.staffName,
+            duration: appointment.duration,
+            type: 'service'
+          },
+          ...appointment.weddingPackageDetails.packageServices.map((pkgService: any) => {
+            const catalogPrice = catalogPriceMap[pkgService.serviceId || pkgService.service] ??
+              catalogPriceMap[pkgService.service] ??
+              catalogPriceMap[pkgService._id] ??
+              null;
+            const originalPrice = pkgService.originalAmount ?? catalogPrice ?? null;
+            const chargedAmount = Number(pkgService.amount || pkgService.price || catalogPrice || 0);
+            return {
+              name: pkgService.serviceName,
+              price: originalPrice !== null ? Number(originalPrice) : chargedAmount,
+              discountedPrice: chargedAmount,
+              quantity: 1,
+              totalPrice: 0,
+              discount: 0,
+              staff: pkgService.staffName || appointment.staffName || '',
+              duration: pkgService.duration,
+              type: 'wedding_included_service'
+            };
+          })
+        ]
+        : appointment.serviceItems?.length ? (appointment.serviceItems as any[]).flatMap(item => [
+          {
+            name: item.serviceName,
+            price: item.amount,
+            quantity: 1,
+            totalPrice: item.amount,
+            discount: 0,
+            staff: item.staffName,
+            duration: item.duration,
+            type: 'service'
+          },
+          ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
+            name: `${addOn.name} (Add-on)`,
+            price: addOn.price,
+            quantity: 1,
+            totalPrice: addOn.price,
+            discount: 0,
+            duration: addOn.duration,
+            type: 'addon'
+          })) : [])
+        ]) : [
+          {
+            name: appointment.serviceName,
+            price: appointment.amount,
+            quantity: 1,
+            totalPrice: appointment.amount,
+            discount: (appointment as any).discountAmount || 0,
+            staff: appointment.staffName,
+            duration: appointment.duration,
+            type: 'service'
+          },
+          ...((appointment as any).addOns || []).map((addOn: any) => ({
+            name: `${addOn.name} (Add-on)`,
+            price: addOn.price,
+            quantity: 1,
+            totalPrice: addOn.price,
+            discount: 0,
+            duration: addOn.duration,
+            type: 'addon'
+          }))
+        ],
       subtotal: Number(totalBaseAmount + totalAddOnsAmount),
       originalSubtotal: Number(originalTotalBaseAmount + totalAddOnsAmount),
       discount: Number(discountAmount > 0 ? discountAmount : (originalTotalBaseAmount > totalBaseAmount ? originalTotalBaseAmount - totalBaseAmount : 0)),
@@ -291,7 +341,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
               Invoice
             </Button>
           )}
-          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !(
+          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !appointment.isWeddingService && !appointment.isHomeService && !(
             ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web' || (appointment as any).bookingSource === 'web' || String((appointment as any).paymentMethod).toLowerCase() === 'pay online' || String((appointment as any).payment?.paymentMethod).toLowerCase() === 'pay online') &&
             (String((appointment as any).paymentStatus).toLowerCase() === 'completed' || String((appointment as any).paymentStatus).toLowerCase() === 'paid' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'completed' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'paid')
           ) && (
@@ -320,9 +370,28 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             <div className="text-lg font-medium">
               {format(new Date(appointment.date), 'MMMM d, yyyy')}
             </div>
-            <div className="flex items-center text-sm text-gray-600 mt-1">
-              <Clock className="h-4 w-4 mr-2 text-gray-400" />
-              {appointment.startTime} - {appointment.endTime} ({appointment.duration} min)
+            <div className="flex items-center text-sm text-gray-600 mt-1 flex-wrap gap-y-1">
+              <Clock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+              {(() => {
+                let start = appointment.startTime;
+                let end = appointment.endTime;
+                let dur = appointment.duration;
+                if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+                  const firstItem = appointment.serviceItems[0];
+                  const lastItem = appointment.serviceItems[appointment.serviceItems.length - 1];
+                  if (firstItem.startTime && lastItem.endTime) {
+                    start = firstItem.startTime;
+                    end = lastItem.endTime;
+                  }
+                  dur = appointment.serviceItems.reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+                }
+                return <span>{start} - {end} ({dur} min)</span>;
+              })()}
+              {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime) ? (
+                <span className="ml-2 text-xs text-muted-foreground font-medium flex items-center bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                  🚗 Travel Time: {((appointment as any).travelTime || (appointment as any).weddingPackageDetails?.travelTime)} min
+                </span>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -362,7 +431,67 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 flex-1">
-            {appointment.serviceItems?.length ? (
+            {appointment.isWeddingService && appointment.weddingPackageDetails?.packageServices?.length ? (
+              <div className="space-y-4">
+                <div className="flex items-center text-sm font-semibold">
+                  <Scissors className="h-4 w-4 mr-2 text-gray-400" />
+                  {appointment.serviceName}
+                </div>
+                {appointment.weddingPackageDetails.packageServices.map((item: any, index: number) => (
+                  <div key={item._id || index} className="border-b pb-3 last:border-b-0 last:pb-0 last:mb-0 ml-6">
+                    <div className="flex items-start justify-between text-sm">
+                      <div className="flex items-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary/50 mr-2 flex-shrink-0" />
+                        <div>
+                          <div className="font-medium">{item.serviceName}</div>
+                          {item.duration ? (
+                            <div className="text-gray-600 text-xs mt-1">
+                              {item.startTime && item.endTime
+                                ? `${item.startTime} - ${item.endTime} • ${item.duration} min`
+                                : `${item.duration} min`}
+                            </div>
+                          ) : item.startTime && item.endTime ? (
+                            <div className="text-gray-600 text-xs mt-1">
+                              {item.startTime} - {item.endTime}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="text-right ml-4 flex-shrink-0">
+                        {(() => {
+                          // Try multiple ID fields for catalog lookup
+                          const catalogPrice = catalogPriceMap[item.serviceId || item.service] ??
+                            catalogPriceMap[item.service] ??
+                            catalogPriceMap[item._id] ??
+                            null;
+                          // Build a robust original price: stored originalAmount > stored price > catalog
+                          const originalPrice = item.originalAmount ?? catalogPrice ?? null;
+                          // Charged amount: stored amount > stored price > catalog > 0
+                          const chargedAmount = Number(item.amount || item.price || catalogPrice || 0);
+                          const hasDiscount = originalPrice !== null && Number(originalPrice) > chargedAmount;
+                          return hasDiscount ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-xs text-gray-400 line-through leading-none">
+                                ₹{Number(originalPrice).toFixed(0)}
+                              </span>
+                              <span className="text-sm font-semibold text-green-700 leading-none">
+                                ₹{chargedAmount.toFixed(0)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-medium">₹{chargedAmount.toFixed(2)}</span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <div className="flex items-center text-sm mt-2 ml-4">
+                      <User className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="text-gray-700">{item.staffName || appointment.staffName}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : appointment.serviceItems?.length ? (
               <div className="space-y-4">
                 {appointment.serviceItems.map((item: ServiceItem, index: number) => (
                   <div key={item._id || index} className="border-b pb-3 last:border-b-0 last:pb-0 last:mb-0">
@@ -493,11 +622,11 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
               </div>
             )}
             {remainingAmount > 0 && appointment.status !== 'cancelled' && onPaymentCollect && (
-              <Button 
+              <Button
                 onClick={onPaymentCollect}
                 className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white gap-2"
               >
-                 <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
+                <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
               </Button>
             )}
           </CardContent>

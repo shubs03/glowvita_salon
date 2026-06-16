@@ -64,6 +64,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
     const transformedProducts = products.map(p => ({
       ...p,
+      productImage: p.productImages && p.productImages.length > 0 ? p.productImages[0] : (p.productImage || null),
       supplierName: p.vendorId?.shopName,
       supplierEmail: p.vendorId?.email,
       supplierBusinessRegistrationNo: p.vendorId?.businessRegistrationNo,

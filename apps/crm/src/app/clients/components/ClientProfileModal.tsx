@@ -395,12 +395,6 @@ export default function ClientProfileModal({
                       )}
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">
-                          Online Booking
-                        </Label>
-                        <p className="text-base font-medium text-foreground mt-1">Allowed</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">
                           Birthday Date
                         </Label>
                         <p className="text-base font-medium text-foreground mt-1">
@@ -415,16 +409,6 @@ export default function ClientProfileModal({
                           {profileClient.address || 'Not provided'}
                         </p>
                       </div>
-                      {profileClient.source !== 'online' && (
-                        <div className="col-span-2">
-                          <Label className="text-sm font-medium text-muted-foreground">
-                            Preferences
-                          </Label>
-                          <p className="text-base font-medium text-foreground mt-1">
-                            {profileClient.preferences || 'No preferences recorded.'}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

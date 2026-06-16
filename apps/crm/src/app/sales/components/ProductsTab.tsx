@@ -2039,10 +2039,7 @@ export default function ProductsTab({
                         <span className="text-gray-600 text-xs">Subtotal</span>
                         <span className="font-medium text-xs">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-green-600 text-xs font-medium">Discount</span>
-                        <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
-                      </div>
+
                       {invoiceData.tax > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600 text-xs text-blue-600 font-medium">GST/Tax Component</span>

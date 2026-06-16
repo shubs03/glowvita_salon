@@ -734,8 +734,11 @@ export default function NewAppointmentForm({
       // Add services from the selected package to current ones if preferred, 
       // or replace them. Usually selecting a package replaces the current selection.
       const newPackageServices = pkg.services.map((s: any) => ({
-        serviceId: s.serviceId,
-        serviceName: s.serviceName
+        serviceId: s.serviceId || s._id || s.id,
+        serviceName: s.serviceName || s.name,
+        price: s.price || s.discountedPrice || s.amount || 0,
+        amount: s.amount || s.price || s.discountedPrice || 0,
+        duration: s.duration || 0
       }));
 
       const newTeamMembers = pkg.services.map(() => "");
@@ -832,7 +835,11 @@ export default function NewAppointmentForm({
             ...currentServices,
             {
               serviceId: selectedService.id || selectedService._id,
-              serviceName: selectedService.name
+              serviceName: selectedService.name,
+              price: (selectedService as any).price || (selectedService as any).discountedPrice || (selectedService as any).amount || 0,
+              amount: (selectedService as any).amount || (selectedService as any).price || (selectedService as any).discountedPrice || 0,
+              originalAmount: (selectedService as any).price || 0,
+              duration: (selectedService as any).duration || 0
             }
           ],
           teamMembers: [
@@ -2860,6 +2867,7 @@ export default function NewAppointmentForm({
               onChange={(e) => handleEndTimeChange(e.target.value)}
               className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
               required
+              disabled
             />
           </div>
         </div>

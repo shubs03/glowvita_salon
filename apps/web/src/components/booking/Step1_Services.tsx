@@ -730,13 +730,13 @@ export function Step1_Services({
                     {/* Image Header */}
                     <div className="relative w-full h-40 sm:h-48 overflow-hidden bg-muted">
                       <Image
-                        src={pkg.image || `https://picsum.photos/seed/${pkg.name}/800/600`}
+                        src={pkg.image || '/images/wedding package placeholder.png'}
                         alt={pkg.name}
                         fill
                         className="object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = `https://picsum.photos/seed/${pkg.name}/800/600`;
+                          target.src = '/images/wedding package placeholder.png';
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -971,13 +971,13 @@ export function Step1_Services({
               {/* Header with Image */}
               <div className="relative w-full h-40 sm:h-52 flex-shrink-0 overflow-hidden bg-muted">
                 <Image
-                  src={selectedPackageForDetails.image || `https://picsum.photos/seed/${selectedPackageForDetails.name}/1200/600`}
+                  src={selectedPackageForDetails.image || '/images/wedding package placeholder.png'}
                   alt={selectedPackageForDetails.name}
                   fill
                   className="object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = `https://picsum.photos/seed/${selectedPackageForDetails.name}/1200/600`;
+                    target.src = '/images/wedding package placeholder.png';
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />

@@ -89,7 +89,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...dateFilter,
       ...regionQuery,
       paymentMethod: 'Pay at Salon',
-      status: { $nin: ['cancelled', 'temp-locked'] }, // Show all except cancelled/temp-locked
+      status: { $in: ['completed', 'partially-completed'] },
     };
 
     console.log("Main filter for appointments:", mainFilter);
@@ -190,7 +190,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { ...regionQuery, paymentMethod: 'Pay at Salon', status: { $nin: ['cancelled', 'temp-locked'] } } },
+      { $match: { ...regionQuery, paymentMethod: 'Pay at Salon', status: { $in: ['completed', 'partially-completed'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -209,7 +209,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique vendors for filter dropdown
     const vendorPipeline = [
-      { $match: { ...regionQuery, paymentMethod: 'Pay at Salon', status: { $nin: ['cancelled', 'temp-locked'] } } },
+      { $match: { ...regionQuery, paymentMethod: 'Pay at Salon', status: { $in: ['completed', 'partially-completed'] } } },
       {
         $lookup: {
           from: "vendors",

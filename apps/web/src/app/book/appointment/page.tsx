@@ -509,7 +509,7 @@ const ConfirmationStep = ({
                   <Star className="h-4 w-4 text-yellow-400 fill-current" />
                   <span>{salon.rating} ({salon.reviews} reviews)</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{salon.address}</p>
+                {/* Salon address removed as per request */}
               </div>
             </div>
           </CardContent>
