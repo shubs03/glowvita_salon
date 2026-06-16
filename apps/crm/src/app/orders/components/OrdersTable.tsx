@@ -166,26 +166,28 @@ const OrdersTable = ({
 
                         {(() => {
                           const isCancelled = order.status === 'Cancelled';
+                          if (isCancelled) return null;
+
                           const isShippedOrDelivered = order.status === 'Shipped' || order.status === 'Delivered';
                           
-                          if (isCancelled) return false;
-                          
-                          // Customer/Online Orders: Vendor can cancel anytime with reason
-                          if (activeTab === 'customer-orders' || isOnlineOrder(order)) return true;
-                          
-                          // Marketplace/Purchase Orders: Cancel only before shipped
-                          return !isShippedOrDelivered;
-                        })() && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCancelOrder(order)}
-                            className="h-8 gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-                          >
-                            <XCircle className="h-4 w-4" />
-                            <span>Cancel</span>
-                          </Button>
-                        )}
+                          return (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCancelOrder(order)}
+                              disabled={isShippedOrDelivered}
+                              className={cn(
+                                "h-8 gap-1 border-red-200 text-red-600",
+                                isShippedOrDelivered 
+                                  ? "opacity-50 cursor-not-allowed" 
+                                  : "hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                              )}
+                            >
+                              <XCircle className="h-4 w-4" />
+                              <span>Cancel</span>
+                            </Button>
+                          );
+                        })()}
 
                         {(role === "supplier" || role === "vendor") && activeTab !== 'my-purchases' && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
                           <DropdownMenu>
@@ -205,7 +207,6 @@ const OrdersTable = ({
                                 .filter(s => s !== order.status)
                                 .filter(s => {
                                   if (s === 'Cancelled') {
-                                    if (activeTab === 'customer-orders' || isOnlineOrder(order)) return order.status !== 'Cancelled';
                                     return order.status !== 'Shipped' && order.status !== 'Delivered' && order.status !== 'Cancelled';
                                   }
                                   return true;
