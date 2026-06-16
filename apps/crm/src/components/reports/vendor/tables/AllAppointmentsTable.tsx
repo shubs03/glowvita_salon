@@ -128,6 +128,19 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
   const appointments = data?.data?.allAppointments?.appointments || data?.data || [];
   const totalBookings = data?.data?.allAppointments?.total || appointments.length || 0;
 
+  // Build a map: appointmentId -> true total base amount
+  // by summing the `amount` of every service row that belongs to the same appointment.
+  // This is the correct denominator for proportional fee/tax allocation,
+  // regardless of what `item.totalAmount` says in the DB.
+  const appointmentBaseTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    appointments.forEach((appt: any) => {
+      const key = String(appt.id);
+      map.set(key, (map.get(key) || 0) + (appt.amount || 0));
+    });
+    return map;
+  }, [appointments]);
+
   const searchedAppointments = useMemo(() => {
     if (!searchTerm) return appointments;
     return appointments.filter((appt: any) =>
@@ -297,25 +310,34 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
           <TableBody>
             {paginatedAppointments.length > 0 ? (
               paginatedAppointments.map((item: any) => {
-                let ratio = (item.isMultiService && item.amount && item.totalAmount) ? item.amount / item.totalAmount : 1;
-                if (!item.isMultiService) ratio = 1;
-                
+                const baseAmount = item.amount || 0;
+                // Use the pre-computed true total base for this appointment (sum of all services)
+                const trueTotalBase = appointmentBaseTotals.get(String(item.id)) || baseAmount || 1;
+                const ratio = (item.isMultiService && trueTotalBase > 0) ? baseAmount / trueTotalBase : 1;
+
                 const proportionalPlatformFee = (item.platformFee || 0) * ratio;
                 const proportionalServiceTax = (item.serviceTax || 0) * ratio;
-                const proportionalFinalAmount = (item.amount || item.totalAmount || 0) + (item.isMultiService ? (proportionalPlatformFee + proportionalServiceTax) : 0);
-                
-                const finalAmtToShow = item.isMultiService ? proportionalFinalAmount : (item.finalAmount || item.totalAmount || 0);
+                const finalAmtToShow = baseAmount + proportionalPlatformFee + proportionalServiceTax;
+
+                // Build service label: "Hair wash (1/2)" for multi-service rows
+                const serviceLabel = (() => {
+                  const name = item.serviceName || item.service?.name || 'N/A';
+                  if (item.isMultiService && item.multiServiceTotal > 1) {
+                    return `${name} (${(item.multiServiceIndex ?? 0) + 1}/${item.multiServiceTotal})`;
+                  }
+                  return name;
+                })();
 
                 return (
-                  <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
+                  <TableRow key={`${item.id}-${item.multiServiceIndex ?? 0}`}>
                     <TableCell>{item.clientName || 'N/A'}</TableCell>
-                    <TableCell>{item.serviceName || item.service?.name || 'N/A'}{item.isMultiService ? '*' : ''}</TableCell>
+                    <TableCell>{serviceLabel}</TableCell>
                     <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
                     <TableCell>{item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}<br/>{item.startTime}</TableCell>
                     <TableCell>{item.duration || 'N/A'}m</TableCell>
-                    <TableCell>₹{item.amount || 0}</TableCell>
-                    <TableCell>₹{proportionalPlatformFee.toFixed(1)}</TableCell>
-                    <TableCell>₹{proportionalServiceTax.toFixed(1)}</TableCell>
+                    <TableCell>₹{baseAmount.toFixed(2)}</TableCell>
+                    <TableCell>₹{proportionalPlatformFee.toFixed(2)}</TableCell>
+                    <TableCell>₹{proportionalServiceTax.toFixed(2)}</TableCell>
                     <TableCell className="font-bold">₹{finalAmtToShow.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary" className={`text-xs px-2 py-0.5 ${(item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'}`}>
@@ -330,15 +352,31 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
                 <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No bookings found.</TableCell>
               </TableRow>
             )}
-            {paginatedAppointments.length > 0 && (
-              <TableRow className="bg-muted font-bold text-primary">
-                <TableCell colSpan={5}>TOTAL</TableCell>
-                <TableCell>₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
-                <TableCell colSpan={2}></TableCell>
-                <TableCell>₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            )}
+            {paginatedAppointments.length > 0 && (() => {
+              // Use the same logic as rows for accurate TOTAL row
+              let totalBase = 0, totalFee = 0, totalTax = 0, totalFinal = 0;
+              paginatedAppointments.forEach((item: any) => {
+                const base = item.amount || 0;
+                const trueTotalBase = appointmentBaseTotals.get(String(item.id)) || base || 1;
+                const r = (item.isMultiService && trueTotalBase > 0) ? base / trueTotalBase : 1;
+                const fee = (item.platformFee || 0) * r;
+                const tax = (item.serviceTax || 0) * r;
+                totalBase += base;
+                totalFee += fee;
+                totalTax += tax;
+                totalFinal += base + fee + tax;
+              });
+              return (
+                <TableRow className="bg-muted font-bold text-primary">
+                  <TableCell colSpan={5}>TOTAL</TableCell>
+                  <TableCell>₹{totalBase.toFixed(2)}</TableCell>
+                  <TableCell>₹{totalFee.toFixed(2)}</TableCell>
+                  <TableCell>₹{totalTax.toFixed(2)}</TableCell>
+                  <TableCell>₹{totalFinal.toFixed(2)}</TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              );
+            })()}
           </TableBody>
         </Table>
       </div>

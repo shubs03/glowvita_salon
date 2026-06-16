@@ -162,19 +162,27 @@ export const AllAppointmentsByStaffTable = ({ startDate, endDate, client, servic
     refetch();
   }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
 
-  // Aggregate appointments by staff
+  // Aggregate appointments by staff with proportional fee/tax allocation
   const staffSummary = useMemo(() => {
-    // Check if data exists and has the expected structure
     if (!data || !data.data || !data.data.allAppointments || !Array.isArray(data.data.allAppointments.appointments)) return [];
 
-    // Create a map to store staff data
+    const appointments = data.data.allAppointments.appointments;
+
+    // Step 1: Build appointmentId -> true total base amount map
+    // by summing the `amount` of every service row sharing the same appointment id.
+    // This is the correct denominator for proportional fee/tax split.
+    const appointmentBaseTotals = new Map<string, number>();
+    appointments.forEach((appt: any) => {
+      const key = String(appt.id || appt._id);
+      appointmentBaseTotals.set(key, (appointmentBaseTotals.get(key) || 0) + (appt.amount || 0));
+    });
+
+    // Step 2: Aggregate per staff using proportional final amount per service row
     const staffMap = new Map();
 
-    // Process each appointment
-    data.data.allAppointments.appointments.forEach((appointment: any) => {
-      const staffName = appointment.staffName || 'Unassigned';
+    appointments.forEach((appt: any) => {
+      const staffName = appt.staffName || 'Unassigned';
 
-      // Get or create staff entry
       if (!staffMap.has(staffName)) {
         staffMap.set(staffName, {
           staffName,
@@ -185,21 +193,22 @@ export const AllAppointmentsByStaffTable = ({ startDate, endDate, client, servic
       }
 
       const staffEntry = staffMap.get(staffName);
-
-      // Increment appointment count
       staffEntry.totalAppointments += 1;
 
-      // Add duration (in minutes)
-      if (appointment.duration) {
-        staffEntry.totalDuration += appointment.duration;
+      if (appt.duration) {
+        staffEntry.totalDuration += appt.duration;
       }
 
-      // Add sale amount (use finalAmount if available, otherwise totalAmount, otherwise amount)
-      const saleAmount = appointment.finalAmount || appointment.totalAmount || appointment.amount || 0;
-      staffEntry.totalSale += saleAmount;
+      // Compute this service row's proportional final amount:
+      // final = base + (platformFee × ratio) + (serviceTax × ratio)
+      const base = appt.amount || 0;
+      const trueTotalBase = appointmentBaseTotals.get(String(appt.id || appt._id)) || base || 1;
+      const ratio = (appt.isMultiService && trueTotalBase > 0) ? base / trueTotalBase : 1;
+      const proportionalFee = (appt.platformFee || 0) * ratio;
+      const proportionalTax = (appt.serviceTax || 0) * ratio;
+      staffEntry.totalSale += base + proportionalFee + proportionalTax;
     });
 
-    // Convert map to array
     return Array.from(staffMap.values());
   }, [data]);
 

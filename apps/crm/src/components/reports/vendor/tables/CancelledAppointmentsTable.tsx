@@ -126,7 +126,18 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
   useEffect(() => { refetch(); }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
 
   const appointments = data?.data?.cancellations?.cancellations || data?.data || [];
-  
+
+  // Build appointmentId -> true total base amount map
+  // by summing each service row's `amount` per appointment id.
+  const appointmentBaseTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    appointments.forEach((appt: any) => {
+      const key = String(appt.id || appt._id);
+      map.set(key, (map.get(key) || 0) + (appt.amount || 0));
+    });
+    return map;
+  }, [appointments]);
+
   const finalFilteredAppointments = useMemo(() => {
     let result = appointments;
     if (searchTerm) {
@@ -280,32 +291,63 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
           </TableHeader>
           <TableBody>
             {paginatedAppointments.length > 0 ? (
-              paginatedAppointments.map((item: any) => (
-                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                  <TableCell className="text-xs py-2 font-medium">{item.clientName || 'N/A'}</TableCell>
-                  <TableCell className="text-xs py-2">{item.serviceName || 'N/A'}</TableCell>
-                  <TableCell className="text-xs py-2">{item.staffName || 'N/A'}</TableCell>
-                  <TableCell className="text-[10px] py-2">{item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : 'N/A'}</TableCell>
-                  <TableCell className="text-[10px] py-2">{item.cancelledDate ? new Date(item.cancelledDate).toLocaleDateString() : 'N/A'}</TableCell>
-                  <TableCell className="text-xs py-2">₹{item.amount || 0}</TableCell>
-                  <TableCell className="text-[10px] py-2">₹{(item.platformFee || 0).toFixed(1)}</TableCell>
-                  <TableCell className="text-[10px] py-2">₹{(item.serviceTax || 0).toFixed(1)}</TableCell>
-                  <TableCell className="text-xs py-2 font-bold text-red-600">₹{(item.finalAmount || item.totalAmount || 0).toFixed(2)}</TableCell>
-                </TableRow>
-              ))
+              paginatedAppointments.map((item: any) => {
+                // Proportional fee/tax allocation using pre-computed true total base
+                const baseAmount = item.amount || 0;
+                const trueTotalBase = appointmentBaseTotals.get(String(item.id || item._id)) || baseAmount || 1;
+                const ratio = (item.isMultiService && trueTotalBase > 0) ? baseAmount / trueTotalBase : 1;
+                const proportionalFee = (item.platformFee || 0) * ratio;
+                const proportionalTax = (item.serviceTax || 0) * ratio;
+                const proportionalFinal = baseAmount + proportionalFee + proportionalTax;
+
+                // Service label with (index/total) for multi-service rows
+                const baseName = item.serviceName || 'N/A';
+                const serviceLabel = (item.isMultiService && item.multiServiceTotal > 1)
+                  ? `${baseName} (${(item.multiServiceIndex ?? 0) + 1}/${item.multiServiceTotal})`
+                  : baseName;
+
+                return (
+                  <TableRow key={`${item.id}-${item.multiServiceIndex ?? 0}`}>
+                    <TableCell className="text-xs py-2 font-medium">{item.clientName || 'N/A'}</TableCell>
+                    <TableCell className="text-xs py-2">{serviceLabel}</TableCell>
+                    <TableCell className="text-xs py-2">{item.staffName || 'N/A'}</TableCell>
+                    <TableCell className="text-[10px] py-2">{item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell className="text-[10px] py-2">{item.cancelledDate ? new Date(item.cancelledDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell className="text-xs py-2">₹{baseAmount.toFixed(2)}</TableCell>
+                    <TableCell className="text-[10px] py-2">₹{proportionalFee.toFixed(2)}</TableCell>
+                    <TableCell className="text-[10px] py-2">₹{proportionalTax.toFixed(2)}</TableCell>
+                    <TableCell className="text-xs py-2 font-bold text-red-600">₹{proportionalFinal.toFixed(2)}</TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No cancelled appointments found.</TableCell>
               </TableRow>
             )}
-            {paginatedAppointments.length > 0 && (
-              <TableRow className="bg-muted font-bold">
-                <TableCell colSpan={5}>TOTAL LOSS</TableCell>
-                <TableCell className="text-xs">₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
-                <TableCell colSpan={2}></TableCell>
-                <TableCell className="text-xs text-red-600">₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
-              </TableRow>
-            )}
+            {paginatedAppointments.length > 0 && (() => {
+              let totalBase = 0, totalFee = 0, totalTax = 0, totalFinal = 0;
+              paginatedAppointments.forEach((item: any) => {
+                const base = item.amount || 0;
+                const trueTotalBase = appointmentBaseTotals.get(String(item.id || item._id)) || base || 1;
+                const r = (item.isMultiService && trueTotalBase > 0) ? base / trueTotalBase : 1;
+                const fee = (item.platformFee || 0) * r;
+                const tax = (item.serviceTax || 0) * r;
+                totalBase  += base;
+                totalFee   += fee;
+                totalTax   += tax;
+                totalFinal += base + fee + tax;
+              });
+              return (
+                <TableRow className="bg-muted font-bold">
+                  <TableCell colSpan={5}>TOTAL LOSS</TableCell>
+                  <TableCell className="text-xs">₹{totalBase.toFixed(2)}</TableCell>
+                  <TableCell className="text-xs">₹{totalFee.toFixed(2)}</TableCell>
+                  <TableCell className="text-xs">₹{totalTax.toFixed(2)}</TableCell>
+                  <TableCell className="text-xs text-red-600">₹{totalFinal.toFixed(2)}</TableCell>
+                </TableRow>
+              );
+            })()}
           </TableBody>
         </Table>
       </div>

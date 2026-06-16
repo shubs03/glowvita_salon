@@ -2997,10 +2997,16 @@ export const glowvitaApi = createApi({
 
     // Product Sales Report
     getSupplierProductSalesReport: builder.query({
-      query: () => ({
-        url: "/crm/reports/supplier/product-sales",
-        method: "GET"
-      }),
+      query: ({ product, category, brand } = {}) => {
+        const params = new URLSearchParams();
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return {
+          url: `/crm/reports/supplier/product-sales?${params.toString()}`,
+          method: "GET"
+        };
+      },
       providesTags: ["SupplierReports"],
       transformResponse: (response) => response,
     }),

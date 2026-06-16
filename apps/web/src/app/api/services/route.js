@@ -1,6 +1,8 @@
 import _db from "@repo/lib/db";
 import ServiceModel from "@repo/lib/models/admin/Service.model";
 import CategoryModel from "@repo/lib/models/admin/Category.model";
+import AddOnModel from "@repo/lib/models/Vendor/AddOn.model";
+import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import mongoose from "mongoose";
 
 // Handle CORS preflight

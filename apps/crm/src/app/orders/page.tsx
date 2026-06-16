@@ -155,14 +155,19 @@ export default function OrdersPage() {
       }
     }
 
-    return dataToFilter.filter((order: Order) =>
-      ((order.orderId && order.orderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    return dataToFilter.filter((order: Order) => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        (order.orderId && order.orderId.toLowerCase().includes(searchLower)) ||
+        (order.customerName && order.customerName.toLowerCase().includes(searchLower)) ||
         (order.items && order.items.some((item: OrderItem) =>
-          item.productName && item.productName.toLowerCase().includes(searchTerm.toLowerCase())
-        ))) &&
-      (statusFilter === 'all' || (order.status && order.status === statusFilter))
-    );
+          item.productName && item.productName.toLowerCase().includes(searchLower)
+        ));
+      
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
   }, [searchTerm, statusFilter, activeTab, viewMode, customerOrders, myPurchases, receivedOrders, onlineCustomerOrders]);
 
   const lastItemIndex = currentPage * itemsPerPage;
@@ -217,8 +222,8 @@ export default function OrdersPage() {
         (o: Order) => o._id === orderId
       );
 
-      // Check if already shipped or delivered (only for non-online orders)
-      if (!isOnlineOrder(order!) && order && (order.status === 'Shipped' || order.status === 'Delivered')) {
+      // Check if already shipped or delivered
+      if (order && (order.status === 'Shipped' || order.status === 'Delivered')) {
         toast.error("Cannot cancel an order that has already been shipped or delivered.");
         return;
       }
