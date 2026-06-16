@@ -560,7 +560,10 @@ export default function NewAppointmentForm({
       date.getFullYear() === today.getFullYear();
   };
 
-  // Get the minimum allowed time for a given date
+  // Get the minimum allowed time for a given date.
+  // For NEW appointments on today, we allow up to 5 minutes in the past
+  // (so a walk-in that arrived moments ago can still be recorded).
+  // Anything older than that is rejected.
   const getMinTimeForDate = (date: Date | string): string => {
     const targetDate = new Date(date);
     const now = new Date();
@@ -574,9 +577,9 @@ export default function NewAppointmentForm({
       return '00:00';
     }
 
-    // For today, use current time + 2 minutes (only for NEW appointments)
+    // For today and NEW appointments: allow up to 5 minutes in the past
     if (targetDateOnly.getTime() === todayDateOnly.getTime() && !isEditing && !isRescheduling) {
-      const minTime = new Date(now.getTime() + 2 * 60 * 1000);
+      const minTime = new Date(now.getTime() - 5 * 60 * 1000);
       const hours = minTime.getHours().toString().padStart(2, '0');
       const minutes = minTime.getMinutes().toString().padStart(2, '0');
       return `${hours}:${minutes}`;
@@ -589,7 +592,7 @@ export default function NewAppointmentForm({
   // Use a ref to track the current duration without causing re-renders
   const durationRef = useRef(60); // Default to 60 minutes
 
-  // Get current time with 15-minute buffer (only for today AND new appointments)
+  // Get current time for use as default start time (only for today AND new appointments)
   const getCurrentTimeWithBuffer = (selectedDate?: Date | string) => {
     const now = new Date();
     const targetDate = selectedDate ? new Date(selectedDate) : now;
@@ -609,9 +612,10 @@ export default function NewAppointmentForm({
       if (isEditing || isRescheduling) {
         return defaultValues?.startTime || '09:00';
       }
-      // For new appointments, use current time with buffer
-      const minTime = getMinTimeForDate(now);
-      return minTime;
+      // For new appointments, default to current time (immediate booking)
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
     }
 
     // Default
@@ -1637,9 +1641,47 @@ export default function NewAppointmentForm({
   };
 
   // Update the start time handler to also update end time
-  // Update the start time handler to also update end time
   const handleStartTimeChange = async (time: string) => {
     try {
+      // ── Past-time guard (new appointments on today only) ──────────────────
+      if (!isEditing && !isRescheduling) {
+        const selectedDate = appointmentData.date instanceof Date
+          ? appointmentData.date
+          : new Date(appointmentData.date);
+        const selectedDateOnly = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate()
+        );
+        const now = new Date();
+        const todayDateOnly = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+        if (selectedDateOnly.getTime() === todayDateOnly.getTime()) {
+          const [inputH, inputM] = time.split(':').map(Number);
+          const selectedMinutes = inputH * 60 + inputM;
+          // Allow up to 5 minutes in the past; reject anything older
+          const allowedMinutes = (now.getHours() * 60 + now.getMinutes()) - 5;
+          if (selectedMinutes < allowedMinutes) {
+            toast.error('Start time cannot be set to a time too far in the past. Please select a recent time.');
+            // Snap to the minimum allowed time (now − 5 min)
+            const minTime = getMinTimeForDate(selectedDate);
+            setAppointmentData(prev => ({
+              ...prev,
+              startTime: minTime,
+              ...(prev.duration > 0 && {
+                endTime: calculateEndTime(minTime, prev.duration)
+              })
+            }));
+            return;
+          }
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       setAppointmentData(prev => {
         // Check if the selected time is available
         if (prev.staff && !isTimeAvailable(new Date(prev.date), time, prev.staff)) {
@@ -1825,6 +1867,33 @@ export default function NewAppointmentForm({
         console.groupEnd();
         return;
       }
+
+      // Validate start time is not too far in the past (new appointments on today only)
+      if (!isEditing && !isRescheduling && appointmentData.startTime) {
+        const selectedDate = appointmentData.date instanceof Date
+          ? appointmentData.date
+          : new Date(appointmentData.date);
+        const selectedDateOnly = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate()
+        );
+        const now = new Date();
+        const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (selectedDateOnly.getTime() === todayDateOnly.getTime()) {
+          const [inputH, inputM] = appointmentData.startTime.split(':').map(Number);
+          const selectedMinutes = inputH * 60 + inputM;
+          const allowedMinutes = (now.getHours() * 60 + now.getMinutes()) - 5;
+          if (selectedMinutes < allowedMinutes) {
+            console.error('❌ Start time is too far in the past');
+            toast.error('Start time cannot be more than 5 minutes in the past. Please select a recent time.');
+            console.groupEnd();
+            return;
+          }
+        }
+      }
+
       if (!appointmentData.endTime) {
         console.error('❌ End time is missing');
         toast.error('Please select an end time');
