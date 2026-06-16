@@ -137,12 +137,14 @@ export const SalesByProductTable = ({ product, category, brand, status, isActive
   // Aggregated Totals for Summary Cards
   const aggregatedTotals = useMemo(() => {
     return searchedProducts.reduce((acc: any, curr: any) => {
-      acc.totalSales += curr.totalSales || 0;
-      acc.unitsSold += curr.quantitySold || 0;
-      acc.grossProfit += curr.grossProfit || 0;
-      acc.taxAmount += curr.taxAmount || 0;
+      acc.totalSales  += curr.totalSales  || 0;
+      acc.unitsSold   += curr.quantitySold || 0;
+      acc.grossProfit += curr.grossProfit  || 0;
+      acc.taxAmount   += curr.taxAmount    || 0;
+      acc.platformFee += curr.platformFee  || 0;
+      acc.gstTax      += curr.gstTax       || 0;
       return acc;
-    }, { totalSales: 0, unitsSold: 0, grossProfit: 0, taxAmount: 0 });
+    }, { totalSales: 0, unitsSold: 0, grossProfit: 0, taxAmount: 0, platformFee: 0, gstTax: 0 });
   }, [searchedProducts]);
 
   if (isLoading) {
@@ -268,8 +270,10 @@ export const SalesByProductTable = ({ product, category, brand, status, isActive
               <TableHead>Gross Sales</TableHead>
               <TableHead>Discount</TableHead>
               <TableHead>Net Sales</TableHead>
+              <TableHead>Platform Fee</TableHead>
+              <TableHead>GST Tax</TableHead>
               <TableHead>Tax</TableHead>
-              <TableHead>Total Sales</TableHead>
+              <TableHead className="font-bold">Total Sales</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -284,6 +288,8 @@ export const SalesByProductTable = ({ product, category, brand, status, isActive
                   <TableCell className="text-xs">₹{item.grossSales?.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">₹{item.discountAmount?.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">₹{item.netSales?.toFixed(2)}</TableCell>
+                  <TableCell className="text-xs">₹{(item.platformFee || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-xs">₹{(item.gstTax || 0).toFixed(2)}</TableCell>
                   <TableCell className="text-xs">₹{item.taxAmount?.toFixed(2)}</TableCell>
                   <TableCell className="text-xs font-bold">₹{item.totalSales?.toFixed(2)}</TableCell>
                 </TableRow>
@@ -300,6 +306,8 @@ export const SalesByProductTable = ({ product, category, brand, status, isActive
                 <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.grossSales || 0), 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.discountAmount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.netSales || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.platformFee || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.gstTax || 0), 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.taxAmount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.totalSales || 0), 0).toFixed(2)}</TableCell>
               </TableRow>

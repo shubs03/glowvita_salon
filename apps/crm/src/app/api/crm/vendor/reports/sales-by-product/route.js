@@ -113,6 +113,12 @@ export const GET = authMiddlewareCrm(async (req) => {
 
     // Process each order and aggregate by product
     allOrders.forEach(order => {
+      // Compute the order's total item value (sum of price×qty across all items)
+      // Used as the denominator for proportional fee/tax allocation.
+      const orderItemsTotal = order.items.reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0) || 1;
+      const orderPlatformFee = order.platformFeeAmount || 0;
+      const orderGst = order.gstAmount || 0;
+
       // Process each item in the order
       order.items.forEach(item => {
         const productId = item.productId ? item.productId.toString() : null;
@@ -144,7 +150,9 @@ export const GET = authMiddlewareCrm(async (req) => {
             discountAmount: 0,
             netSales: 0,
             taxAmount: 0,
-            totalSales: 0, // Net + Tax
+            platformFee: 0,   // proportional platform fee
+            gstTax: 0,        // proportional GST
+            totalSales: 0, // netSales + platformFee + gstTax
             costOfGoodsSold: 0, // COGS
             grossProfit: 0,
             grossMarginPercentage: 0,
@@ -157,26 +165,29 @@ export const GET = authMiddlewareCrm(async (req) => {
         const unitPrice = item.price || 0;
         const itemTotal = unitPrice * quantity;
 
+        // Proportional share of this item in the order
+        const itemRatio = orderItemsTotal > 0 ? itemTotal / orderItemsTotal : 0;
+        const itemPlatformFee = orderPlatformFee * itemRatio;
+        const itemGst = orderGst * itemRatio;
+
         salesByProduct[productId].unitsSold += quantity;
         salesByProduct[productId].grossSales += itemTotal;
 
-        // For now, we're setting discounts/tax to 0 as the ClientOrder model
-        // doesn't have these fields. In a real implementation, these would come
-        // from the order or be calculated based on business rules.
-        // We'll assume 0 discounts and 0 tax for now
         const discount = 0;
         const tax = 0;
 
         salesByProduct[productId].discountAmount += discount;
         salesByProduct[productId].taxAmount += tax;
+        salesByProduct[productId].platformFee += itemPlatformFee;
+        salesByProduct[productId].gstTax += itemGst;
         salesByProduct[productId].netSales += (itemTotal - discount);
-        salesByProduct[productId].totalSales += (itemTotal - discount + tax);
+        // Final total = net + platform fee + GST
+        salesByProduct[productId].totalSales += (itemTotal - discount + itemPlatformFee + itemGst);
 
         // Calculate COGS, Gross Profit and Gross Margin %
         // Assuming COGS is 60% of net sales as an example
         const cogs = (itemTotal - discount) * 0.6;
         const grossProfit = (itemTotal - discount) - cogs;
-        const grossMarginPercentage = (itemTotal - discount) > 0 ? (grossProfit / (itemTotal - discount)) * 100 : 0;
 
         salesByProduct[productId].costOfGoodsSold += cogs;
         salesByProduct[productId].grossProfit += grossProfit;
@@ -216,6 +227,8 @@ export const GET = authMiddlewareCrm(async (req) => {
       product.discountAmount = parseFloat(product.discountAmount.toFixed(2));
       product.netSales = parseFloat(product.netSales.toFixed(2));
       product.taxAmount = parseFloat(product.taxAmount.toFixed(2));
+      product.platformFee = parseFloat(product.platformFee.toFixed(2));
+      product.gstTax = parseFloat(product.gstTax.toFixed(2));
       product.totalSales = parseFloat(product.totalSales.toFixed(2));
       product.costOfGoodsSold = parseFloat(product.costOfGoodsSold.toFixed(2));
       product.grossProfit = parseFloat(product.grossProfit.toFixed(2));
@@ -238,6 +251,8 @@ export const GET = authMiddlewareCrm(async (req) => {
         discountAmount: product.discountAmount,
         netSales: product.netSales,
         taxAmount: product.taxAmount,
+        platformFee: product.platformFee,
+        gstTax: product.gstTax,
         totalSales: product.totalSales,
         averageSellingPrice: product.averageSellingPrice,
         cogs: product.costOfGoodsSold,

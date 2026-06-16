@@ -2,30 +2,74 @@ import { NextResponse } from "next/server";
 import _db from "@repo/lib/db";
 import OrderModel from "@repo/lib/models/Vendor/Order.model";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
+import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory";
 import { authMiddlewareCrm } from "../../../../../../middlewareCrm";
 
 await _db();
 
-// GET - Fetch product sales report for supplier
 export const GET = authMiddlewareCrm(async (request) => {
   try {
     const supplierId = request.user.userId;
-    
-    // Get all products for this supplier
-    const products = await ProductModel.find({
-      supplierId: supplierId
-    })
-    .select('productName productImage price stock category createdAt')
-    .sort({ createdAt: -1 });
+    const { searchParams } = new URL(request.url);
 
-    // Get all orders for this supplier (both B2C from customers and B2B from vendors)
+    // Get filter parameters
+    const productFilter = searchParams.get('product');
+    const categoryFilter = searchParams.get('category');
+    const brandFilter = searchParams.get('brand');
+
+    // Get all categories to map category IDs to names
+    const categories = await ProductCategoryModel.find();
+    const categoryMap = {};
+    if (categories && categories.length > 0) {
+      categories.forEach(cat => {
+        categoryMap[cat._id.toString()] = cat.name;
+      });
+    }
+
+    // Get all products for this supplier
+    const productQuery = {
+      vendorId: supplierId,
+      origin: 'Supplier'
+    };
+
+    if (productFilter && productFilter !== '' && productFilter !== 'all') {
+      productQuery.productName = { $regex: productFilter, $options: 'i' };
+    }
+
+    if (brandFilter && brandFilter !== '' && brandFilter !== 'all') {
+      productQuery.brand = brandFilter;
+    }
+
+    let products = await ProductModel.find(productQuery)
+      .select('productName productImage price stock category createdAt brand')
+      .sort({ createdAt: -1 });
+
+    if (categoryFilter && categoryFilter !== '' && categoryFilter !== 'all') {
+      const trimmedCategoryFilter = categoryFilter.trim();
+      const matchingCategory = await ProductCategoryModel.findOne({
+        name: trimmedCategoryFilter
+      });
+
+      if (matchingCategory) {
+        const matchingCategoryId = matchingCategory._id.toString();
+        products = products.filter(product => {
+          if (!product.category) return false;
+          return product.category.toString().trim() === matchingCategoryId;
+        });
+      } else {
+        products = [];
+      }
+    }
+
+    // Get all orders for this supplier (both B2C from customers and B2B from vendors) - only delivered
     const orders = await OrderModel.find({
-      supplierId: supplierId
+      supplierId: supplierId,
+      status: 'Delivered'
     });
 
-    // Separate B2C and B2B orders
-    const b2cOrders = orders.filter(order => order.customerId && !order.vendorId);
-    const b2bOrders = orders.filter(order => order.vendorId && !order.customerId);
+    // Fixed rate constants for fee/tax calculation
+    const PLATFORM_FEE_RATE = 0.10; // 10%
+    const GST_RATE = 0.18;          // 18%
 
     // Calculate sales statistics for each product
     const productSalesData = products.map(product => {
@@ -41,32 +85,41 @@ export const GET = authMiddlewareCrm(async (request) => {
       let b2bOrders = 0;
 
       orders.forEach(order => {
-        const productItem = order.items.find(item => 
-          item.productId && item.productId.toString() === product._id.toString()
-        );
-        
-        if (productItem) {
-          const quantity = productItem.quantity || 0;
-          const revenue = (productItem.price || 0) * quantity;
-          
-          totalQuantitySold += quantity;
-          totalRevenue += revenue;
-          orderCount += 1;
+        let orderHasProduct = false;
+        order.items.forEach(productItem => {
+          if (productItem.productId && productItem.productId.toString() === product._id.toString()) {
+            const quantity = productItem.quantity || 0;
+            const revenue = (productItem.price || 0) * quantity;
 
-          // Categorize by order type
+            totalQuantitySold += quantity;
+            totalRevenue += revenue;
+            orderHasProduct = true;
+
+            // Categorize by order type
+            if (order.customerId && !order.vendorId) {
+              b2cQuantity += quantity;
+              b2cRevenue += revenue;
+            } else if (order.vendorId && !order.customerId) {
+              b2bQuantity += quantity;
+              b2bRevenue += revenue;
+            }
+          }
+        });
+
+        if (orderHasProduct) {
+          orderCount += 1;
           if (order.customerId && !order.vendorId) {
-            // B2C order (web customer)
-            b2cQuantity += quantity;
-            b2cRevenue += revenue;
             b2cOrders += 1;
           } else if (order.vendorId && !order.customerId) {
-            // B2B order (vendor purchase)
-            b2bQuantity += quantity;
-            b2bRevenue += revenue;
             b2bOrders += 1;
           }
         }
       });
+
+      // Compute platform fee and GST on net revenue
+      const platformFee = parseFloat((totalRevenue * PLATFORM_FEE_RATE).toFixed(2));
+      const gstAmount  = parseFloat((totalRevenue * GST_RATE).toFixed(2));
+      const totalSales = parseFloat((totalRevenue + platformFee + gstAmount).toFixed(2));
 
       return {
         productId: product._id,
@@ -74,20 +127,21 @@ export const GET = authMiddlewareCrm(async (request) => {
         productImage: product.productImage,
         price: product.price,
         stock: product.stock,
-        category: product.category,
+        category: categoryMap[product.category?.toString()] || 'N/A',
+        brand: product.brand || 'N/A',
+        quantitySold: totalQuantitySold,
+        grossSales: parseFloat(totalRevenue.toFixed(2)),
+        discountAmount: 0,
+        netSales: parseFloat(totalRevenue.toFixed(2)),
+        platformFee,
+        gstAmount,
+        taxAmount: 0,
+        totalSales,
         totalQuantitySold,
-        totalRevenue,
+        totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         orderCount,
-        b2cSales: {
-          quantity: b2cQuantity,
-          revenue: b2cRevenue,
-          orders: b2cOrders
-        },
-        b2bSales: {
-          quantity: b2bQuantity,
-          revenue: b2bRevenue,
-          orders: b2bOrders
-        },
+        b2cSales: { quantity: b2cQuantity, revenue: parseFloat(b2cRevenue.toFixed(2)), orders: b2cOrders },
+        b2bSales: { quantity: b2bQuantity, revenue: parseFloat(b2bRevenue.toFixed(2)), orders: b2bOrders },
         createdAt: product.createdAt
       };
     });
