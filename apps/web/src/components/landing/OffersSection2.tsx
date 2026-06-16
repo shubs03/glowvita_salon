@@ -7,12 +7,10 @@ import { useSalonFilter } from './SalonFilterContext';
 
 interface SimplifiedOffer {
   code: string;
-  vendorId: string;
   discount: string;
   image: string;
   validTill: string;
   salonName: string;
-  isVendorOffer: boolean;
 }
 
 const OffersSection2 = () => {
@@ -43,22 +41,18 @@ const OffersSection2 = () => {
     }
   }, [offersData, error]);
 
-  // Use the fetched offers data
+  // Only admin offers are returned by the API — map them to display format
   const offers: SimplifiedOffer[] = offersData?.data && !isLoading && !error
     ? offersData.data
       .filter((offer: any) => offer.status === 'Active') // Only show active offers
       .map((offer: any) => ({
         code: offer.code,
-        vendorId: offer.businessId?._id || offer.businessId || offer.vendorId, // Extract ID if populated
         discount: `${offer.type === 'percentage' ? offer.value + '% OFF' : '₹' + offer.value + ' OFF'}`,
         image: offer.offerImage || '/images/Offer Placeholder.png',
         validTill: offer.expires
           ? new Date(offer.expires).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
           : '',
-        salonName: offer.isVendorOffer && offer.businessId?.businessName
-          ? `by ${offer.businessId.businessName}`
-          : 'Valid @ All Salons',
-        isVendorOffer: offer.isVendorOffer || false,
+        salonName: 'Valid @ All Salons',
       }))
     : [];
 
@@ -155,10 +149,7 @@ const OffersSection2 = () => {
                   return (
                     <Link
                       key={index}
-                      href={offer.isVendorOffer
-                        ? `/book/${offer.vendorId}?offerCode=${offer.code}`
-                        : salonsUrl
-                      }
+                      href={salonsUrl}
                       className="relative flex-shrink-0 inline-block pr-6 sm:pr-8 lg:pr-10"
                       onMouseEnter={() => setHoveredIndex(index)}
                       onMouseLeave={() => setHoveredIndex(null)}
