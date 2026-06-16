@@ -8,7 +8,7 @@ import { Input } from '@repo/ui/input';
 import { Pagination } from "@repo/ui/pagination";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Download, Search, Copy, FileText, FileSpreadsheet, Printer, Filter } from 'lucide-react';
-import { useGetSalesByProductReportQuery } from '@repo/store/api';
+import { useGetSupplierProductSalesReportQuery } from '@repo/store/api';
 import { FilterModal } from '../../shared/FilterModal';
 import { FilterParams } from '../../shared/types';
 import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } from './exportUtils';
@@ -21,7 +21,7 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
   const [searchTerm, setSearchTerm] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading, isError, refetch } = useGetSalesByProductReportQuery({
+  const { data, isLoading, isError, refetch } = useGetSupplierProductSalesReportQuery({
     product: product && product !== 'all' ? product : undefined,
     category: category && category !== 'all' ? category : undefined,
     brand: brand && brand !== 'all' ? brand : undefined
@@ -64,19 +64,17 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
 
   const totals = useMemo(() => {
     return searchedProducts.reduce((acc: any, item: any) => ({
-      quantitySold: acc.quantitySold + (item.quantitySold || item.unitsSold || 0),
-      grossSales: acc.grossSales + (item.grossSales || item.grossSale || 0),
-      discountAmount: acc.discountAmount + (item.discountAmount || item.discounts || 0),
-      netSales: acc.netSales + (item.netSales || item.netSale || 0),
-      taxAmount: acc.taxAmount + (item.taxAmount || item.tax || 0),
-      totalSales: acc.totalSales + (item.totalSales || 0)
+      quantitySold:   acc.quantitySold   + (item.quantitySold   || item.unitsSold  || 0),
+      grossSales:     acc.grossSales     + (item.grossSales     || item.grossSale  || 0),
+      discountAmount: acc.discountAmount + (item.discountAmount || item.discounts  || 0),
+      netSales:       acc.netSales       + (item.netSales       || item.netSale    || 0),
+      platformFee:    acc.platformFee    + (item.platformFee    || 0),
+      gstAmount:      acc.gstAmount      + (item.gstAmount      || 0),
+      taxAmount:      acc.taxAmount      + (item.taxAmount      || item.tax        || 0),
+      totalSales:     acc.totalSales     + (item.totalSales     || 0)
     }), {
-      quantitySold: 0,
-      grossSales: 0,
-      discountAmount: 0,
-      netSales: 0,
-      taxAmount: 0,
-      totalSales: 0
+      quantitySold: 0, grossSales: 0, discountAmount: 0,
+      netSales: 0, platformFee: 0, gstAmount: 0, taxAmount: 0, totalSales: 0
     });
   }, [searchedProducts]);
 
@@ -120,8 +118,10 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
                 <TableHead>Gross Sales</TableHead>
                 <TableHead>Discount Amount</TableHead>
                 <TableHead>Net Sales</TableHead>
+                <TableHead className="text-blue-600">Platform Fee</TableHead>
+                <TableHead className="text-orange-600">GST Tax</TableHead>
                 <TableHead>Tax Amount</TableHead>
-                <TableHead>Total Sales</TableHead>
+                <TableHead className="font-bold">Total Sales</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,6 +132,8 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -213,8 +215,10 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
               <TableHead>Gross Sales</TableHead>
               <TableHead>Discount Amount</TableHead>
               <TableHead>Net Sales</TableHead>
+              <TableHead>Platform Fee</TableHead>
+              <TableHead>GST Tax</TableHead>
               <TableHead>Tax Amount</TableHead>
-              <TableHead>Total Sales</TableHead>
+              <TableHead className="font-bold">Total Sales</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -228,8 +232,10 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
                 <TableCell>₹{(item.grossSales ?? item.grossSale ?? 0).toFixed(2)}</TableCell>
                 <TableCell>₹{(item.discountAmount ?? item.discounts ?? 0).toFixed(2)}</TableCell>
                 <TableCell>₹{(item.netSales ?? item.netSale ?? 0).toFixed(2)}</TableCell>
+                <TableCell>₹{(item.platformFee || 0).toFixed(2)}</TableCell>
+                <TableCell>₹{(item.gstAmount || 0).toFixed(2)}</TableCell>
                 <TableCell>₹{(item.taxAmount ?? item.tax ?? 0).toFixed(2)}</TableCell>
-                <TableCell>₹{(item.totalSales ?? 0).toFixed(2)}</TableCell>
+                <TableCell className="font-bold">₹{(item.totalSales ?? 0).toFixed(2)}</TableCell>
               </TableRow>
             ))}
             <TableRow className="font-bold bg-muted/50">
@@ -238,6 +244,8 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
               <TableCell>₹{totals.grossSales.toFixed(2)}</TableCell>
               <TableCell>₹{totals.discountAmount.toFixed(2)}</TableCell>
               <TableCell>₹{totals.netSales.toFixed(2)}</TableCell>
+              <TableCell>₹{totals.platformFee.toFixed(2)}</TableCell>
+              <TableCell>₹{totals.gstAmount.toFixed(2)}</TableCell>
               <TableCell>₹{totals.taxAmount.toFixed(2)}</TableCell>
               <TableCell>₹{totals.totalSales.toFixed(2)}</TableCell>
             </TableRow>

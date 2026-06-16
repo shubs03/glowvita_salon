@@ -172,6 +172,18 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
   // Extract appointments from the API response (already filtered by backend)
   const filteredAppointments = data?.data?.complete?.appointments || data?.data || [];
 
+  // Build a map: appointmentId -> true total base amount
+  // by summing the `amount` of every service row sharing the same appointment id.
+  // Used as the correct denominator for proportional fee/tax allocation.
+  const appointmentBaseTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    filteredAppointments.forEach((appt: any) => {
+      const key = String(appt.id || appt._id);
+      map.set(key, (map.get(key) || 0) + (appt.amount || 0));
+    });
+    return map;
+  }, [filteredAppointments]);
+
   // Filter data based on search term and filter props
   const finalFilteredAppointments = useMemo(() => {
     let result = filteredAppointments;
@@ -471,17 +483,25 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
                   const timeRange = item.startTime && item.endTime ?
                     `${item.startTime} - ${item.endTime}` : 'N/A';
 
-                  // Format service name for multi-service appointments
-                  let serviceName = item.serviceName || item.service?.name || 'N/A';
-                  if (item.isMultiService && item.multiServiceTotal) {
-                    serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-                  }
+                  // Service label with (index/total) for multi-service appointments
+                  const baseName = item.serviceName || item.service?.name || 'N/A';
+                  const serviceName = (item.isMultiService && item.multiServiceTotal > 1)
+                    ? `${baseName} (${(item.multiServiceIndex ?? 0) + 1}/${item.multiServiceTotal})`
+                    : baseName;
 
-                  // Format status with asterisk for multi-service appointments
-                  const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
+                  // Status label (no asterisk needed — label already disambiguates)
+                  const statusText = item.status || 'N/A';
+
+                  // Proportional fee/tax split using the pre-computed true total base
+                  const baseAmount = item.amount || 0;
+                  const trueTotalBase = appointmentBaseTotals.get(String(item.id || item._id)) || baseAmount || 1;
+                  const ratio = (item.isMultiService && trueTotalBase > 0) ? baseAmount / trueTotalBase : 1;
+                  const proportionalFee = (item.platformFee || 0) * ratio;
+                  const proportionalTax = (item.serviceTax || 0) * ratio;
+                  const proportionalFinal = baseAmount + proportionalFee + proportionalTax;
 
                   return (
-                    <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
+                    <TableRow key={`${item.id}-${item.multiServiceIndex ?? 0}`}>
                       <TableCell>{item.clientName || 'N/A'}</TableCell>
                       <TableCell>{serviceName}</TableCell>
                       <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
@@ -489,42 +509,51 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
                       <TableCell>{createdDate}</TableCell>
                       <TableCell>{timeRange}</TableCell>
                       <TableCell>{item.duration || item.totalDuration || 'N/A'} mins</TableCell>
-                      <TableCell>₹{item.amount || 0}</TableCell>
-                      <TableCell>₹{item.platformFee || 0}</TableCell>
-                      <TableCell>₹{item.serviceTax || 0}</TableCell>
-                      <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
+                      <TableCell>₹{baseAmount.toFixed(2)}</TableCell>
+                      <TableCell>₹{proportionalFee.toFixed(2)}</TableCell>
+                      <TableCell>₹{proportionalTax.toFixed(2)}</TableCell>
+                      <TableCell>₹{proportionalFinal.toFixed(2)}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${(item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                          (item.status || '').toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                              (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                                (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
-                                  'bg-gray-100 text-gray-800'
-                          }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          (item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                          (item.status || '').toLowerCase() === 'pending'   ? 'bg-yellow-100 text-yellow-800' :
+                          (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                          (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
                           {statusText}
                         </span>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {/* Total Row */}
-                <TableRow className="font-bold bg-gray-50">
-                  <TableCell>Total</TableCell>
-                  <TableCell colSpan={6}></TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-                  </TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
-                  </TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0)}
-                  </TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0)}
-                  </TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
+                {/* Total Row — uses same proportional math as each row */}
+                {(() => {
+                  let totalBase = 0, totalFee = 0, totalTax = 0, totalFinal = 0;
+                  paginatedAppointments.forEach((item: any) => {
+                    const base = item.amount || 0;
+                    const trueTotalBase = appointmentBaseTotals.get(String(item.id || item._id)) || base || 1;
+                    const r = (item.isMultiService && trueTotalBase > 0) ? base / trueTotalBase : 1;
+                    const fee = (item.platformFee || 0) * r;
+                    const tax = (item.serviceTax || 0) * r;
+                    totalBase  += base;
+                    totalFee   += fee;
+                    totalTax   += tax;
+                    totalFinal += base + fee + tax;
+                  });
+                  return (
+                    <TableRow className="font-bold bg-gray-50">
+                      <TableCell>Total</TableCell>
+                      <TableCell colSpan={6}></TableCell>
+                      <TableCell>₹{totalBase.toFixed(2)}</TableCell>
+                      <TableCell>₹{totalFee.toFixed(2)}</TableCell>
+                      <TableCell>₹{totalTax.toFixed(2)}</TableCell>
+                      <TableCell>₹{totalFinal.toFixed(2)}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  );
+                })()}
               </TableBody>
             </Table>
           </div>

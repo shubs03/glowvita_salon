@@ -544,12 +544,6 @@ export default function ProfilePage() {
                       <span className="sm:hidden">SMS</span>
                     </TabsTrigger>
                     <TabsTrigger
-                      value="taxes"
-                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                    >
-                      Taxes
-                    </TabsTrigger>
-                    <TabsTrigger
                       value="notifications"
                       className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
                     >
@@ -656,10 +650,6 @@ export default function ProfilePage() {
 
               <TabsContent value="sms">
                 <SmsPackagesTab />
-              </TabsContent>
-
-              <TabsContent value="taxes">
-                <TaxesTab taxes={localSupplier?.taxes || { taxValue: 0, taxType: 'percentage' }} setVendor={setLocalSupplier} />
               </TabsContent>
             </>
           )}
