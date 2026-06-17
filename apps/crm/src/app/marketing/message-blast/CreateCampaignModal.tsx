@@ -9,7 +9,6 @@ import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Checkbox } from "@repo/ui/checkbox";
 import { Card } from "@repo/ui/card";
 import { MessageSquare, Plus } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@repo/store/hooks';
@@ -123,7 +122,6 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
   const [campaignName, setCampaignName] = useState('');
   const [campaignTypes, setCampaignTypes] = useState<string[]>(['SMS']);
   const [targetAudience, setTargetAudience] = useState('All Customers');
-  const [budget, setBudget] = useState(0);
   const [scheduledDate, setScheduledDate] = useState('');
 
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -169,7 +167,6 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
     setCampaignName('');
     setCampaignTypes(['SMS']);
     setTargetAudience('All Customers');
-    setBudget(0);
     setScheduledDate('');
     setSelectedTemplate(null);
     setMessage('');
@@ -177,7 +174,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
     setShowNewTemplateForm(false);
   };
 
-  const handleCreateCampaign = async () => {
+  const handleCreateCampaign = async (status: 'Draft' | 'Active') => {
     try {
       if (!campaignName.trim()) {
         toast.error('Please enter a campaign name');
@@ -200,9 +197,9 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
         content: message.trim(),
         templateId: selectedTemplate,
         targetAudience,
-        budget: budget || 0,
+        budget: 0,
         scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : new Date().toISOString(),
-        status: 'Draft'
+        status
       };
 
       console.log('Creating campaign with data:', campaignData);
@@ -211,7 +208,11 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
 
       console.log('Campaign created successfully:', result);
 
-      toast.success('Campaign created successfully!');
+      if (status === 'Active') {
+        toast.success('Campaign launched and messages sent successfully!');
+      } else {
+        toast.success('Campaign created as draft successfully!');
+      }
 
       // Trigger refetch of campaigns list
       if (onCampaignCreated) {
@@ -513,45 +514,22 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                     />
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       Campaign Type
                       <span className="text-destructive">*</span>
                     </Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                        <Checkbox
-                          id="type-sms"
-                          checked={campaignTypes.includes('SMS')}
-                          onCheckedChange={(checked) => handleCampaignTypeToggle('SMS', checked as boolean)}
-                          className="data-[state=checked]:bg-primary"
-                        />
-                        <Label htmlFor="type-sms" className="font-medium cursor-pointer flex-1">
-                          SMS
-                        </Label>
+                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary/30">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <MessageSquare className="h-4 w-4 text-primary" />
                       </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                        <Checkbox
-                          id="type-email"
-                          checked={campaignTypes.includes('Email')}
-                          onCheckedChange={(checked) => handleCampaignTypeToggle('Email', checked as boolean)}
-                          className="data-[state=checked]:bg-primary"
-                        />
-                        <Label htmlFor="type-email" className="font-medium cursor-pointer flex-1">
-                          Email
-                        </Label>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-primary">SMS</p>
+                        <p className="text-xs text-muted-foreground">Campaign will be sent as SMS to recipients</p>
                       </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                        <Checkbox
-                          id="type-notification"
-                          checked={campaignTypes.includes('Notification')}
-                          onCheckedChange={(checked) => handleCampaignTypeToggle('Notification', checked as boolean)}
-                          className="data-[state=checked]:bg-primary"
-                        />
-                        <Label htmlFor="type-notification" className="font-medium cursor-pointer flex-1">
-                          Notification
-                        </Label>
-                      </div>
+                      <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                        Selected
+                      </span>
                     </div>
                   </div>
 
@@ -583,39 +561,18 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="target-audience" className="text-sm font-medium">
-                        Target Audience
-                      </Label>
-                      <Select value={targetAudience} onValueChange={setTargetAudience}>
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select target audience" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="All Customers">All Customers</SelectItem>
-                          <SelectItem value="New Customers">New Customers</SelectItem>
-                          <SelectItem value="Returning Customers">Returning Customers</SelectItem>
-                          <SelectItem value="Premium Customers">Premium Customers</SelectItem>
-                          <SelectItem value="Inactive Customers">Inactive Customers</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="budget" className="text-sm font-medium">
-                        Budget (₹)
-                      </Label>
-                      <Input
-                        id="budget"
-                        type="number"
-                        placeholder="Enter campaign budget"
-                        className="h-11"
-                        min="0"
-                        value={budget || ''}
-                        onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="target-audience" className="text-sm font-medium">
+                      Target Audience
+                    </Label>
+                    <Select value={targetAudience} onValueChange={setTargetAudience} disabled>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select target audience" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All Customers">All Customers</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-3">
@@ -659,17 +616,25 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
               resetForm();
               onOpenChange(false);
             }}
-            className="order-2 sm:order-1"
+            className="order-3 sm:order-1"
             disabled={isCreatingCampaign}
           >
             Cancel
           </Button>
           <Button
-            className="order-1 sm:order-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+            variant="outline"
+            className="order-2 sm:order-2 border border-input hover:bg-accent hover:text-accent-foreground"
             disabled={!message.trim() || !campaignName.trim() || isCreatingCampaign}
-            onClick={handleCreateCampaign}
+            onClick={() => handleCreateCampaign('Draft')}
           >
-            {isCreatingCampaign ? 'Creating...' : 'Create Campaign'}
+            Save as Draft
+          </Button>
+          <Button
+            className="order-1 sm:order-3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+            disabled={!message.trim() || !campaignName.trim() || isCreatingCampaign}
+            onClick={() => handleCreateCampaign('Active')}
+          >
+            {isCreatingCampaign ? 'Launching...' : 'Launch Campaign'}
           </Button>
         </div>
       </DialogContent>
