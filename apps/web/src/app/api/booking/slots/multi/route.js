@@ -251,13 +251,37 @@ function getStaffWindowInSequence(staffId, assignments, startMinutes, isHomeServ
   return { start: windowStart, end: windowEnd };
 }
 
+// Helper: Check if a staff member is compatible with a service
+// Returns true if the service has no staff restrictions, or the staff is listed in service.staff
+function isStaffCompatibleWithService(staff, service) {
+  const serviceStaff = service.staff || [];
+  if (serviceStaff.length === 0) return true; // No restrictions
+  const staffIdStr = staff._id?.toString() || staff.id?.toString() || '';
+  const staffNameStr = (staff.fullName || '').trim().toLowerCase();
+  return serviceStaff.some(sId => {
+    if (!sId) return false;
+    const sIdStr = sId.toString();
+    return sIdStr === staffIdStr || sIdStr.trim().toLowerCase() === staffNameStr;
+  });
+}
+
 // Main validation: Check if a complete sequence is valid
 async function validateSequence(assignments, startMinutes, date, existingAppointments, allActiveStaff, isHomeService, travelTimeInfo, bufferBefore = 0, bufferAfter = 0) {
   const hasAnyAssignment = assignments.some(a => a.staff.isAny);
 
   if (hasAnyAssignment) {
-    // Try to find a candidate from allActiveStaff who can fulfill the "Any Professional" slots
-    for (const candidate of allActiveStaff) {
+    // Build the list of services that are marked as 'any' — the candidate must be compatible with ALL of them
+    const anyServices = assignments.filter(a => a.staff.isAny).map(a => a.service);
+
+    // Filter allActiveStaff to only those who can actually perform every 'any' service
+    const compatibleCandidates = allActiveStaff.filter(candidate =>
+      anyServices.every(service => isStaffCompatibleWithService(candidate, service))
+    );
+
+    console.log(`[MultiSlots] 'Any Professional' candidates after service-compatibility filter: ${compatibleCandidates.length} of ${allActiveStaff.length} active staff`);
+
+    // Try to find a candidate from compatible staff who can fulfill the "Any Professional" slots
+    for (const candidate of compatibleCandidates) {
       // Create a temporary fully-specified assignments array where 'any' is replaced by candidate
       const testAssignments = assignments.map(a => {
         if (a.staff.isAny) {
@@ -322,7 +346,7 @@ async function validateSequence(assignments, startMinutes, date, existingAppoint
       }
     }
 
-    // If we tried all active staff and none could make a valid sequence
+    // If we tried all compatible staff and none could make a valid sequence
     return { valid: false, reason: 'No professional available for "Any Professional" selection' };
   } else {
     // No "any" assignments, check specific assignments directly
@@ -646,10 +670,28 @@ export async function POST(request) {
     let earliestStart = 24 * 60; // 11:59 PM in minutes
     let latestEnd = 0;
 
-    // If any assignment is 'any', consider all active staff for the range
-    const staffForRange = enrichedAssignments.some(a => a.staff.isAny)
-      ? allActiveStaff
-      : enrichedAssignments.map(a => a.staff);
+    // If any assignment is 'any', only consider active staff who are compatible with those services
+    // to avoid inflating the working-hours range with unrelated staff
+    let staffForRange;
+    if (enrichedAssignments.some(a => a.staff.isAny)) {
+      const anyServices = enrichedAssignments.filter(a => a.staff.isAny).map(a => a.service);
+      staffForRange = allActiveStaff.filter(candidate =>
+        anyServices.every(service => {
+          const serviceStaff = service.staff || [];
+          if (serviceStaff.length === 0) return true;
+          const candidateIdStr = candidate._id?.toString() || '';
+          const candidateNameStr = (candidate.fullName || '').trim().toLowerCase();
+          return serviceStaff.some(sId => {
+            if (!sId) return false;
+            const sIdStr = sId.toString();
+            return sIdStr === candidateIdStr || sIdStr.trim().toLowerCase() === candidateNameStr;
+          });
+        })
+      );
+      console.log(`[MultiSlots] Staffs for working-hours range (compatible only): ${staffForRange.length} of ${allActiveStaff.length}`);
+    } else {
+      staffForRange = enrichedAssignments.map(a => a.staff);
+    }
 
     for (const staff of staffForRange) {
       const workingHours = getStaffWorkingHours(staff, date);

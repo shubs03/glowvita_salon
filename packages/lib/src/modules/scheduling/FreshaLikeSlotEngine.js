@@ -126,6 +126,24 @@ export async function generateFreshaLikeSlots({
       throw new Error('Staff not found');
     }
 
+    // Check if staff is compatible with all requested services
+    const isCompatible = services.every(service => {
+      const serviceStaff = service.staff || [];
+      if (serviceStaff.length === 0) {
+        return true; // No restrictions
+      }
+      const staffIdStr = staff._id.toString();
+      const staffNameStr = staff.fullName ? staff.fullName.toString() : '';
+      return serviceStaff.some(sId => 
+        sId && (sId.toString() === staffIdStr || (staffNameStr && sId.toString().trim().toLowerCase() === staffNameStr.trim().toLowerCase()))
+      );
+    });
+
+    if (!isCompatible) {
+      console.log(`[SlotEngine] Staff ${staff.fullName} is not compatible with requested services`);
+      return [];
+    }
+
     // Get day of week and working hours
     const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     const dayAvailableField = `${dayOfWeek}Available`;

@@ -86,7 +86,8 @@ export const POST = authMiddlewareCrm(async (req) => {
         }
 
         // 3. 50% Withdrawal Limit
-        const maxAllowedAmount = user.wallet * 0.5;
+        const maxPercentage = 50;
+        const maxAllowedAmount = user.wallet * (maxPercentage / 100);
         if (amount > maxAllowedAmount) {
             await session.abortTransaction();
             return NextResponse.json({
@@ -126,7 +127,7 @@ export const POST = authMiddlewareCrm(async (req) => {
             userId: user._id,
             userType: userType,
             regionId: user.regionId,
-            withdrawalId: generatedWDId,
+            withdrawalId: withdrawalId,
             amount,
             netAmount: amount,
             bankDetails: {
@@ -152,7 +153,6 @@ export const POST = authMiddlewareCrm(async (req) => {
             userId: user._id,
             userType: userType,
             regionId: user.regionId,
-            transactionId: generatedWTXId,
             transactionType: 'debit',
             amount: -amount,
             balanceBefore: user.wallet + amount,
