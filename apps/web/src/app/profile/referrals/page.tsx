@@ -138,9 +138,16 @@ export default function ReferralsPage() {
     }, 0);
   const successfulReferralsCount = referralHistory.filter((r: any) => r.status === 'Completed' || r.status === 'Bonus Paid').length;
 
-  const bonuses = referralData?.data?.settings || {
-    c2c: { referrerBonus: 100, refereeBonus: 50 }, // Default fallback values
-    c2v: { referrerBonus: 500, refereeBonus: 0 }
+  const rawSettings = referralData?.data?.settings;
+  const bonuses = {
+    c2c: {
+      referrerBonus: rawSettings?.c2c?.referrerBonus ?? 100,
+      refereeBonus: rawSettings?.c2c?.refereeBonus ?? 50
+    },
+    c2v: {
+      referrerBonus: rawSettings?.c2v?.referrerBonus ?? 500,
+      refereeBonus: rawSettings?.c2v?.refereeBonus ?? 0
+    }
   };
 
   const handleWhatsAppShare = (link: string, type: 'friend' | 'partner') => {
