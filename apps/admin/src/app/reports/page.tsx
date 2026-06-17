@@ -31,6 +31,7 @@ import {
   TotalBookingsReportDialog,
   CompletedBookingsReportDialog,
   ConsolidatedSalesReportDialog,
+  RevenueReportDialog,
   SalesByProductReportDialog,
   SubscriptionReportDialog,
   MarketingCampaignReportDialog,
@@ -59,6 +60,7 @@ export default function ReportsPage() {
   const [showTotalBookings, setShowTotalBookings] = useState(false);
   const [showCompletedBookings, setShowCompletedBookings] = useState(false);
   const [showConsolidatedSales, setShowConsolidatedSales] = useState(false);
+  const [showRevenueReport, setShowRevenueReport] = useState(false);
   const [showSalesByProduct, setShowSalesByProduct] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showMarketingCampaign, setShowMarketingCampaign] = useState(false);
@@ -87,6 +89,9 @@ export default function ReportsPage() {
         break;
       case "Sales Report":
         setShowConsolidatedSales(true);
+        break;
+      case "Revenue Report":
+        setShowRevenueReport(true);
         break;
       case "Sales by Product":
         setShowSalesByProduct(true);
@@ -200,6 +205,10 @@ export default function ReportsPage() {
       <ConsolidatedSalesReportDialog
         isOpen={showConsolidatedSales}
         onClose={() => setShowConsolidatedSales(false)}
+      />
+      <RevenueReportDialog
+        isOpen={showRevenueReport}
+        onClose={() => setShowRevenueReport(false)}
       />
       <SalesByProductReportDialog
         isOpen={showSalesByProduct}

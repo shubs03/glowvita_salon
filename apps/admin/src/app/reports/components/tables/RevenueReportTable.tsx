@@ -15,7 +15,7 @@ import { FilterModal } from '../common/FilterModal';
 import { FilterParams } from '../types';
 import { copyToClipboard, exportToExcel, exportToCSV, exportToPDF, printTable } from '../utils/exportFunctions';
 
-export const ConsolidatedSalesReportTable = () => {
+export const RevenueReportTable = () => {
   const {
     apiFilters,
     filters,
@@ -66,11 +66,20 @@ export const ConsolidatedSalesReportTable = () => {
     Object.values(sale).map(v => v?.toString() || '')
   );
 
+  const totalServiceTax = data?.aggregatedTotals?.totalServiceTax || 0;
+  const totalProductTax = data?.aggregatedTotals?.totalProductTax || 0;
+  const totalProductPlatformFee = data?.aggregatedTotals?.totalProductPlatformFee || 0;
+  const totalPlatformFees = data?.aggregatedTotals?.totalPlatformFees || 0;
+  const subscriptionAmount = data?.aggregatedTotals?.subscriptionAmount || 0;
+  const smsAmount = data?.aggregatedTotals?.smsAmount || 0;
+  const totalRevenue = totalServiceTax + totalProductTax + totalProductPlatformFee + totalPlatformFees + subscriptionAmount + smsAmount;
+  const totalRevenueFormatted = `₹${totalRevenue.toFixed(2)}`;
+
   if (isLoading) {
     return (
       <div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
+          {[...Array(1)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -89,17 +98,19 @@ export const ConsolidatedSalesReportTable = () => {
                 <TableHead>Business Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>City</TableHead>
-                <TableHead>Total Service Amount (₹)</TableHead>
-                <TableHead>Total Product Amount (₹)</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Product Tax/GST (₹)</TableHead>
                 <TableHead>Product Platform Fee (₹)</TableHead>
                 <TableHead>Service Platform Fees (₹)</TableHead>
                 <TableHead>Subscription Amount (₹)</TableHead>
                 <TableHead>SMS Amount (₹)</TableHead>
+                <TableHead>Total Revenue (₹)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(5)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -121,7 +132,7 @@ export const ConsolidatedSalesReportTable = () => {
   if (isError) {
     return (
       <div className="p-4 text-center text-red-500">
-        Error loading consolidated sales report data. Please try again later.
+        Error loading revenue report data. Please try again later.
         {process.env.NODE_ENV === 'development' && error && (
           <div className="mt-2 text-sm text-gray-500">
             {typeof error === 'string' ? error : JSON.stringify(error)}
@@ -137,25 +148,7 @@ export const ConsolidatedSalesReportTable = () => {
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Business</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">SMS Amount</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Subscription Amount</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
               <IndianRupee className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -182,13 +175,13 @@ export const ConsolidatedSalesReportTable = () => {
                 <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
                   <Copy className="mr-2 h-4 w-4" /> Copy
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'consolidated_sales_report')}>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'revenue_report')}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'consolidated_sales_report')}>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'revenue_report')}>
                   <FileText className="mr-2 h-4 w-4" /> CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'consolidated_sales_report')}>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'revenue_report')}>
                   <FileText className="mr-2 h-4 w-4" /> PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => printTable(tableRef)}>
@@ -218,18 +211,19 @@ export const ConsolidatedSalesReportTable = () => {
                 <TableHead>Business Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>City</TableHead>
-                <TableHead>Total Service Amount (₹)</TableHead>
-                <TableHead>Total Product Amount (₹)</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Product Tax/GST (₹)</TableHead>
                 <TableHead>Product Platform Fee (₹)</TableHead>
                 <TableHead>Service Platform Fees (₹)</TableHead>
                 <TableHead>Subscription Amount (₹)</TableHead>
                 <TableHead>SMS Amount (₹)</TableHead>
+                <TableHead>Total Revenue (₹)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                  No consolidated sales report data available.
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  No revenue report data available.
                 </TableCell>
               </TableRow>
             </TableBody>
@@ -259,13 +253,13 @@ export const ConsolidatedSalesReportTable = () => {
               <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
                 <Copy className="mr-2 h-4 w-4" /> Copy
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'consolidated_sales_report')}>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'revenue_report')}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'consolidated_sales_report')}>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'revenue_report')}>
                 <FileText className="mr-2 h-4 w-4" /> CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'consolidated_sales_report')}>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'revenue_report')}>
                 <FileText className="mr-2 h-4 w-4" /> PDF
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => printTable(tableRef)}>
@@ -291,34 +285,12 @@ export const ConsolidatedSalesReportTable = () => {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(data?.aggregatedTotals?.totalBusinessFormatted || '₹0.00')}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">SMS Amount</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{(data?.aggregatedTotals?.smsAmount || 0).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subscription Amount</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{(data?.aggregatedTotals?.subscriptionAmount || 0).toFixed(2)}
+              {totalRevenueFormatted}
             </div>
           </CardContent>
         </Card>
@@ -331,21 +303,17 @@ export const ConsolidatedSalesReportTable = () => {
               <TableHead>Business Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>City</TableHead>
-              <TableHead>Total Service Amount (₹)</TableHead>
-              <TableHead>Total Product Amount (₹)</TableHead>
               <TableHead>Service Tax (₹)</TableHead>
               <TableHead>Product Tax/GST (₹)</TableHead>
               <TableHead>Product Platform Fee (₹)</TableHead>
               <TableHead>Service Platform Fees (₹)</TableHead>
               <TableHead>Subscription Amount (₹)</TableHead>
               <TableHead>SMS Amount (₹)</TableHead>
-              <TableHead>Total Business (₹)</TableHead>
+              <TableHead>Total Revenue (₹)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedData.map((vendor: any, index: number) => {
-              const serviceAmount = parseFloat(vendor["Total Service Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-              const productAmount = parseFloat(vendor["Total Product Amount (₹)"].replace(/[₹,]/g, '')) || 0;
               const serviceTax = parseFloat(vendor["Service Tax (₹)"].replace(/[₹,]/g, '')) || 0;
               const productTax = parseFloat(vendor["Product Tax/GST (₹)"].replace(/[₹,]/g, '')) || 0;
               const productPlatformFee = parseFloat(vendor["Product Platform Fee (₹)"].replace(/[₹,]/g, '')) || 0;
@@ -353,38 +321,26 @@ export const ConsolidatedSalesReportTable = () => {
               const subscriptionAmount = parseFloat(vendor["Subscription Amount (₹)"].replace(/[₹,]/g, '')) || 0;
               const smsAmount = parseFloat(vendor["SMS Amount (₹)"].replace(/[₹,]/g, '')) || 0;
 
-              const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
+              const totalRowRevenue = serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
 
               return (
                 <TableRow key={startIndex + index}>
                   <TableCell className="font-medium">{vendor["Business Name"]}</TableCell>
                   <TableCell>{vendor.Type}</TableCell>
                   <TableCell>{vendor.City}</TableCell>
-                  <TableCell>{vendor["Total Service Amount (₹)"]}</TableCell>
-                  <TableCell>{vendor["Total Product Amount (₹)"]}</TableCell>
                   <TableCell>{vendor["Service Tax (₹)"]}</TableCell>
                   <TableCell>{vendor["Product Tax/GST (₹)"]}</TableCell>
                   <TableCell>{vendor["Product Platform Fee (₹)"]}</TableCell>
                   <TableCell>{vendor["Service Platform Fees (₹)"]}</TableCell>
                   <TableCell>{vendor["Subscription Amount (₹)"]}</TableCell>
                   <TableCell>{vendor["SMS Amount (₹)"]}</TableCell>
-                  <TableCell>₹{totalBusiness.toFixed(2)}</TableCell>
+                  <TableCell>₹{totalRowRevenue.toFixed(2)}</TableCell>
                 </TableRow>
               )
             })}
             {paginatedData.length > 0 && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={3}>TOTAL</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
-                  const rawValue = item["Total Service Amount (₹)"] || '0';
-                  const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
-                  return sum + numericValue;
-                }, 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
-                  const rawValue = item["Total Product Amount (₹)"] || '0';
-                  const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
-                  return sum + numericValue;
-                }, 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
                   const rawValue = item["Service Tax (₹)"] || '0';
                   const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
@@ -417,8 +373,6 @@ export const ConsolidatedSalesReportTable = () => {
                   return sum + numericValue;
                 }, 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
-                  const serviceAmount = parseFloat(item["Total Service Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const productAmount = parseFloat(item["Total Product Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
                   const serviceTax = parseFloat(item["Service Tax (₹)"]?.replace(/[₹,]/g, '')) || 0;
                   const productTax = parseFloat(item["Product Tax/GST (₹)"]?.replace(/[₹,]/g, '')) || 0;
                   const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"]?.replace(/[₹,]/g, '')) || 0;
@@ -426,8 +380,8 @@ export const ConsolidatedSalesReportTable = () => {
                   const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
                   const smsAmount = parseFloat(item["SMS Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
 
-                  const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
-                  return sum + totalBusiness;
+                  const totalRowRevenue = serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
+                  return sum + totalRowRevenue;
                 }, 0).toFixed(2)}</TableCell>
               </TableRow>
             )}
