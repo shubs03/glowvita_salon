@@ -34,16 +34,21 @@ import { useAuth } from '../../hooks/useAuth';
 import { useGetPublicProductsQuery, useGetClientOrdersQuery, useGetClientCartQuery, useGetPublicAllOffersQuery } from "@repo/store/api";
 import { useGetDoctorWishlistQuery, useGetSalonWishlistQuery } from "@repo/store/services/api";
 import { useUserAppointments } from '../../hooks/useUserAppointments';
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 
 function OverviewContent() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const { userLat, userLng } = useSalonFilter();
 
   // Fetch user appointments
   const { appointments: appointmentsData = [], isLoading: isLoadingAppointments } = useUserAppointments();
 
   // Fetch products for new products section
-  const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery(undefined);
+  const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery({
+    lat: userLat || undefined,
+    lng: userLng || undefined,
+  });
 
   // // Fetch offers
   const { data: offersResponse, isLoading: isLoadingOffers } = useGetPublicAllOffersQuery(undefined);
