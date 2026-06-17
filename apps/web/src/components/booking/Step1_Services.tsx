@@ -87,6 +87,7 @@ interface Step1ServicesProps {
   weddingPackages?: WeddingPackage[];
   onWeddingPackageSelect?: (pkg: WeddingPackage | null) => void;
   selectedWeddingPackage?: WeddingPackage | null;
+  weddingPackageMode?: 'default' | 'customized' | null;
   bookingMode: 'salon' | 'home';
   setBookingMode: (mode: 'salon' | 'home') => void;
 }
@@ -105,6 +106,7 @@ export function Step1_Services({
   weddingPackages = [],
   onWeddingPackageSelect,
   selectedWeddingPackage,
+  weddingPackageMode,
   bookingMode,
   setBookingMode
 }: Step1ServicesProps) {
@@ -698,8 +700,15 @@ export function Step1_Services({
                 if (!isValidPackage) return null;
 
                 const isSelected = selectedWeddingPackage?.id === (pkg.id || pkg._id);
-                const discount = pkg.discountedPrice && pkg.discountedPrice !== pkg.totalPrice
-                  ? Math.round(((pkg.totalPrice - pkg.discountedPrice) / pkg.totalPrice) * 100)
+                const isCustomized = isSelected && weddingPackageMode === 'customized' && selectedWeddingPackage;
+
+                const displayServicesCount = isCustomized ? (selectedWeddingPackage.services?.length || 0) : (pkg.services?.length || 0);
+                const displayDuration = isCustomized ? (selectedWeddingPackage.duration || 0) : (pkg.duration || 0);
+                const displayTotalPrice = isCustomized ? (selectedWeddingPackage.totalPrice || 0) : (pkg.totalPrice || 0);
+                const displayDiscountedPrice = isCustomized ? (selectedWeddingPackage.discountedPrice || null) : (pkg.discountedPrice || null);
+
+                const discount = displayDiscountedPrice && displayDiscountedPrice !== displayTotalPrice
+                  ? Math.round(((displayTotalPrice - displayDiscountedPrice) / displayTotalPrice) * 100)
                   : 0;
 
                 return (
@@ -749,11 +758,11 @@ export function Step1_Services({
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                             <List className="h-3 w-3 mr-1" />
-                            {pkg.services?.length || 0} Services
+                            {displayServicesCount} Services
                           </span>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                             <Clock className="h-3 w-3 mr-1" />
-                            {pkg.duration || 0}m
+                            {displayDuration}m
                           </span>
                           {pkg.staffCount && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
@@ -773,18 +782,18 @@ export function Step1_Services({
                       )}
 
                       {/* Services Preview */}
-                      {pkg.services && pkg.services.length > 0 && (
+                      {(isCustomized ? selectedWeddingPackage.services : pkg.services) && (isCustomized ? selectedWeddingPackage.services : pkg.services).length > 0 && (
                         <div className="space-y-1.5">
                           <p className="text-xs font-semibold text-foreground">What's Included</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {pkg.services.slice(0, 3).map((service, idx) => (
+                            {(isCustomized ? selectedWeddingPackage.services : pkg.services).slice(0, 3).map((service: any, idx: number) => (
                               <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border">
-                                <span className="line-clamp-1">{service.serviceName}</span>
+                                <span className="line-clamp-1">{service.serviceName || service.name}</span>
                               </span>
                             ))}
-                            {pkg.services.length > 3 && (
+                            {(isCustomized ? selectedWeddingPackage.services : pkg.services).length > 3 && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
-                                +{pkg.services.length - 3} more
+                                +{(isCustomized ? selectedWeddingPackage.services : pkg.services).length - 3} more
                               </span>
                             )}
                           </div>
@@ -825,18 +834,18 @@ export function Step1_Services({
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs text-muted-foreground mb-0.5">Package Price</p>
-                          {pkg.discountedPrice && pkg.discountedPrice !== pkg.totalPrice ? (
+                          {displayDiscountedPrice && displayDiscountedPrice !== displayTotalPrice ? (
                             <div className="flex items-baseline gap-2">
                               <span className="font-bold text-xl sm:text-2xl text-foreground">
-                                ₹{pkg.discountedPrice?.toLocaleString('en-IN')}
+                                ₹{displayDiscountedPrice?.toLocaleString('en-IN')}
                               </span>
                               <span className="text-muted-foreground line-through text-sm">
-                                ₹{pkg.totalPrice?.toLocaleString('en-IN')}
+                                ₹{displayTotalPrice?.toLocaleString('en-IN')}
                               </span>
                             </div>
                           ) : (
                             <span className="font-bold text-xl sm:text-2xl text-foreground">
-                              ₹{pkg.totalPrice?.toLocaleString('en-IN')}
+                              ₹{displayTotalPrice?.toLocaleString('en-IN')}
                             </span>
                           )}
                         </div>

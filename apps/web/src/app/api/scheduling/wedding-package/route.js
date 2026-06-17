@@ -368,11 +368,13 @@ export async function PUT(request) {
             duration = match ? parseInt(match[1]) : 0;
           }
 
+          const isCustomized = !!customizedPackageServices && customizedPackageServices.length > 0;
+
           return {
             serviceId: svc.serviceId || svc.id || svc._id,
             serviceName: svc.serviceName || svc.name,
             duration: Number(duration) || 0,
-            amount: Number(svc.amount !== undefined ? svc.amount : (svc.discountedPrice !== undefined ? svc.discountedPrice : (svc.serviceDiscountedPrice !== undefined && svc.serviceDiscountedPrice !== null ? svc.serviceDiscountedPrice : (svc.price !== undefined ? svc.price : (svc.servicePrice !== undefined ? svc.servicePrice : 0))))),
+            amount: Number(svc.amount !== undefined ? svc.amount : (isCustomized ? (svc.price !== undefined ? svc.price : (svc.servicePrice !== undefined ? svc.servicePrice : 0)) : (svc.discountedPrice !== undefined ? svc.discountedPrice : (svc.serviceDiscountedPrice !== undefined && svc.serviceDiscountedPrice !== null ? svc.serviceDiscountedPrice : (svc.price !== undefined ? svc.price : (svc.servicePrice !== undefined ? svc.servicePrice : 0)))))),
             originalAmount: Number(svc.originalAmount !== undefined ? svc.originalAmount : (svc.price !== undefined ? svc.price : (svc.servicePrice !== undefined ? svc.servicePrice : 0))),
             vendorId: svc.vendorId || weddingPackage.vendorId,
             staffId: svc.staffId || null

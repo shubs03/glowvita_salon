@@ -143,13 +143,19 @@ export function BookingSummary({
   // Calculate totals - handle wedding package pricing
   const subtotal = weddingPackage
     ? (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
-      ? customizedPackageServices.reduce((acc, service) => {
-        const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-          parseFloat(String(service.discountedPrice)) :
-          parseFloat(String(service.price || '0'));
-        const quantity = (service as any).quantity || 1;
-        return acc + (servicePrice * quantity);
-      }, 0)
+      ? (() => {
+          const baseSum = customizedPackageServices.reduce((acc, service) => {
+            const servicePrice = parseFloat(String(service.price || '0'));
+            const quantity = (service as any).quantity || 1;
+            return acc + (servicePrice * quantity);
+          }, 0);
+          
+          if (weddingPackage.totalPrice && weddingPackage.discountedPrice) {
+            const discountPercent = (weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice;
+            return baseSum * (1 - discountPercent);
+          }
+          return baseSum;
+        })()
       : (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0))
     : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
       const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
