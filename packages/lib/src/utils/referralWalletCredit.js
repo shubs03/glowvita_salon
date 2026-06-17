@@ -10,78 +10,130 @@ import { ReferralModel, C2CSettingsModel, V2VSettingsModel, C2VSettingsModel } f
 /**
  * Credit referral bonus to user's wallet
  * @param {String|Object} referralData - Referral object or ID
- * @param {String} triggerEvent - What triggered the bonus (signup, appointment, order)
+ * @param {String} triggerEvent - What triggered the bonus (signup, appointment, subscription_purchase)
  * @returns {Object} - Result of the operation
  */
-export async function creditReferralBonus(referralData, triggerEvent = 'appointment') {
+export async function creditReferralBonus(referralData, triggerEvent = 'appointment', useSession = true) {
   // Use a transaction if available but don't strictly require it for dev environments without replica sets
   let session = null;
-  try {
-    session = await mongoose.startSession();
-  } catch (e) {
-    console.log("[Referral Bonus] Transactions not supported, proceeding without session");
+  if (useSession) {
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+    } catch (e) {
+      console.log("[Referral Bonus] Transactions/sessions not supported or failed to start, proceeding without session:", e.message);
+      session = null;
+    }
   }
 
-  if (session) session.startTransaction();
-
   try {
-    // 1. Get referral record
+    // 1. Always fetch referral fresh from DB to get a proper mongoose document (supports .save())
     let referral;
+    let referralId;
     if (typeof referralData === 'string' || referralData instanceof mongoose.Types.ObjectId) {
-        referral = await ReferralModel.findById(referralData).session(session);
+      referralId = referralData;
+    } else if (referralData && referralData._id) {
+      referralId = referralData._id;
     } else {
-        referral = referralData;
+      referralId = referralData;
     }
+
+    referral = await ReferralModel.findById(referralId).session(session);
 
     if (!referral) {
-        if (session) await session.abortTransaction();
-        if (session) session.endSession();
-        return { success: false, message: 'Referral record not found' };
+      if (session) {
+        try { await session.abortTransaction(); } catch (_) {}
+        session.endSession();
+      }
+      return { success: false, message: 'Referral record not found' };
     }
 
-    console.log(`[Referral Bonus] Processing bonus for ${referral.referralId} (${referral.referralType})`);
+    console.log(`[Referral Bonus] Processing bonus for ${referral.referralId} (${referral.referralType}), event: ${triggerEvent}`);
 
     if (referral.status === 'Completed' || referral.status === 'Bonus Paid') {
-      if (session) await session.abortTransaction();
-      if (session) session.endSession();
+      if (session) {
+        try { await session.abortTransaction(); } catch (_) {}
+        session.endSession();
+      }
       return { success: false, message: 'Bonus already paid' };
     }
 
     // 2. Get correct settings based on type and region
     let Model;
     switch (referral.referralType) {
-        case 'C2C': Model = C2CSettingsModel; break;
-        case 'C2V': Model = C2VSettingsModel; break;
-        case 'V2V': 
-        case 'D2D': 
-        case 'S2S': 
-            Model = V2VSettingsModel; 
-            break;
-        default: Model = C2CSettingsModel;
+      case 'C2C': Model = C2CSettingsModel; break;
+      case 'C2V': Model = C2VSettingsModel; break;
+      case 'V2V':
+      case 'D2D':
+      case 'S2S':
+        Model = V2VSettingsModel;
+        break;
+      default: Model = C2CSettingsModel;
     }
 
     // Find settings: specific region first, then global
     const settings = await Model.findOne({
-        $or: [
-            { regionId: referral.regionId },
-            { regionId: null }
-        ]
+      $or: [
+        { regionId: referral.regionId },
+        { regionId: null }
+      ]
     }).sort({ regionId: -1 }).session(session);
 
     if (!settings) {
-      if (session) await session.abortTransaction();
-      if (session) session.endSession();
+      if (session) {
+        try { await session.abortTransaction(); } catch (_) {}
+        session.endSession();
+      }
       return { success: false, message: `${referral.referralType} referral settings not found` };
+    }
+
+    // 2b. Check creditTime gate — only proceed if the current trigger matches the configured creditTime
+    const configuredCreditTime = settings.referrerBonus?.creditTime;
+    if (configuredCreditTime && configuredCreditTime !== triggerEvent) {
+      // Map common aliases so 'subscription_purchase' matches 'subscription' etc.
+      const triggerAliases = {
+        'subscription_purchase': ['subscription', 'subscription_purchase', 'plan_purchase'],
+        'appointment': ['appointment', 'booking'],
+        'signup': ['signup', 'registration', 'on_signup'],
+        'order': ['order', 'first_order'],
+      };
+      const allowed = triggerAliases[triggerEvent] || [triggerEvent];
+
+      // Also handle time-based creditTime values (e.g. '7 days', '1 month', '2 weeks').
+      // When an admin sets a duration like '7 days', it means "credit after X days from the
+      // triggering event". For V2V/S2S/D2D referrals the triggering event is always a
+      // subscription purchase, so we allow any subscription-type trigger to pass through.
+      const isTimeBased = /\d+\s*(day|days|week|weeks|month|months|hour|hours)/i.test(
+        configuredCreditTime || ''
+      );
+      const isSubscriptionEvent = [
+        'subscription_purchase',
+        'plan_purchase',
+        'subscription',
+      ].includes(triggerEvent);
+
+      if (!allowed.includes(configuredCreditTime) && !(isTimeBased && isSubscriptionEvent)) {
+        if (session) {
+          try { await session.abortTransaction(); } catch (_) {}
+          session.endSession();
+        }
+        console.log(`[Referral Bonus] Skipping: trigger '${triggerEvent}' does not match configured creditTime '${configuredCreditTime}'`);
+        return { success: false, message: `Bonus trigger mismatch: expected '${configuredCreditTime}', got '${triggerEvent}'` };
+      }
+
+      if (isTimeBased && isSubscriptionEvent) {
+        console.log(`[Referral Bonus] creditTime '${configuredCreditTime}' is a duration — proceeding immediately on subscription event '${triggerEvent}'`);
+      }
     }
 
     // 3. Get referrer and referee models
     const getModel = (type) => {
-        switch (type) {
-            case 'Vendor': return VendorModel;
-            case 'Doctor': return DoctorModel;
-            case 'Supplier': return SupplierModel;
-            default: return UserModel;
-        }
+      switch (type) {
+        case 'Vendor': return VendorModel;
+        case 'Doctor': return DoctorModel;
+        case 'Supplier': return SupplierModel;
+        default: return UserModel;
+      }
     };
 
     const ReferrerModel = getModel(referral.referrerType || 'User');
@@ -94,45 +146,43 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
     let referee = null;
 
     if (mongoose.Types.ObjectId.isValid(referrerId)) {
-        referrer = await ReferrerModel.findById(referrerId).session(session);
+      referrer = await ReferrerModel.findById(referrerId).session(session);
     }
-    
+
     if (mongoose.Types.ObjectId.isValid(refereeId)) {
-        referee = await RefereeModel.findById(refereeId).session(session);
+      referee = await RefereeModel.findById(refereeId).session(session);
     }
 
     // If still null and professional, try other professional models (robustness)
     if (!referrer && mongoose.Types.ObjectId.isValid(referrerId) && ['Vendor', 'Doctor', 'Supplier'].includes(referral.referrerType)) {
-        const others = [VendorModel, DoctorModel, SupplierModel].filter(m => m !== ReferrerModel);
-        for (const M of others) {
-            referrer = await M.findById(referrerId).session(session);
-            if (referrer) break;
-        }
+      const others = [VendorModel, DoctorModel, SupplierModel].filter(m => m !== ReferrerModel);
+      for (const M of others) {
+        referrer = await M.findById(referrerId).session(session);
+        if (referrer) break;
+      }
     }
-    
+
     if (!referee && mongoose.Types.ObjectId.isValid(refereeId) && ['Vendor', 'Doctor', 'Supplier'].includes(referral.refereeType)) {
-        const others = [VendorModel, DoctorModel, SupplierModel].filter(m => m !== RefereeModel);
-        for (const M of others) {
-            referee = await M.findById(refereeId).session(session);
-            if (referee) break;
-        }
+      const others = [VendorModel, DoctorModel, SupplierModel].filter(m => m !== RefereeModel);
+      for (const M of others) {
+        referee = await M.findById(refereeId).session(session);
+        if (referee) break;
+      }
     }
 
     if (!referrer) {
-      if (session) await session.abortTransaction();
-      if (session) session.endSession();
+      if (session) {
+        try { await session.abortTransaction(); } catch (_) {}
+        session.endSession();
+      }
       return { success: false, message: `Referrer (${referral.referrerType}) not found` };
     }
 
-    const referrerName = referrer?.businessName || referrer?.shopName || referrer?.name || `${referrer?.firstName || ''} ${referrer?.lastName || ''}`.trim() || referral.referrer || 'Referrer';
-    const refereeName = referee?.businessName || referee?.shopName || referee?.name || `${referee?.firstName || ''} ${referee?.lastName || ''}`.trim() || referral.referee || 'New User';
+    const referrerName = referrer?.businessName || referrer?.shopName || referrer?.name || `${referrer?.firstName || ''} ${referrer?.lastName || ''}`.trim() || 'Referrer';
+    const refereeName = referee?.businessName || referee?.shopName || referee?.name || `${referee?.firstName || ''} ${referee?.lastName || ''}`.trim() || 'New User';
 
-    // 4. Calculate amount
-    // Use settings value as source of truth
+    // 4. Calculate amount from settings
     const bonusValue = settings.referrerBonus?.bonusValue || 0;
-    const bonusType = settings.referrerBonus?.bonusType || 'amount';
-    
-    // For now, only 'amount' is supported for direct wallet credit
     const creditAmount = parseFloat(bonusValue);
 
     if (creditAmount > 0) {
@@ -164,13 +214,13 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
       // Use atomic update to avoid validation issues with old profiles
       await ReferrerModel.updateOne(
         { _id: referrer._id },
-        { 
+        {
           $inc: { wallet: creditAmount },
           $set: { updatedAt: new Date() }
         },
         { session }
       );
-      
+
       console.log(`[Referral Bonus] Successfully credited ₹${creditAmount} to referrer: ${referrerName}`);
     }
 
@@ -208,7 +258,7 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
 
       await ReeModel.updateOne(
         { _id: referee._id },
-        { 
+        {
           $inc: { wallet: refereeBonusValue },
           $set: { updatedAt: new Date() }
         },
@@ -220,29 +270,55 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
       console.warn(`[Referral Bonus] Referee bonus enabled but referee record not found for referral ${referral.referralId}`);
     }
 
-    // 6. Update referral status
-    referral.status = 'Completed';
-    // Store the actual credit amount in the bonus field for history
-    referral.bonus = `₹${creditAmount}`;
-    await referral.save({ session });
+    // 6. Update referral status using atomic update (avoids .save() issues)
+    await ReferralModel.updateOne(
+      { _id: referral._id },
+      {
+        $set: {
+          status: 'Completed',
+          bonus: `₹${creditAmount}`,
+          updatedAt: new Date()
+        }
+      },
+      { session }
+    );
 
     console.log(`[Referral Bonus] Referral ${referral.referralId} marked as Completed. Referrer bonus: ₹${creditAmount}`);
 
     if (session) {
-        await session.commitTransaction();
-        session.endSession();
+      await session.commitTransaction();
+      session.endSession();
     }
 
-    return { 
-      success: true, 
-      message: 'Bonus credited successfully', 
+    return {
+      success: true,
+      message: 'Bonus credited successfully',
       referrerAmount: creditAmount,
       refereeAmount: (refereeBonusEnabled && refereeBonusValue > 0 && referee) ? refereeBonusValue : 0
     };
 
   } catch (error) {
-    if (session && session.inTransaction()) await session.abortTransaction();
-    if (session) session.endSession();
+    if (session) {
+      try {
+        if (session.inTransaction()) {
+          await session.abortTransaction();
+        }
+      } catch (_) {}
+      session.endSession();
+    }
+
+    // Check if error is related to replica sets or transaction support
+    const isTxError = error.message?.includes('Transaction numbers') ||
+                      error.message?.includes('replica set') ||
+                      error.message?.includes('Replica Set') ||
+                      error.message?.includes('sessions') ||
+                      error.message?.includes('session');
+
+    if (isTxError && useSession) {
+      console.warn("[Referral Bonus] Transaction failed due to database configuration. Retrying without session/transaction...");
+      return creditReferralBonus(referralData, triggerEvent, false);
+    }
+
     console.error('[Referral Bonus] Error:', error);
     return { success: false, message: 'Server error', error: error.message };
   }
@@ -266,12 +342,12 @@ export async function checkAndCreditReferralBonus(userId, eventType = 'appointme
     });
 
     if (!referral) {
-      console.log(`[Referral Bonus] No pending/completed C2C referral found for referee: ${userId}`);
+      console.log(`[Referral Bonus] No pending referral found for referee: ${userId}`);
       return { success: false, message: 'No eligible referral record found' };
     }
 
     // Trigger the actual credit
-    return await creditReferralBonus(referral, eventType);
+    return await creditReferralBonus(referral._id, eventType);
 
   } catch (error) {
     console.error('[Referral Bonus] checkAndCreditReferralBonus error:', error);
@@ -280,37 +356,44 @@ export async function checkAndCreditReferralBonus(userId, eventType = 'appointme
 }
 
 /**
- * Check and credit referral bonus for subscription purchase
+ * Check and credit referral bonus for subscription purchase/renewal/change.
+ * Only credits on the FIRST paid plan activation (status must still be Pending).
  * @param {String} userId - ID of the referee (Vendor, Doctor, Supplier)
  * @param {Object} plan - The purchased plan object
  * @returns {Object} - Result
  */
 export async function checkAndCreditSubscriptionReferral(userId, plan) {
   try {
-    console.log(`[Referral Bonus] Subscription check triggered for user: ${userId}, planType: ${plan.planType}, price: ${plan.price}`);
+    const userIdStr = userId?.toString();
+    console.log(`[Referral Bonus] Subscription check triggered for user: ${userIdStr}, planType: ${plan?.planType}, price: ${plan?.price}`);
 
-    // Only credit for regular (paid) plans
-    if (plan.planType !== 'regular') {
-      console.log(`[Referral Bonus] Skipping bonus for non-regular plan: ${plan.planType}`);
+    // Only credit for regular (paid) plans: planType is 'regular' or price > 0
+    const isRegularPlan = plan?.planType === 'regular' || (plan?.price !== undefined && plan?.price > 0);
+    if (!isRegularPlan) {
+      console.log(`[Referral Bonus] Skipping bonus for non-regular plan: ${plan?.planType || 'unknown'}`);
       return { success: false, message: 'Bonus not eligible for non-regular plans' };
     }
 
-    // Find a pending referral where this user is the referee
+    // Find a pending V2V/S2S/D2D/C2V referral where this user is the referee
+    // Use $or to match both string and ObjectId representations robustly
     const referral = await ReferralModel.findOne({
-      referee: userId.toString(),
+      $or: [
+        { referee: userIdStr },
+        { referee: new mongoose.Types.ObjectId(userIdStr) }
+      ],
       status: 'Pending',
       referralType: { $in: ['V2V', 'S2S', 'D2D', 'C2V'] }
     });
 
     if (!referral) {
-      console.log(`[Referral Bonus] No pending subscription-based referral record found for referee: ${userId}`);
+      console.log(`[Referral Bonus] No pending subscription-based referral record found for referee: ${userIdStr}`);
       return { success: false, message: 'No eligible referral record found' };
     }
 
-    console.log(`[Referral Bonus] Found matching referral ${referral.referralId}, starting credit process...`);
-    
-    // Trigger the actual credit
-    const result = await creditReferralBonus(referral, 'subscription_purchase');
+    console.log(`[Referral Bonus] Found matching referral ${referral.referralId} for referee ${userIdStr}, starting credit process...`);
+
+    // Pass the referral _id so creditReferralBonus fetches a fresh mongoose document
+    const result = await creditReferralBonus(referral._id.toString(), 'subscription_purchase');
     console.log(`[Referral Bonus] Final result:`, result);
     return result;
 
@@ -319,5 +402,3 @@ export async function checkAndCreditSubscriptionReferral(userId, plan) {
     return { success: false, message: 'Error processing subscription referral', error: error.message };
   }
 }
-
-

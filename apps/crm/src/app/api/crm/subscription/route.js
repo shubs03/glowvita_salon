@@ -70,28 +70,7 @@ export const POST = authMiddlewareCrm(async (req) => {
       }
     }
 
-    // --- Detect first-time paid upgrade (trial → regular) for referral bonus ---
-    // We need to know the current plan's type BEFORE we overwrite the subscription.
-    // If the vendor is currently on a trial plan and is now switching to a regular (paid) plan,
-    // this counts as their first paid purchase → referral bonus should be credited.
-    let isFirstTimePaidUpgrade = false;
-    if (newPlan.planType === 'regular' && user.subscription?.plan) {
-      const currentPlanDoc = await SubscriptionPlanModel.findById(user.subscription.plan).select('planType');
-      // It's a first-time paid upgrade if: current plan is trial AND no prior paid plan in history
-      const hasNoPriorPaidPlan = !user.subscription.history?.length ||
-        !(await SubscriptionPlanModel.find({
-          _id: { $in: (user.subscription.history || []).map(h => h.plan) }
-        }).select('planType')).some(p => p.planType === 'regular');
-
-      if (currentPlanDoc?.planType === 'trial' && hasNoPriorPaidPlan) {
-        isFirstTimePaidUpgrade = true;
-        console.log('[Referral Bonus] Detected first-time paid upgrade from trial plan. Will check referral.');
-      }
-    }
-    // Also handle the edge case where vendor has no subscription yet and is picking a paid plan directly
-    if (newPlan.planType === 'regular' && !user.subscription?.plan) {
-      isFirstTimePaidUpgrade = true;
-    }
+    // Referral check will be run on active regular subscription after saving the updated user document
 
     // Calculate new subscription dates
     const startDate = new Date();
@@ -138,16 +117,15 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     await user.save();
 
-    // Credit referral bonus ONLY on first-time upgrade from trial → paid (regular) plan.
-    // For regular→regular plan switches, referral is NOT credited here — it is handled by renew/route.js.
-    // This prevents prematurely completing a referral before any real payment is made.
-    if (isFirstTimePaidUpgrade) {
+    // Check for referral credit if regular (paid) plan
+    const isRegularPlan = newPlan.planType === 'regular' || (newPlan.price !== undefined && newPlan.price > 0);
+    if (isRegularPlan) {
       try {
         const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
         const referralResult = await checkAndCreditSubscriptionReferral(userId, newPlan);
-        console.log('[Referral Bonus] Trial→Regular upgrade referral result:', referralResult);
+        console.log('[Referral Bonus] Subscription change referral result:', referralResult);
       } catch (err) {
-        console.error("[Referral Bonus] Check failed on trial→regular plan upgrade:", err);
+        console.error("[Referral Bonus] Check failed on subscription change:", err);
       }
     }
 

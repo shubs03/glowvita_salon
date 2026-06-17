@@ -113,12 +113,17 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     await user.save();
 
-    // Check for referral credit if regular plan
-    try {
-      const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
-      await checkAndCreditSubscriptionReferral(userId, newPlan);
-    } catch (err) {
-      console.error("[Referral Bonus] Check failed on renewal:", err);
+    // Check for referral credit — only fires if this is a paid plan and the referral is still Pending
+    // (creditReferralBonus guards against double-credit internally using status check)
+    const isRegularPlan = newPlan.planType === 'regular' || (newPlan.price !== undefined && newPlan.price > 0);
+    if (isRegularPlan) {
+      try {
+        const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
+        const referralResult = await checkAndCreditSubscriptionReferral(userId, newPlan);
+        console.log('[Referral Bonus] Subscription renew referral result:', referralResult);
+      } catch (err) {
+        console.error("[Referral Bonus] Check failed on renewal:", err);
+      }
     }
 
     return NextResponse.json({
