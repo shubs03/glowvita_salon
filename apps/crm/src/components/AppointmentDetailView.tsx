@@ -2367,9 +2367,9 @@ export function AppointmentDetailView({
                               <path d="M10 9h1v4"></path>
                             </svg>
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
-                            <p className="text-foreground/90">{appointment.notes}</p>
+                            <p className="text-foreground/90 whitespace-pre-wrap break-words">{appointment.notes}</p>
                           </div>
                         </div>
                       </div>
