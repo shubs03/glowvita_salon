@@ -58,7 +58,7 @@ export async function POST(request) {
 
     for (const roleInfo of userRoles) {
       const foundUser = await roleInfo.model.findOne({ email }).select(roleInfo.selectFields);
-      if (foundUser && foundUser.password) {
+      if (foundUser && foundUser.email === email && foundUser.password) {
         const isMatch = await bcrypt.compare(password, foundUser.password);
         if (isMatch) {
           user = foundUser;

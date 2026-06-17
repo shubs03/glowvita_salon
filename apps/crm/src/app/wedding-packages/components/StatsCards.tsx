@@ -25,7 +25,7 @@ interface StatsCardsProps {
 
 export function StatsCards({ packages }: StatsCardsProps) {
   const averagePrice = packages.length > 0
-    ? (packages.reduce((sum, pkg) => sum + pkg.totalPrice, 0) / packages.length).toFixed(0)
+    ? (packages.reduce((sum, pkg) => sum + (pkg.discountedPrice || pkg.totalPrice), 0) / packages.length).toFixed(0)
     : 0;
 
   const mostPopularServiceCount = packages.length > 0

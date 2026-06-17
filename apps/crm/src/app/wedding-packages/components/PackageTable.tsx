@@ -158,7 +158,14 @@ export function PackageTable({
                     )}
                   </TableCell>
                   <TableCell>
-                    <span>₹{pkg.totalPrice}</span>
+                    {pkg.discountedPrice !== null && pkg.discountedPrice < pkg.totalPrice ? (
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-green-600 dark:text-green-400">₹{pkg.discountedPrice}</span>
+                        <span className="text-xs text-muted-foreground line-through">₹{pkg.totalPrice}</span>
+                      </div>
+                    ) : (
+                      <span>₹{pkg.totalPrice}</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -184,7 +191,7 @@ export function PackageTable({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Switch checked={pkg.isActive} />
+                    <Switch checked={pkg.isActive} onCheckedChange={() => {}} disabled />
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
