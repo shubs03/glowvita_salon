@@ -123,7 +123,6 @@ function SocialMediaTemplateFormContent({
   /**
    * Normalize any stored imageUrl to a displayable src.
    * Handles: base64, relative paths (/uploads/...), full URLs (any host/port).
-   * For full URLs we extract just the filename and serve relative to the current app.
    */
   const resolvedImagePreview = useMemo(() => {
     if (!imagePreview) return null;
@@ -131,16 +130,8 @@ function SocialMediaTemplateFormContent({
     if (imagePreview.startsWith('data:image')) return imagePreview;
     // Already a relative path — use as-is
     if (imagePreview.startsWith('/')) return imagePreview;
-    // Full URL (http:// or https://) — extract filename and serve from current app
-    if (imagePreview.startsWith('http')) {
-      try {
-        const url = new URL(imagePreview);
-        const filename = url.pathname.split('/').pop();
-        return `/uploads/${filename}`;
-      } catch {
-        return imagePreview;
-      }
-    }
+    // Full URL (http:// or https://) — use as-is
+    if (imagePreview.startsWith('http')) return imagePreview;
     // Plain filename — serve from current app uploads
     return `/uploads/${imagePreview}`;
   }, [imagePreview]);
