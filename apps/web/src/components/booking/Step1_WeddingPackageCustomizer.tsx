@@ -79,9 +79,7 @@ export function Step1_WeddingPackageCustomizer({
     const calculateTotalPrice = () => {
         return selectedServices.reduce((total, service) => {
             const quantity = serviceQuantities[service.id] || 1;
-            const price = service.discountedPrice !== null && service.discountedPrice !== undefined
-                ? parseFloat(service.discountedPrice)
-                : parseFloat(service.price);
+            const price = parseFloat(service.price);
             return total + (price * quantity);
         }, 0);
     };
@@ -104,6 +102,13 @@ export function Step1_WeddingPackageCustomizer({
 
     const totalPrice = calculateTotalPrice();
     const totalDuration = calculateTotalDuration();
+
+    // Calculate package discount percentage based on original package price vs discounted package price
+    const discountPercent = weddingPackage.totalPrice && weddingPackage.discountedPrice
+        ? (weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice
+        : 0;
+    const calculatedDiscountedPrice = totalPrice * (1 - discountPercent);
+    const savings = totalPrice - calculatedDiscountedPrice;
 
     // Live update parent when services or quantities change
     useEffect(() => {
@@ -156,9 +161,7 @@ export function Step1_WeddingPackageCustomizer({
             })),
             totalPrice: totalPrice,
             duration: totalDuration,
-            discountedPrice: weddingPackage.discountedPrice && totalPrice < weddingPackage.totalPrice
-                ? totalPrice
-                : weddingPackage.discountedPrice
+            discountedPrice: calculatedDiscountedPrice
         };
 
         // Create updated services array with quantity information
@@ -230,11 +233,11 @@ export function Step1_WeddingPackageCustomizer({
                                 {Math.floor(totalDuration / 60)}h {totalDuration % 60}m
                             </div>
                             <div className="bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-sm font-medium">
-                                ₹{totalPrice.toFixed(2)}
+                                ₹{calculatedDiscountedPrice.toFixed(2)}
                             </div>
-                            {weddingPackage.discountedPrice !== null && weddingPackage.discountedPrice !== undefined && (
+                            {savings > 0 && (
                                 <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                    You save ₹{(weddingPackage.totalPrice - totalPrice).toFixed(2)}
+                                    You save ₹{savings.toFixed(2)}
                                 </div>
                             )}
                         </div>
@@ -329,9 +332,7 @@ export function Step1_WeddingPackageCustomizer({
                                     </div>
                                     <div className="text-right">
                                         <div className="font-semibold">
-                                            ₹{((service.discountedPrice !== null && service.discountedPrice !== undefined
-                                                ? parseFloat(service.discountedPrice)
-                                                : parseFloat(service.price)) * quantity).toFixed(2)}
+                                            ₹{(parseFloat(service.price) * quantity).toFixed(2)}
                                         </div>
                                     </div>
                                 </Card>
@@ -398,9 +399,7 @@ export function Step1_WeddingPackageCustomizer({
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-sm font-semibold">
-                                                    ₹{service.discountedPrice !== null && service.discountedPrice !== undefined
-                                                        ? service.discountedPrice
-                                                        : service.price}
+                                                    ₹{service.price}
                                                 </div>
                                                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0 mt-1">
                                                     <Plus className="h-4 w-4" />

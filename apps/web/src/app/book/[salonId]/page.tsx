@@ -365,9 +365,7 @@ function BookingPageContent() {
     if (selectedWeddingPackage) {
       if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
         const amount = customizedPackageServices.reduce((sum, service) => {
-          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-            parseFloat(service.discountedPrice) :
-            parseFloat(service.price || '0');
+          const servicePrice = parseFloat(service.price || '0');
           const quantity = (service as any).quantity || 1;
           return sum + (servicePrice * quantity);
         }, 0);
@@ -1542,9 +1540,11 @@ function BookingPageContent() {
         serviceItems: (isCustomized ? customizedPackageServices : selectedWeddingPackage.services).map((service: any) => {
           const qty = isCustomized ? (service.quantity || 1) : 1;
           const singleDuration = convertDurationToMinutes(service.duration || selectedWeddingPackage.duration / (selectedWeddingPackage.services?.length || 1));
-          const singleAmount = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-            Number(service.discountedPrice) :
-            Number(service.price || (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice) / (selectedWeddingPackage.services?.length || 1));
+          const singleAmount = isCustomized
+            ? Number(service.price || 0)
+            : (service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              Number(service.discountedPrice) :
+              Number(service.price || (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice) / (selectedWeddingPackage.services?.length || 1)));
           return {
             service: service.id || service.serviceId || service._id,
             serviceName: service.name || service.serviceName,
@@ -1696,9 +1696,7 @@ function BookingPageContent() {
       // Calculate customized subtotal if applicable
       const customizedSubtotal = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
         ? customizedPackageServices.reduce((acc, service) => {
-          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-            parseFloat(String(service.discountedPrice)) :
-            parseFloat(String(service.price || '0'));
+          const servicePrice = parseFloat(String(service.price || '0'));
           const quantity = (service as any).quantity || 1;
           return acc + (servicePrice * quantity);
         }, 0)
@@ -1858,9 +1856,11 @@ function BookingPageContent() {
           startTime: selectedTime,
           endTime: endTime,
           duration: convertDurationToMinutes(pkgService.duration || selectedWeddingPackage.duration),
-          amount: pkgService.discountedPrice !== null && pkgService.discountedPrice !== undefined ?
-            Number(pkgService.discountedPrice) :
-            Number(pkgService.price || 0)
+          amount: customizedPackageServices.length > 0
+            ? Number(pkgService.price || 0)
+            : (pkgService.discountedPrice !== null && pkgService.discountedPrice !== undefined ?
+              Number(pkgService.discountedPrice) :
+              Number(pkgService.price || 0))
         }))
         : // For regular services (including single service)
         (() => {
@@ -1961,7 +1961,8 @@ function BookingPageContent() {
             servicesToCalculate = customizedPackageServices.map((s: any) => ({
               ...s,
               id: s.id || s._id,
-              selectedAddons: s.selectedAddons || []
+              selectedAddons: s.selectedAddons || [],
+              discountedPrice: undefined
             }));
           } else {
             servicesToCalculate = [{
@@ -2204,9 +2205,11 @@ function BookingPageContent() {
               
               let svcAmount = svc.amount;
               if (svcAmount === undefined && fullServiceInfo) {
-                  svcAmount = fullServiceInfo.discountedPrice !== null && fullServiceInfo.discountedPrice !== undefined 
-                      ? parseFloat(fullServiceInfo.discountedPrice as any) 
-                      : (fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0);
+                  svcAmount = (customizedPackageServices && customizedPackageServices.length > 0)
+                      ? (fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0)
+                      : (fullServiceInfo.discountedPrice !== null && fullServiceInfo.discountedPrice !== undefined 
+                          ? parseFloat(fullServiceInfo.discountedPrice as any) 
+                          : (fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0));
               }
 
               return {
@@ -3439,6 +3442,33 @@ function BookingPageContent() {
 
           // If wedding package selected and customization started, show customizer
           if (selectedWeddingPackage && isCustomizingPackage) {
+            const liveServicesCount = customizedPackageServices && customizedPackageServices.length > 0
+              ? customizedPackageServices.length
+              : (selectedWeddingPackage.services?.length || 0);
+
+            const liveDuration = customizedPackageServices && customizedPackageServices.length > 0
+              ? customizedPackageServices.reduce((sum, s) => {
+                  const durStr = String(s.duration || '0').replace(/[^0-9]/g, '');
+                  const dur = parseInt(durStr, 10) || 0;
+                  const qty = (s as any).quantity || 1;
+                  return sum + (dur * qty);
+                }, 0)
+              : (selectedWeddingPackage.duration || 0);
+
+            const liveBasePrice = customizedPackageServices && customizedPackageServices.length > 0
+              ? customizedPackageServices.reduce((sum, s) => {
+                  const prStr = String(s.price || '0').replace(/[^0-9.]/g, '');
+                  const pr = parseFloat(prStr) || 0;
+                  const qty = (s as any).quantity || 1;
+                  return sum + (pr * qty);
+                }, 0)
+              : (selectedWeddingPackage.totalPrice || 0);
+
+            const discountPercent = selectedWeddingPackage.totalPrice && selectedWeddingPackage.discountedPrice
+              ? (selectedWeddingPackage.totalPrice - selectedWeddingPackage.discountedPrice) / selectedWeddingPackage.totalPrice
+              : 0;
+            const liveDiscountedPrice = liveBasePrice * (1 - discountPercent);
+
             return (
               <div className="w-full max-w-4xl mx-auto space-y-6">
                 {/* Breadcrumb */}
@@ -3466,19 +3496,19 @@ function BookingPageContent() {
                         <div className="flex items-center gap-4 mt-4">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{selectedWeddingPackage.duration} min</span>
+                            <span className="text-sm">{liveDuration} min</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Scissors className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{selectedWeddingPackage.services.length} services</span>
+                            <span className="text-sm">{liveServicesCount} services</span>
                           </div>
                           <div className="flex items-center gap-2 ml-auto">
                             <span className="text-2xl font-bold text-primary">
-                              ₹{selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice}
+                              ₹{Math.round(liveDiscountedPrice)}
                             </span>
-                            {selectedWeddingPackage.discountedPrice && (
+                            {discountPercent > 0 && (
                               <span className="text-sm text-muted-foreground line-through">
-                                ₹{selectedWeddingPackage.totalPrice}
+                                ₹{Math.round(liveBasePrice)}
                               </span>
                             )}
                           </div>
@@ -3493,6 +3523,7 @@ function BookingPageContent() {
                   weddingPackage={selectedWeddingPackage}
                   allServices={services}
                   onPackageUpdate={(updatedPackage, customServices) => {
+                    setSelectedWeddingPackage(updatedPackage as any);
                     handleCustomizationComplete(customServices);
                   }}
                   onLiveUpdate={setCustomizedPackageServices}
@@ -3523,6 +3554,7 @@ function BookingPageContent() {
               weddingPackages={weddingPackages}
               onWeddingPackageSelect={handleSelectWeddingPackage}
               selectedWeddingPackage={selectedWeddingPackage}
+              weddingPackageMode={weddingPackageMode}
               bookingMode={bookingMode}
               setBookingMode={handleBookingModeChange}
             />
@@ -4057,9 +4089,7 @@ function BookingPageContent() {
         // Calculate base package price (with customization if applicable) for fallback
         const packagePrice = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
           ? customizedPackageServices.reduce((sum, service: any) => {
-            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-              parseFloat(service.discountedPrice) :
-              parseFloat(service.price || '0');
+            const servicePrice = parseFloat(service.price || '0');
             const quantity = service.quantity || 1;
             return sum + (servicePrice * quantity);
           }, 0)
@@ -4067,7 +4097,10 @@ function BookingPageContent() {
 
         // Use customized services if available, otherwise use package defaults
         const servicesForCalculation = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
-          ? customizedPackageServices
+          ? customizedPackageServices.map(s => ({
+              ...s,
+              discountedPrice: undefined
+            }))
           : [{
             id: (selectedWeddingPackage as any).id || (selectedWeddingPackage as any)._id,
             name: selectedWeddingPackage.name,
@@ -4626,7 +4659,7 @@ function BookingPageContent() {
                                 </div>
                                 <div className="flex items-center gap-2 ml-2 flex-shrink-0">
                                   <div className="text-xs text-muted-foreground">
-                                    ₹{service.discountedPrice || service.price}
+                                    ₹{service.price}
                                   </div>
                                 </div>
                               </div>

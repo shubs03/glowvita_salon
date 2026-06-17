@@ -22,6 +22,10 @@ export async function POST(req) {
       return NextResponse.json({ message: 'User not found. Please register first.' }, { status: 404 });
     }
 
+    if (user.emailAddress !== email) {
+      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
+    }
+
     if (!user.password) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }

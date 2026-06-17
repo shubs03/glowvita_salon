@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -120,7 +120,7 @@ export function PackageModal({
   // Local state for the percentage discount
   const [discountPercent, setDiscountPercent] = useState<number | "">("");
 
-  // Initialize the discount percent when the modal is opened
+  // Initialize discountPercent ONLY when the modal first opens (not on every formData change)
   useEffect(() => {
     if (isOpen) {
       if (formData.totalPrice > 0 && formData.discountedPrice !== null) {
@@ -131,32 +131,32 @@ export function PackageModal({
       } else {
         setDiscountPercent("");
       }
+    } else {
+      // Reset when modal closes
+      setDiscountPercent("");
     }
-  }, [isOpen, formData.discountedPrice, formData.totalPrice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
-  // Keep discountedPrice reactively in sync with totalPrice and discountPercent changes
+  // When totalPrice changes (due to services being added/removed), recalculate discountedPrice
+  // using the current discountPercent — but only if a discount is already active.
+  // Uses a ref-based approach to avoid putting discountPercent in deps (which would cause loops).
+  const discountPercentRef = React.useRef(discountPercent);
+  discountPercentRef.current = discountPercent;
+
   useEffect(() => {
     if (!isOpen) return;
-
-    if (discountPercent !== "" && discountPercent > 0) {
-      const calculatedDiscountedPrice = Math.round(
-        formData.totalPrice * (1 - discountPercent / 100)
-      );
-      if (formData.discountedPrice !== calculatedDiscountedPrice) {
-        onFormDataChange(prev => ({
-          ...prev,
-          discountedPrice: calculatedDiscountedPrice,
-        }));
-      }
-    } else if (discountPercent === 0 || discountPercent === "") {
-      if (formData.discountedPrice !== null) {
-        onFormDataChange(prev => ({
-          ...prev,
-          discountedPrice: null,
-        }));
-      }
+    const pct = discountPercentRef.current;
+    if (pct !== "" && pct > 0) {
+      const newDiscountedPrice = Math.round(formData.totalPrice * (1 - (pct as number) / 100));
+      onFormDataChange(prev => {
+        if (prev.discountedPrice === newDiscountedPrice) return prev;
+        return { ...prev, discountedPrice: newDiscountedPrice };
+      });
     }
-  }, [formData.totalPrice, discountPercent, isOpen, onFormDataChange]);
+    // Only re-run when totalPrice changes, not discountPercent (avoids the circular loop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.totalPrice, isOpen]);
 
   const handleDiscountPercentChange = (val: string) => {
     if (val === "") {
@@ -188,6 +188,7 @@ export function PackageModal({
       }
     }
   };
+
 
   // Helper: Get initials for avatar placeholders
   const getInitials = (name: string) => {

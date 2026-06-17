@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect, useRef ,useMemo} from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppSelector } from '@repo/store/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { FaRupeeSign, FaShoppingCart } from "react-icons/fa";
-import { FiUsers, FiActivity, FiXCircle } from "react-icons/fi";
+import { FiUsers, FiActivity, FiXCircle, FiPercent } from "react-icons/fi";
 import { SalesOfServicesChart } from '@/components/charts/SalesOfServicesChart';
 import { SalesOfProductsChart } from '@/components/charts/SalesOfProductsChart';
 import { BusinessBreakdownChart } from '@/components/charts/BusinessBreakdownChart';
@@ -60,23 +60,25 @@ export default function AdminPage() {
     queryParams !== null ? queryParams : undefined
   );
 
-  // Calculate Total Business (Sum of all components across regions)
+  // Total Business — from Consolidated Sales Report aggregatedTotals.totalBusiness (source of truth)
   const totalBusinessValue = useMemo(() => {
-    return dashboardData?.cityWiseSales?.reduce((acc: number, item: any) => {
-      return acc + (item.totalServiceAmount || 0) +
-        (item.totalProductAmount || 0) +
-        (item.servicePlatformFees || 0) +
-        (item.productPlatformFees || 0) +
-        (item.serviceTax || 0) +
-        (item.productTax || 0) +
-        (item.subscriptionAmount || 0) +
-        (item.smsAmount || 0);
-    }, 0) || 0;
+    return dashboardData?.totalBusiness || 0;
+  }, [dashboardData]);
+
+  // Total Revenue — Revenue Report formula: taxes + platform fees + subscription + SMS
+  // Uses same consolidated report aggregatedTotals fields as the Revenue Report page.
+  const totalRevenueValue = useMemo(() => {
+    return (dashboardData?.serviceTax || 0) +
+      (dashboardData?.productTax || 0) +
+      (dashboardData?.productPlatformFee || 0) +
+      (dashboardData?.servicePlatformFees || 0) +
+      (dashboardData?.subscriptionAmount || 0) +
+      (dashboardData?.smsAmount || 0);
   }, [dashboardData]);
 
   // Aggregate data for Business Breakdown Chart
   const businessBreakdownData = useMemo(() => {
-    if (!dashboardData?.cityWiseSales) return {
+    if (!dashboardData) return {
       serviceAmount: 0,
       productAmount: 0,
       platformFees: 0,
@@ -85,22 +87,14 @@ export default function AdminPage() {
       smsAmount: 0
     };
 
-    return dashboardData.cityWiseSales.reduce((acc: any, item: any) => {
-      acc.serviceAmount += (item.totalServiceAmount || 0);
-      acc.productAmount += (item.totalProductAmount || 0);
-      acc.platformFees += (item.servicePlatformFees || 0) + (item.productPlatformFees || 0);
-      acc.taxes += (item.serviceTax || 0) + (item.productTax || 0);
-      acc.subscriptionAmount += (item.subscriptionAmount || 0);
-      acc.smsAmount += (item.smsAmount || 0);
-      return acc;
-    }, {
-      serviceAmount: 0,
-      productAmount: 0,
-      platformFees: 0,
-      taxes: 0,
-      subscriptionAmount: 0,
-      smsAmount: 0
-    });
+    return {
+      serviceAmount: dashboardData.serviceAmount || 0,
+      productAmount: dashboardData.productAmount || 0,
+      platformFees: (dashboardData.servicePlatformFees || 0) + (dashboardData.productPlatformFee || 0),
+      taxes: (dashboardData.serviceTax || 0) + (dashboardData.productTax || 0),
+      subscriptionAmount: dashboardData.subscriptionAmount || 0,
+      smsAmount: dashboardData.smsAmount || 0
+    };
   }, [dashboardData]);
 
   // Show placeholder data when filter is selected but no value chosen
@@ -378,8 +372,8 @@ export default function AdminPage() {
                 <div className="text-2xl font-bold text-secondary-foreground truncate">
                   {showPlaceholder ? "₹0.00" : formatCurrency(totalBusinessValue)}
                 </div>
-                <div className="text-[10px] text-secondary-foreground/70 mt-1 line-clamp-1">
-                  Includes Service, Product, Fees, Tax, Subs & SMS
+                <div className="text-[10px] text-secondary-foreground/70 mt-1 line-clamp-2">
+                  Total Service Amount + Total Product Amount + Service Tax + Product Tax/GST + Product Platform Fee + Service Platform Fees + Subscription Amount + SMS Amount
                 </div>
               </div>
               <div className="p-3 bg-primary/10 rounded-full shrink-0">
@@ -396,7 +390,10 @@ export default function AdminPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Revenue</p>
                 <div className="text-2xl font-bold text-secondary-foreground truncate">
-                  {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.totalRevenue?.current || 0)}
+                  {showPlaceholder ? "₹0.00" : formatCurrency(totalRevenueValue)}
+                </div>
+                <div className="text-[10px] text-secondary-foreground/70 mt-1 line-clamp-2">
+                  Service Tax + Product Tax/GST + Product Platform Fee + Service Platform Fees + Subscription Amount + SMS Amount
                 </div>
               </div>
               <div className="p-3 bg-primary/10 rounded-full shrink-0">
@@ -406,28 +403,93 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Card 3: Total Business User (Merged Vendors & Suppliers) */}
+        {/* Card 3: Total Service Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Business User</p>
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Service Amount</p>
                 <div className="text-2xl font-bold text-secondary-foreground truncate">
-                  {showPlaceholder ? "0" : ((dashboardData?.totalVendors?.current || 0) + (dashboardData?.totalSuppliers?.current || 0)).toLocaleString()}
+                  {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.serviceAmount || 0)}
                 </div>
                 <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
-                  <span className="font-medium shrink-0">Vendors: {showPlaceholder ? "0" : (dashboardData?.totalVendors?.current || 0).toLocaleString()}</span>
-                  <span className="font-medium shrink-0">Suppliers: {showPlaceholder ? "0" : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}</span>
+                  <span className="font-medium text-primary/80 shrink-0">Vendor: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.serviceAmount || 0)}</span>
                 </div>
               </div>
               <div className="p-3 bg-primary/10 rounded-full shrink-0">
-                <FiUsers className="h-6 w-6 text-primary" />
+                <FaRupeeSign className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 4: Subscription Amount */}
+        {/* Card 4: Total Product Amount */}
+        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Product Amount</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
+                  {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.productAmount || 0)}
+                </div>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Vendor: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.productAmount || 0)}</span>
+                  <span className="font-medium shrink-0">Supplier: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierProductAmount || 0)}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
+                <FaRupeeSign className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second Row: Detailed Performance Cards */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mt-6">
+        {/* Card 5: Platform Fees */}
+        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Platform Fees</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
+                  {showPlaceholder ? "₹0.00" : formatCurrency((dashboardData?.servicePlatformFees || 0) + (dashboardData?.productPlatformFee || 0))}
+                </div>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Service: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.servicePlatformFees || 0)}</span>
+                  <span className="font-medium shrink-0">Product: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.productPlatformFee || 0)}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
+                <FiPercent className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 6: Tax Collected */}
+        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Tax Collected</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
+                  {showPlaceholder ? "₹0.00" : formatCurrency((dashboardData?.serviceTax || 0) + (dashboardData?.productTax || 0))}
+                </div>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium text-primary/80 shrink-0">Service Tax: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.serviceTax || 0)}</span>
+                  <span className="font-medium shrink-0">Product GST: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.productTax || 0)}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
+                <FaRupeeSign className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 7: Subscription Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
@@ -448,12 +510,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-       
-      </div>
-
-      {/* Second Row: Detailed Performance Cards */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mt-6">
-        {/* Card 5: SMS Amount */}
+        {/* Card 8: SMS Amount */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
@@ -469,50 +526,8 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
-      
-        {/* Card 6: Total Service Amount */}
-        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Service Amount</p>
-                <div className="text-2xl font-bold text-secondary-foreground truncate">
-                  {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.serviceAmount || 0)}
-                </div>
-                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
-                  <span className="font-medium text-primary/80 shrink-0">Vendor: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.vendorServiceAmount || 0)}</span>
-                  <span className="font-medium shrink-0">Supplier: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierServiceAmount || 0)}</span>
-                </div>
-              </div>
-              <div className="p-3 bg-primary/10 rounded-full shrink-0">
-                <FaRupeeSign className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Card 7: Total Product Amount */}
-        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Product Amount</p>
-                <div className="text-2xl font-bold text-secondary-foreground truncate">
-                  {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.productAmount || 0)}
-                </div>
-                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
-                  <span className="font-medium text-primary/80 shrink-0">Vendor: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.vendorProductAmount || 0)}</span>
-                  <span className="font-medium shrink-0">Supplier: {showPlaceholder ? "₹0.00" : formatCurrency(dashboardData?.supplierProductAmount || 0)}</span>
-                </div>
-              </div>
-              <div className="p-3 bg-primary/10 rounded-full shrink-0">
-                <FaRupeeSign className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 8: Total Bookings */}
+        {/* Card 9: Total Bookings */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
@@ -533,7 +548,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Card 9: Completed Appointments */}
+        {/* Card 10: Completed Appointments */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
@@ -554,7 +569,7 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Card 10: Cancelled Bookings */}
+        {/* Card 11: Cancelled Bookings */}
         <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
@@ -570,6 +585,27 @@ export default function AdminPage() {
               </div>
               <div className="p-3 bg-primary/10 rounded-full shrink-0">
                 <FiXCircle className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 12: Total Business User (Merged Vendors & Suppliers) */}
+        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 truncate">Total Business User</p>
+                <div className="text-2xl font-bold text-secondary-foreground truncate">
+                  {showPlaceholder ? "0" : ((dashboardData?.totalVendors?.current || 0) + (dashboardData?.totalSuppliers?.current || 0)).toLocaleString()}
+                </div>
+                <div className="flex flex-wrap text-xs text-secondary-foreground/70 mt-1 gap-x-3 gap-y-0.5">
+                  <span className="font-medium shrink-0">Vendors: {showPlaceholder ? "0" : (dashboardData?.totalVendors?.current || 0).toLocaleString()}</span>
+                  <span className="font-medium shrink-0">Suppliers: {showPlaceholder ? "0" : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full shrink-0">
+                <FiUsers className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>

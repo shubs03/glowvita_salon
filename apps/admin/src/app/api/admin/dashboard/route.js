@@ -287,8 +287,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Total product platform fees is the sum of vendor and supplier fees
     const productPlatformFees = productData.Vendor.fees + productData.Supplier.fees;
-    const vendorProductAmount = productData.Vendor.fees;
-    const supplierProductAmount = productData.Supplier.fees;
+    const vendorProductAmount = productData.Vendor.sales;
+    const supplierProductAmount = productData.Supplier.sales;
 
     const subscriptionAmount = await calculateSubscriptionAmount(req, filterType, filterValue);
     const subscriptionStats = await getSubscriptionStats(req);
@@ -297,7 +297,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const totalRevenue = servicePlatformFees + productPlatformFees + subscriptionAmount + smsAmount;
 
     // 4. Accurate Region-Wise Sales for Charts and Tables
-    const regionWiseSales = await getRegionWiseRevenueDetailed(req, allowedRegionIds);
+    const regionWiseSales = await getRegionWiseRevenueDetailed(req, allowedRegionIds, appointmentDateMatch, generalDateMatch);
 
     // 5. Top Performance
     const [servicesData, productsData] = await Promise.all([
@@ -329,12 +329,50 @@ export const GET = authMiddlewareAdmin(async (req) => {
       })()
     ]);
 
+    // 6. Get accurate financial totals from consolidated sales report (canonical source of truth)
+    // The consolidated report uses the same sub-routes as the reports page and is guaranteed correct.
+    let consolidatedFinancials = null;
+    try {
+      const consolidatedSalesModule = await import('../reports/Financial-Reports/salesreport/route');
+      const cUrl = new URL(req.url);
+      cUrl.pathname = '/api/admin/reports/Financial-Reports/salesreport';
+      if (filterType) cUrl.searchParams.set('filterType', filterType);
+      if (filterValue) cUrl.searchParams.set('filterValue', filterValue);
+      if (selectedRegionId && selectedRegionId !== 'all') cUrl.searchParams.set('regionId', selectedRegionId);
+      const cRes = await consolidatedSalesModule.GET(new Request(cUrl.href, { headers: req.headers }));
+      const cJson = await cRes.json();
+      if (cJson?.success && cJson.data?.aggregatedTotals) {
+        consolidatedFinancials = cJson.data.aggregatedTotals;
+      }
+    } catch (e) {
+      console.error('Failed to fetch consolidated financial summary for dashboard:', e);
+    }
+
+    // Resolve final values — consolidated report wins, direct aggregation is the fallback
+    const finalServiceAmount      = consolidatedFinancials?.totalServiceAmount    ?? serviceGrossAmount;
+    const finalProductAmount      = consolidatedFinancials?.totalProductAmount    ?? (productData.Vendor.sales + productData.Supplier.sales);
+    const finalServiceTax         = consolidatedFinancials?.totalServiceTax       ?? 0;
+    const finalProductTax         = consolidatedFinancials?.totalProductTax       ?? 0;
+    const finalProductPlatformFee = consolidatedFinancials?.totalProductPlatformFee ?? productPlatformFees;
+    const finalServicePlatformFees= consolidatedFinancials?.totalPlatformFees     ?? servicePlatformFees;
+    const finalSubscriptionAmount = consolidatedFinancials?.subscriptionAmount    ?? subscriptionAmount;
+    const finalSmsAmount          = consolidatedFinancials?.smsAmount             ?? smsAmount;
+    const finalTotalBusiness      = consolidatedFinancials?.totalBusiness ??
+      (finalServiceAmount + finalProductAmount + finalServiceTax + finalProductTax +
+       finalProductPlatformFee + finalServicePlatformFees + finalSubscriptionAmount + finalSmsAmount);
+    const finalTotalRevenue = finalServicePlatformFees + finalProductPlatformFee + finalSubscriptionAmount + finalSmsAmount;
+
     return NextResponse.json({
       success: true,
       data: {
         totalRevenue: {
-          current: totalRevenue,
-          components: { servicePlatformFees, productPlatformFees, subscriptionAmount, smsAmount }
+          current: finalTotalRevenue,
+          components: {
+            servicePlatformFees: finalServicePlatformFees,
+            productPlatformFees: finalProductPlatformFee,
+            subscriptionAmount:  finalSubscriptionAmount,
+            smsAmount:           finalSmsAmount
+          }
         },
         regionWiseSales,
         cityWiseSales: regionWiseSales, // Legacy UI support
@@ -347,30 +385,34 @@ export const GET = authMiddlewareAdmin(async (req) => {
           completedOffline: completedData.offline
         },
         totalCustomers: { current: totalCustomers },
-        totalVendors: { current: totalVendors },
+        totalVendors:   { current: totalVendors },
         totalSuppliers: { current: totalSuppliers },
-        totalDoctors: { current: totalDoctors },
+        totalDoctors:   { current: totalDoctors },
         cancelledBookings: {
           current: cancelledData.total,
-          online: cancelledData.online,
+          online:  cancelledData.online,
           offline: cancelledData.offline
         },
         services: servicesData?.services || [],
         products: productsData?.salesByProducts || [],
-        subscriptionAmount: subscriptionAmount,
-        subscriptionStats: subscriptionStats,
-        smsAmount: smsAmount,
-        serviceAmount: serviceGrossAmount,
-        productAmount: productData.Vendor.sales + productData.Supplier.sales,
-        servicePlatformFees,
-        productPlatformFees,
+        // Financial summary (sourced from consolidated sales report)
+        totalBusiness:       finalTotalBusiness,
+        serviceAmount:       finalServiceAmount,
+        productAmount:       finalProductAmount,
+        serviceTax:          finalServiceTax,
+        productTax:          finalProductTax,
+        productPlatformFee:  finalProductPlatformFee,
+        servicePlatformFees: finalServicePlatformFees,
+        subscriptionAmount:  finalSubscriptionAmount,
+        smsAmount:           finalSmsAmount,
+        subscriptionStats,
+        // Vendor / supplier breakdown (from direct aggregation)
         vendorServiceAmount,
         supplierServiceAmount,
         vendorProductAmount: productData.Vendor.sales,
         supplierProductAmount: productData.Supplier.sales,
-        vendorProductFees: productData.Vendor.fees,
+        vendorProductFees:   productData.Vendor.fees,
         supplierProductFees: productData.Supplier.fees,
-        totalProductSales: productData.Vendor.sales + productData.Supplier.sales,
         currentPeriod: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });
@@ -381,7 +423,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
   }
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"]);
 
-async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
+async function getRegionWiseRevenueDetailed(req, allowedRegionIds, appointmentDateMatch = {}, generalDateMatch = {}) {
   const AppointmentModel = (await import('@repo/lib/models/Appointment/Appointment.model')).default;
   const ClientOrderModel = (await import('@repo/lib/models/user/ClientOrder.model')).default;
   const RegionModel = (await import('@repo/lib/models/admin/Region')).default;
@@ -410,7 +452,7 @@ async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
 
   const [serviceSales, productSales, vendorCounts, supplierCounts] = await Promise.all([
     AppointmentModel.aggregate([
-      ...basePipeline({ status: 'completed' }),
+      ...basePipeline({ ...appointmentDateMatch, status: 'completed' }),
       {
         $group: {
           _id: "$rid",
@@ -421,7 +463,7 @@ async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
       }
     ]),
     ClientOrderModel.aggregate([
-      ...basePipeline({ status: 'Delivered' }),
+      ...basePipeline({ ...generalDateMatch, status: 'Delivered' }),
       {
         $group: {
           _id: "$rid",
