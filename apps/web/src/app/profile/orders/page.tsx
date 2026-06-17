@@ -95,8 +95,11 @@ export default function OrdersPage() {
     data: ordersData,
     isLoading,
     isError,
+    refetch,
   } = useGetClientOrdersQuery(undefined, {
     skip: !user,
+    pollingInterval: 5000,
+    refetchOnMountOrArgChange: true,
   });
 
   console.log("Orders Data on orders page : ", ordersData)
@@ -192,10 +195,8 @@ export default function OrdersPage() {
         setIsCancelModalOpen(false);
         setOrderToCancel(null);
         setCancellationReason("");
-        // Trigger a refetch or reload
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        // Trigger a refetch dynamically
+        refetch();
       } else {
         toast.error(result.message || 'Failed to cancel order', { id: toastId });
         console.error('Failed to cancel order:', result.message);
