@@ -149,6 +149,18 @@ export const POST = authMiddlewareAdmin(async (req) => {
         // Save user
         await user.save();
 
+        // Check for referral credit — fires on first paid plan activation, ignored on subsequent renewals
+        const isRegularPlan = plan.planType === 'regular' || (plan.price !== undefined && plan.price > 0);
+        if (isRegularPlan) {
+          try {
+            const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
+            const referralResult = await checkAndCreditSubscriptionReferral(user._id.toString(), plan);
+            console.log('[Referral Bonus] Admin subscription-renewal referral result:', referralResult);
+          } catch (err) {
+            console.error("[Referral Bonus] Check failed on admin subscription-renewal:", err);
+          }
+        }
+
         // Populate the plan for the frontend
         await user.populate('subscription.plan');
 

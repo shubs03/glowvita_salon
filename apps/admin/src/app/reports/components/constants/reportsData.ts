@@ -10,6 +10,11 @@ export const reportsData: ReportCategory[] = [
         details: "Combined revenue breakdown for services and products."
       },
       {
+        title: "Revenue Report",
+        description: "Detailed report of platform revenue from taxes, fees, and subscriptions.",
+        details: "Platform revenue breakdown excluding service and product amounts."
+      },
+      {
         title: "Subscription Report",
         description: "Detailed report on subscription revenue and user churn.",
         details: "Monitor the health of your subscription business."
