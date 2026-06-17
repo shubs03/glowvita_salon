@@ -70,19 +70,19 @@ export const AdminSettlementReportTable = () => {
   // Format the data to match Admin Settlement structure
   const adminSettlementData = salesData.map((item: any) => {
     // Extract numeric values from the formatted strings
-    const servicePlatformFee = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"].replace(/[₹,]/g, '')) || 0 : 0;
-    const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"].replace(/[₹,]/g, '')) || 0;
-    const serviceTax = parseFloat(item["Service Tax (₹)"].replace(/[₹,]/g, '')) || 0;
-    const productTax = parseFloat(item["Product Tax/GST (₹)"].replace(/[₹,]/g, '')) || 0;
-    const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-    const smsAmount = parseFloat(item["SMS Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    const servicePlatformFee = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"]?.toString().replace(/[₹,]/g, '')) || 0 : 0;
+    const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+    const serviceTax = parseFloat(item["Service Tax (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+    const productTax = parseFloat(item["Product Tax/GST (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+    const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+    const smsAmount = parseFloat(item["SMS Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
     
     // Calculate total IN (Vendor Payout)
     const totalIn = servicePlatformFee + productPlatformFee + serviceTax + productTax + subscriptionAmount + smsAmount;
     
     // Calculate vendor/supplier payables (Vendor Payable out)
-    const serviceGrossAmount = parseFloat(item["Total Service Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-    const productGrossAmount = parseFloat(item["Total Product Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    const serviceGrossAmount = parseFloat(item["Total Service Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+    const productGrossAmount = parseFloat(item["Total Product Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
     
     // Calculate platform fees for vendor/supplier payables
     const servicePlatformFeeForPayout = item.Type.toLowerCase() === 'vendor' ? servicePlatformFee : 0;

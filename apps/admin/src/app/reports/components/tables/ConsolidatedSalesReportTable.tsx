@@ -91,15 +91,21 @@ export const ConsolidatedSalesReportTable = () => {
                 <TableHead>City</TableHead>
                 <TableHead>Total Service Amount (₹)</TableHead>
                 <TableHead>Total Product Amount (₹)</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Product Tax/GST (₹)</TableHead>
                 <TableHead>Product Platform Fee (₹)</TableHead>
                 <TableHead>Service Platform Fees (₹)</TableHead>
                 <TableHead>Subscription Amount (₹)</TableHead>
                 <TableHead>SMS Amount (₹)</TableHead>
+                <TableHead>Total Business (₹)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(5)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -202,15 +208,18 @@ export const ConsolidatedSalesReportTable = () => {
                 <TableHead>City</TableHead>
                 <TableHead>Total Service Amount (₹)</TableHead>
                 <TableHead>Total Product Amount (₹)</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Product Tax/GST (₹)</TableHead>
                 <TableHead>Product Platform Fee (₹)</TableHead>
                 <TableHead>Service Platform Fees (₹)</TableHead>
                 <TableHead>Subscription Amount (₹)</TableHead>
                 <TableHead>SMS Amount (₹)</TableHead>
+                <TableHead>Total Business (₹)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                   No consolidated sales report data available.
                 </TableCell>
               </TableRow>
@@ -304,14 +313,14 @@ export const ConsolidatedSalesReportTable = () => {
           </TableHeader>
           <TableBody>
             {paginatedData.map((vendor: any, index: number) => {
-              const serviceAmount = parseFloat(vendor["Total Service Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-              const productAmount = parseFloat(vendor["Total Product Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-              const serviceTax = parseFloat(vendor["Service Tax (₹)"].replace(/[₹,]/g, '')) || 0;
-              const productTax = parseFloat(vendor["Product Tax/GST (₹)"].replace(/[₹,]/g, '')) || 0;
-              const productPlatformFee = parseFloat(vendor["Product Platform Fee (₹)"].replace(/[₹,]/g, '')) || 0;
-              const servicePlatformFees = vendor["Service Platform Fees (₹)"] !== '-' ? parseFloat(vendor["Service Platform Fees (₹)"]?.replace(/[₹,]/g, '')) || 0 : 0;
-              const subscriptionAmount = parseFloat(vendor["Subscription Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-              const smsAmount = parseFloat(vendor["SMS Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+              const serviceAmount = parseFloat(vendor["Total Service Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+              const productAmount = parseFloat(vendor["Total Product Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+              const serviceTax = parseFloat(vendor["Service Tax (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+              const productTax = parseFloat(vendor["Product Tax/GST (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+              const productPlatformFee = parseFloat(vendor["Product Platform Fee (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+              const servicePlatformFees = vendor["Service Platform Fees (₹)"] !== '-' ? parseFloat(vendor["Service Platform Fees (₹)"]?.toString().replace(/[₹,]/g, '')) || 0 : 0;
+              const subscriptionAmount = parseFloat(vendor["Subscription Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+              const smsAmount = parseFloat(vendor["SMS Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
 
               const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
 
@@ -377,14 +386,14 @@ export const ConsolidatedSalesReportTable = () => {
                   return sum + numericValue;
                 }, 0).toFixed(2)}</TableCell>
                 <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
-                  const serviceAmount = parseFloat(item["Total Service Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const productAmount = parseFloat(item["Total Product Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const serviceTax = parseFloat(item["Service Tax (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const productTax = parseFloat(item["Product Tax/GST (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const servicePlatformFees = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"]?.replace(/[₹,]/g, '')) || 0 : 0;
-                  const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  const smsAmount = parseFloat(item["SMS Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const serviceAmount = parseFloat(item["Total Service Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+                  const productAmount = parseFloat(item["Total Product Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+                  const serviceTax = parseFloat(item["Service Tax (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+                  const productTax = parseFloat(item["Product Tax/GST (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+                  const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+                  const servicePlatformFees = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"]?.toString().replace(/[₹,]/g, '')) || 0 : 0;
+                  const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
+                  const smsAmount = parseFloat(item["SMS Amount (₹)"]?.toString().replace(/[₹,]/g, '')) || 0;
 
                   const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
                   return sum + totalBusiness;
