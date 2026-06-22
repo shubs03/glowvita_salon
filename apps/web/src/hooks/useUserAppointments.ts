@@ -261,7 +261,10 @@ export const useUserAppointments = () => {
         serviceItems: serviceItems,
         cancellationReason: appointment.cancellationReason,
         paymentMethod: appointment.paymentMethod,
-        isPackage: shouldUsePackageItems
+        isPackage: shouldUsePackageItems,
+        isHomeService: appointment.isHomeService,
+        homeServiceLocation: appointment.homeServiceLocation,
+        isWeddingService: appointment.isWeddingService
       };
     });
   }, [appointments]);
