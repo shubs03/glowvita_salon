@@ -497,6 +497,10 @@ function ClientRegisterForm() {
             }
             if (component.types.includes('locality')) {
               city = component.long_name;
+            } else if (!city && component.types.includes('administrative_area_level_2')) {
+              city = component.long_name;
+            } else if (!city && component.types.includes('administrative_area_level_3')) {
+              city = component.long_name;
             }
             if (component.types.includes('postal_code')) {
               pincode = component.long_name;
@@ -540,6 +544,10 @@ function ClientRegisterForm() {
             }
             if (component.types.includes('locality')) {
               city = component.long_name;
+            } else if (!city && component.types.includes('administrative_area_level_2')) {
+              city = component.long_name;
+            } else if (!city && component.types.includes('administrative_area_level_3')) {
+              city = component.long_name;
             }
             if (component.types.includes('postal_code')) {
               pincode = component.long_name;
@@ -568,7 +576,7 @@ function ClientRegisterForm() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
+    <div className="min-h-screen md:h-screen w-full md:overflow-hidden flex flex-col md:flex-row">
       {/* Back Button */}
       <button
         onClick={() => showRegistrationForm ? setShowRegistrationForm(false) : router.back()}
@@ -580,8 +588,8 @@ function ClientRegisterForm() {
       </button>
 
       {/* Left Side - Registration Form */}
-      <div className="flex-1 md:w-1/2 flex items-center justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="w-full max-w-md self-center py-6">
+      <div className="flex-1 md:w-1/2 md:overflow-y-auto flex flex-col items-center justify-start md:justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="w-full max-w-md my-auto py-6">
           {/* Heading - Only show when not on registration form */}
           {!showRegistrationForm && (
             <div className="text-center mb-6">
@@ -984,19 +992,19 @@ function ClientRegisterForm() {
       {/* Map Modal */}
       {isMapOpen && (
         <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-          <DialogContent className="sm:max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col border-none shadow-2xl rounded-3xl">
-            <DialogHeader className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
+          <DialogContent className="w-full sm:max-w-5xl h-[90vh] sm:h-[85vh] p-0 gap-0 overflow-hidden flex flex-col border-none shadow-2xl rounded-2xl sm:rounded-3xl">
+            <DialogHeader className="p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
               <div className="flex items-center justify-between">
                 <div>
-                  <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Find Your Salon</DialogTitle>
-                  <DialogDescription className="text-slate-500 font-medium">
+                  <DialogTitle className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Find Your Salon</DialogTitle>
+                  <DialogDescription className="text-slate-500 text-xs sm:text-sm font-medium">
                     Search for your area and pin your exact location for accurate home service mapping.
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="flex-1 flex flex-col relative overflow-hidden">
+            <div className="flex-1 flex flex-col relative overflow-hidden min-h-0">
               {/* Floating Search Bar with Glassmorphism */}
               <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
                 <div className="relative group">
@@ -1040,7 +1048,7 @@ function ClientRegisterForm() {
               </div>
 
               {/* Map Container */}
-              <div className="flex-1 relative bg-slate-100">
+              <div className="flex-1 relative bg-slate-100 min-h-0">
                 <div
                   ref={mapContainer}
                   className="w-full h-full"
@@ -1077,7 +1085,7 @@ function ClientRegisterForm() {
               </div>
 
               {/* Bottom Action Area */}
-              <div className="p-6 bg-slate-50 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="p-4 sm:p-6 bg-slate-50 border-t flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
                   {location && (
                     <div className="flex items-center gap-2 text-slate-600">
@@ -1097,10 +1105,14 @@ function ClientRegisterForm() {
                   <Button
                     className="flex-1 sm:flex-none rounded-xl px-8"
                     onClick={() => {
+                      if (!city || !pincode) {
+                        toast.error("We couldn't detect city or pincode for this location. Please drag the pin or search again.");
+                        return;
+                      }
                       setConfirmedLocation(location);
                       setIsMapOpen(false);
                     }}
-                    disabled={!location || !city || !pincode}
+                    disabled={!location}
                   >
                     Confirm Location
                   </Button>
