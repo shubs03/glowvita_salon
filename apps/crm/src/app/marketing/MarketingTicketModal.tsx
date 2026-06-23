@@ -9,7 +9,7 @@ import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { Ticket, Users, CheckCircle2, X, Building2, Phone, Mail, User, FileText, AlignLeft, ChevronRight } from 'lucide-react';
+import { Ticket, CheckCircle2, X, Building2, Phone, Mail, User, FileText, AlignLeft, ChevronRight } from 'lucide-react';
 
 type MarketingPackage = {
   _id: string;
@@ -20,12 +20,7 @@ type MarketingPackage = {
   platforms?: string[];
 };
 
-type MarketingAgent = {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-};
+
 
 type MarketingTicketModalProps = {
   open: boolean;
@@ -43,43 +38,35 @@ export default function MarketingTicketModal({
   const { user } = useCrmAuth();
 
   const [packages, setPackages] = useState<MarketingPackage[]>([]);
-  const [agents, setAgents] = useState<MarketingAgent[]>([]);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     packageId: '',
-    agentId: '',
     subject: '',
     description: ''
   });
 
   useEffect(() => {
     if (open) {
-      const fetchMetadata = async () => {
-        setLoadingMetadata(true);
-        try {
-          const requests: Promise<Response>[] = [fetch('/api/crm/marketing/agents')];
-          if (!preSelectedPackage) {
-            requests.unshift(fetch('/api/crm/marketing/packages'));
+      if (!preSelectedPackage) {
+        const fetchPackages = async () => {
+          setLoadingMetadata(true);
+          try {
+            const resPkg = await fetch('/api/crm/marketing/packages');
+            if (resPkg.ok) {
+              const d = await resPkg.json();
+              setPackages(d.data || []);
+            }
+          } catch {
+            toast.error("Failed to load packages. Please try again.");
+          } finally {
+            setLoadingMetadata(false);
           }
-          const results = await Promise.all(requests);
-          if (!preSelectedPackage) {
-            const [resPkg, resAgt] = results;
-            if (resPkg.ok) { const d = await resPkg.json(); setPackages(d.data || []); }
-            if (resAgt.ok) { const d = await resAgt.json(); setAgents(d.data || []); }
-          } else {
-            const [resAgt] = results;
-            if (resAgt.ok) { const d = await resAgt.json(); setAgents(d.data || []); }
-          }
-        } catch {
-          toast.error("Failed to load data. Please try again.");
-        } finally {
-          setLoadingMetadata(false);
-        }
-      };
-      fetchMetadata();
-      setFormData({ packageId: preSelectedPackage?._id || '', agentId: '', subject: '', description: '' });
+        };
+        fetchPackages();
+      }
+      setFormData({ packageId: preSelectedPackage?._id || '', subject: '', description: '' });
     }
   }, [open, preSelectedPackage]);
 
@@ -93,7 +80,7 @@ export default function MarketingTicketModal({
     try {
       const payload = {
         ...formData,
-        agentId: formData.agentId === 'none' || !formData.agentId ? null : formData.agentId,
+        agentId: null,
       };
       const res = await fetch('/api/crm/marketing/tickets', {
         method: 'POST',
@@ -115,10 +102,7 @@ export default function MarketingTicketModal({
     }
   };
 
-  const selectedAgent = agents.find(a => a._id === formData.agentId);
-  const agentInitials = selectedAgent
-    ? selectedAgent.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : null;
+
 
   const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Vendor';
 
@@ -245,59 +229,7 @@ export default function MarketingTicketModal({
               )}
             </div>
 
-            {/* ── Agent Section ─────────────────────────────────────── */}
-            <div className="px-6 py-5 border-b border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                Assign Agent <span className="normal-case font-normal text-slate-400">(Optional)</span>
-              </p>
-              {loadingMetadata ? (
-                <div className="h-11 w-full bg-slate-100 rounded-xl animate-pulse" />
-              ) : (
-                <div className="space-y-2">
-                  <Select
-                    value={formData.agentId}
-                    onValueChange={(val) => setFormData(prev => ({ ...prev, agentId: val }))}
-                  >
-                    <SelectTrigger className="bg-white border-slate-200 h-11 rounded-xl">
-                      <SelectValue placeholder="Choose preferred agent or auto-assign…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center">
-                            <Users className="h-3 w-3 text-slate-500" />
-                          </div>
-                          <span className="text-slate-500">Auto-assign agent</span>
-                        </div>
-                      </SelectItem>
-                      {agents.map((agt) => (
-                        <SelectItem key={agt._id} value={agt._id}>
-                          <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded-full bg-slate-900 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                              {agt.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                            </div>
-                            {agt.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
 
-                  {/* Selected agent preview */}
-                  {selectedAgent && (
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5">
-                      <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                        {agentInitials}
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-800">{selectedAgent.name}</p>
-                        <p className="text-[10px] text-slate-500">{selectedAgent.email}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* ── Request Details ───────────────────────────────────── */}
             <div className="px-6 py-5 space-y-4">

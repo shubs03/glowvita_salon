@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { AlertCircle, Calendar, CheckCircle, X, Trash, Search, MapPin, Clock, User, Scissors, DollarSign, Edit, MoreVertical, Link as LinkIcon, Info, FileText, Download } from 'lucide-react';
+import { AlertCircle, Calendar, CheckCircle, X, Trash, Search, MapPin, Clock, User, Scissors, DollarSign, Edit, MoreVertical, Link as LinkIcon, Info, FileText, Download, Home, Heart } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
@@ -356,13 +356,27 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
                     <>with {appointment.staff} at {appointment.salon.name}</>
                 )}
             </div>
-            {/* Show indicator for multi-service appointments */}
-            {appointment.serviceItems && appointment.serviceItems.length > 1 && (
-                <div className="mt-2 flex items-center text-xs text-primary">
-                    <Scissors className="h-3 w-3 mr-1" />
-                    <span>{appointment.serviceItems.length} Services</span>
-                </div>
-            )}
+            {/* Show indicators for multi-service, home, wedding */}
+            <div className="mt-2 flex flex-wrap gap-2">
+                {appointment.serviceItems && appointment.serviceItems.length > 1 && (
+                    <div className="flex items-center text-xs text-primary">
+                        <Scissors className="h-3 w-3 mr-1" />
+                        <span>{appointment.serviceItems.length} Services</span>
+                    </div>
+                )}
+                {appointment.isHomeService && (
+                    <div className="flex items-center gap-1 bg-primary text-secondary text-[9px] font-bold px-2 py-0.5 rounded-full">
+                        <Home className="w-3 h-3" />
+                        <span className="uppercase tracking-wider">Home Service</span>
+                    </div>
+                )}
+                {appointment.isWeddingService && (
+                    <div className="flex items-center gap-1 bg-rose-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                        <Heart className="w-3 h-3 fill-current" />
+                        <span className="uppercase tracking-wider">Wedding Service</span>
+                    </div>
+                )}
+            </div>
         </button>
     );
 };
@@ -590,9 +604,23 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                     ) : (
                         <CardTitle className="text-xl">{appointment.service}</CardTitle>
                     )}
-                    <Badge className={cn("text-xs", statusConfig[appointment.status]?.color)}>
-                        {appointment.status === 'partially-completed' ? 'Partially Paid' : appointment.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                        {appointment.isHomeService && (
+                            <div className="flex items-center gap-1 bg-primary text-secondary text-[10px] font-bold px-2 py-1 rounded-full">
+                                <Home className="w-3.5 h-3.5" />
+                                <span className="uppercase tracking-wider">Home Service</span>
+                            </div>
+                        )}
+                        {appointment.isWeddingService && (
+                            <div className="flex items-center gap-1 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">
+                                <Heart className="w-3.5 h-3.5 fill-current" />
+                                <span className="uppercase tracking-wider">Wedding Service</span>
+                            </div>
+                        )}
+                        <Badge className={cn("text-xs", statusConfig[appointment.status]?.color)}>
+                            {appointment.status === 'partially-completed' ? 'Partially Paid' : appointment.status}
+                        </Badge>
+                    </div>
                 </div>
                 <CardDescription>{appointment.salon.name}</CardDescription>
                 {/* Show all staff for multi-service appointments */}

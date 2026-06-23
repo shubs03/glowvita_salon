@@ -141,26 +141,63 @@ export function BookingSummary({
   };
 
   // Calculate totals - handle wedding package pricing
-  const subtotal = weddingPackage
+  // For wedding packages: totalServicesPrice = raw price, packageDiscount = built-in pkg discount,
+  // subtotal = after-package-discount price (what fees/GST are calculated on)
+  const totalServicesPrice = weddingPackage
     ? (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
-      ? (() => {
-          const baseSum = customizedPackageServices.reduce((acc, service) => {
-            const servicePrice = parseFloat(String(service.price || '0'));
-            const quantity = (service as any).quantity || 1;
-            return acc + (servicePrice * quantity);
-          }, 0);
-          
-          if (weddingPackage.totalPrice && weddingPackage.discountedPrice) {
-            const discountPercent = (weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice;
+      ? customizedPackageServices.reduce((acc, service) => {
+        const servicePrice = parseFloat(String(service.price || '0'));
+        const quantity = (service as any).quantity || 1;
+        return acc + (servicePrice * quantity);
+      }, 0)
+      : (weddingPackage.totalPrice || 0))
+    : null;
+
+  // Built-in package discount amount (NOT the offer code discount)
+  const packageInherentDiscount = weddingPackage
+    ? (() => {
+      if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
+        const baseSum = totalServicesPrice!;
+        if (weddingPackage.discountedPrice != null && weddingPackage.totalPrice > 0) {
+          const discountPercent = (weddingPackage as any).discountPercent != null
+            ? (weddingPackage as any).discountPercent / 100
+            : (weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice;
+          return baseSum * discountPercent;
+        }
+        return 0;
+      } else {
+        // Non-customized: discount = totalPrice - discountedPrice
+        const total = weddingPackage.totalPrice || 0;
+        const discounted = weddingPackage.discountedPrice != null ? weddingPackage.discountedPrice : total;
+        return Math.max(0, total - discounted);
+      }
+    })()
+    : 0;
+
+  const subtotal = weddingPackage
+    ? (priceBreakdown?.subtotal != null
+      ? priceBreakdown.subtotal
+      : (() => {
+        if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
+          const baseSum = totalServicesPrice!;
+          if (weddingPackage.discountedPrice != null && weddingPackage.totalPrice > 0) {
+            const discountPercent = (weddingPackage as any).discountPercent != null
+              ? (weddingPackage as any).discountPercent / 100
+              : (weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice;
             return baseSum * (1 - discountPercent);
           }
           return baseSum;
-        })()
-      : (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0))
+        } else {
+          // Non-customized: use discountedPrice (the actual price after pkg discount)
+          return weddingPackage.discountedPrice != null
+            ? weddingPackage.discountedPrice
+            : (weddingPackage.totalPrice || 0);
+        }
+      })())
     : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
-      const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-        parseFloat(String(service.discountedPrice)) :
-        parseFloat(String(service.price || '0'));
+      const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined
+        ? parseFloat(String(service.discountedPrice))
+        : parseFloat(String(service.price || '0'));
 
       const addonsPrice = service.selectedAddons
         ? service.selectedAddons.reduce((sum, addon) => {
@@ -475,7 +512,7 @@ export function BookingSummary({
                   )}
                   <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
                     <span>Package Price</span>
-                    <span className="text-primary">₹{Math.round(subtotal)}</span>
+                    <span className="text-primary">₹{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -620,7 +657,7 @@ export function BookingSummary({
           </h4>
 
           <div className="bg-secondary/30 rounded-lg p-4 space-y-2">
-            {/* Itemized Services and Addons */}
+            {/* Itemized Services and Addons (regular services only) */}
             {!weddingPackage && selectedServices.length > 0 && (
               <div className="space-y-2 pb-2 border-b border-border/50">
                 {selectedServices.map((service) => {
@@ -650,9 +687,30 @@ export function BookingSummary({
               </div>
             )}
 
+            {/* Wedding Package: show Total Services → Package Discount → Subtotal */}
+            {weddingPackage && totalServicesPrice != null && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Services</span>
+                <span>₹{totalServicesPrice.toFixed(2)}</span>
+              </div>
+            )}
+
+            {weddingPackage && packageInherentDiscount > 0 && (() => {
+              const totalP = totalServicesPrice || 0;
+              const discountPct = totalP > 0 ? Math.round((packageInherentDiscount / totalP) * 100) : 0;
+              return (
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span className="text-muted-foreground">
+                    Package Discount{discountPct > 0 ? ` (${discountPct}%)` : ''}
+                  </span>
+                  <span>-₹{packageInherentDiscount.toFixed(2)}</span>
+                </div>
+              );
+            })()}
+
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
-              <span>₹{Math.round(subtotal)}</span>
+              <span>₹{subtotal.toFixed(2)}</span>
             </div>
 
             {priceBreakdown && priceBreakdown.platformFee > 0 && (
@@ -676,6 +734,7 @@ export function BookingSummary({
               </div>
             )}
 
+            {/* Offer code discount (separate from package's built-in discount) */}
             {priceBreakdown && priceBreakdown.discountAmount > 0 && (
               <div className="flex justify-between text-sm text-green-600 font-medium">
                 <span className="text-muted-foreground">

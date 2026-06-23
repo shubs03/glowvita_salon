@@ -2455,6 +2455,13 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["Vendor"],
     }),
+    getSmsBalance: builder.query({
+      query: () => ({
+        url: "/crm/sms-balance",
+        method: "GET"
+      }),
+      providesTags: ["Vendor"],
+    }),
 
     // Cart Endpoints (CRM)
     getCart: builder.query({
@@ -3503,6 +3510,7 @@ export const {
   useDeleteCustomizedTemplateMutation,
   usePurchaseSmsPackageMutation,
   useGetSmsPurchaseHistoryQuery,
+  useGetSmsBalanceQuery,
 
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,

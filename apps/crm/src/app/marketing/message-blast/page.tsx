@@ -9,7 +9,7 @@ import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { MessageSquare, Package, FileText, Plus, ArrowLeft } from 'lucide-react';
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery, useUpdateCrmCampaignMutation } from '@repo/store/services/api';
+import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery, useUpdateCrmCampaignMutation, useGetSmsBalanceQuery } from '@repo/store/services/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
 import { Rocket } from 'lucide-react';
@@ -76,6 +76,8 @@ export default function MessageBlastPage() {
   const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
   const [updateCrmCampaign, { isLoading: isLaunching }] = useUpdateCrmCampaignMutation();
 
+
+
   // Preload Razorpay script on mount
   useEffect(() => {
     loadRazorpayScript();
@@ -114,6 +116,16 @@ export default function MessageBlastPage() {
     skip: !isAuthenticated,
     refetchOnMountOrArgChange: true
   });
+  
+  // Fetch SMS Balance
+  const {
+    data: balanceResponse,
+    refetch: refetchBalance
+  } = useGetSmsBalanceQuery(undefined, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true
+  });
+  const smsBalance = balanceResponse?.data?.smsBalance ?? 0;
   
   // Fetch Purchase History
   const {
@@ -243,7 +255,8 @@ export default function MessageBlastPage() {
                 // Refresh packages and purchase history and wait for it
                 await Promise.all([
                   refetchPackages(),
-                  refetchPurchaseHistory()
+                  refetchPurchaseHistory(),
+                  refetchBalance()
                 ]);
                 resolve();
               } else {
@@ -295,6 +308,7 @@ export default function MessageBlastPage() {
       toast.success(`Campaign "${launchConfirmCampaign.name}" has been launched!`);
       setLaunchConfirmCampaign(null);
       refetchCampaigns();
+      refetchBalance();
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to launch campaign');
     }
@@ -302,20 +316,33 @@ export default function MessageBlastPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <Link href="/marketing">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Marketing
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Message Blast</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Link href="/marketing">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Marketing
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">Message Blast</h1>
+          </div>
         </div>
+        {isAuthenticated && (
+          <div className="flex items-center gap-3 bg-card border rounded-xl p-4 shadow-sm">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Available SMS Balance</p>
+              <p className="text-xl font-bold text-primary">{smsBalance.toLocaleString()}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mb-8">
+        <TabsList className="grid w-full grid-cols-2 max-w-lg mb-8">
           <TabsTrigger value="packages" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             SMS Packages
@@ -588,7 +615,10 @@ export default function MessageBlastPage() {
             <CreateCampaignModal 
               open={isCreateModalOpen} 
               onOpenChange={setIsCreateModalOpen}
-              onCampaignCreated={refetchCampaigns}
+              onCampaignCreated={() => {
+                refetchCampaigns();
+                refetchBalance();
+              }}
             />
             <CampaignDetailsModal
               campaign={selectedCampaign}
@@ -614,11 +644,16 @@ export default function MessageBlastPage() {
                     <span className="font-medium">{launchConfirmCampaign?.targetAudience}</span>.
                   </DialogDescription>
                 </DialogHeader>
+                {smsBalance <= 0 && (
+                  <div className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg border border-destructive/20 font-medium">
+                    ⚠️ Insufficient SMS balance ({smsBalance} remaining). Please purchase SMS packages before launching.
+                  </div>
+                )}
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={() => setLaunchConfirmCampaign(null)} disabled={isLaunching}>
                     Cancel
                   </Button>
-                  <Button onClick={handleLaunchCampaign} disabled={isLaunching} className="gap-2">
+                  <Button onClick={handleLaunchCampaign} disabled={isLaunching || smsBalance <= 0} className="gap-2">
                     <Rocket className="h-4 w-4" />
                     {isLaunching ? 'Launching...' : 'Yes, Launch'}
                   </Button>
@@ -627,6 +662,7 @@ export default function MessageBlastPage() {
             </Dialog>
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );

@@ -34,22 +34,31 @@ import { useAuth } from '../../hooks/useAuth';
 import { useGetPublicProductsQuery, useGetClientOrdersQuery, useGetClientCartQuery, useGetPublicAllOffersQuery } from "@repo/store/api";
 import { useGetDoctorWishlistQuery, useGetSalonWishlistQuery } from "@repo/store/services/api";
 import { useUserAppointments } from '../../hooks/useUserAppointments';
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 
 function OverviewContent() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const { userLat, userLng } = useSalonFilter();
 
   // Fetch user appointments
   const { appointments: appointmentsData = [], isLoading: isLoadingAppointments } = useUserAppointments();
 
   // Fetch products for new products section
-  const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery(undefined);
+  const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery({
+    lat: userLat || undefined,
+    lng: userLng || undefined,
+  });
 
   // // Fetch offers
   const { data: offersResponse, isLoading: isLoadingOffers } = useGetPublicAllOffersQuery(undefined);
 
   // Fetch client orders
-  const { data: ordersData = [] } = useGetClientOrdersQuery(undefined, { skip: !isAuthenticated || !user?._id });
+  const { data: ordersData = [] } = useGetClientOrdersQuery(undefined, {
+    skip: !isAuthenticated || !user?._id,
+    pollingInterval: 5000,
+    refetchOnMountOrArgChange: true,
+  });
 
   // Fetch client cart
   const { data: cartData } = useGetClientCartQuery(undefined, { skip: !isAuthenticated || !user?._id });
@@ -552,7 +561,9 @@ function OverviewContent() {
             ) : newProducts.length > 0 ? (
               newProducts.map((product) => (
                 <div key={product.name} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
-                  <img src={product.image} alt={product.name} width={48} height={48} className="rounded-md" />
+                  <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-md relative">
+                    <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
+                  </div>
                   <div className="flex-1">
                     <h4 className="font-semibold">{product.name}</h4>
                     <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
