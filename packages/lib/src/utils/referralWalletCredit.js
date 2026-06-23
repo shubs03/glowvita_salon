@@ -89,7 +89,18 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
 
     // 2b. Check creditTime gate — only proceed if the current trigger matches the configured creditTime
     const configuredCreditTime = settings.referrerBonus?.creditTime;
-    if (configuredCreditTime && configuredCreditTime !== triggerEvent) {
+    const isC2CorC2V = ['C2C', 'C2V'].includes(referral.referralType);
+    const isAppointmentOrOrderEvent = [
+      'appointment',
+      'booking',
+      'order',
+      'first_order',
+      'wedding_package',
+      'consultation',
+    ].includes(triggerEvent);
+
+    // For C2C/C2V referrals, we always credit instantly upon appointment or order completion, bypassing any duration/time configuration
+    if (triggerEvent !== 'manual_claim' && !(isC2CorC2V && isAppointmentOrOrderEvent) && configuredCreditTime && configuredCreditTime !== triggerEvent) {
       // Map common aliases so 'subscription_purchase' matches 'subscription' etc.
       const triggerAliases = {
         'subscription_purchase': ['subscription', 'subscription_purchase', 'plan_purchase'],
@@ -171,11 +182,8 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
     }
 
     if (!referrer) {
-      if (session) {
-        try { await session.abortTransaction(); } catch (_) {}
-        session.endSession();
-      }
-      return { success: false, message: `Referrer (${referral.referrerType}) not found` };
+      console.warn(`[Referral Bonus] Referrer account (${referral.referrerType}: ${referrerId}) not found — will still mark referral as Completed.`);
+      // Don't bail out — still update the referral status below so it doesn't stay Pending forever.
     }
 
     const referrerName = referrer?.businessName || referrer?.shopName || referrer?.name || `${referrer?.firstName || ''} ${referrer?.lastName || ''}`.trim() || 'Referrer';
@@ -185,7 +193,7 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
     const bonusValue = settings.referrerBonus?.bonusValue || 0;
     const creditAmount = parseFloat(bonusValue);
 
-    if (creditAmount > 0) {
+    if (creditAmount > 0 && referrer) {
       const balanceBefore = referrer.wallet || 0;
       const balanceAfter = balanceBefore + creditAmount;
 
@@ -222,6 +230,10 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
       );
 
       console.log(`[Referral Bonus] Successfully credited ₹${creditAmount} to referrer: ${referrerName}`);
+    } else if (creditAmount > 0 && !referrer) {
+      console.warn(`[Referral Bonus] ⚠️ Referrer not found \u2014 wallet credit skipped but referral will still be marked Completed.`);
+    } else {
+      console.log(`[Referral Bonus] bonusValue is 0 or not configured \u2014 no wallet transaction created.`);
     }
 
     // 5. Credit referee bonus (if enabled in settings)
@@ -332,19 +344,42 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
  */
 export async function checkAndCreditReferralBonus(userId, eventType = 'appointment') {
   try {
-    console.log(`[Referral Bonus] Checking bonus for user: ${userId}, event: ${eventType}`);
+    const userIdStr = userId?.toString();
+    console.log(`[Referral Bonus] ===== checkAndCreditReferralBonus =====`);
+    console.log(`[Referral Bonus] userId: ${userIdStr}, event: ${eventType}`);
 
-    // Find a pending referral where this user is the referee
-    // We search across all types (C2C, V2V, etc.)
-    const referral = await ReferralModel.findOne({
-      referee: userId.toString(),
+    if (!userIdStr) {
+      console.warn(`[Referral Bonus] No userId provided, skipping.`);
+      return { success: false, message: 'No userId provided' };
+    }
+
+    // Search by BOTH string and ObjectId to handle however the referee field was stored.
+    // This matches the same pattern used by checkAndCreditSubscriptionReferral.
+    let referralQuery = {
+      referee: userIdStr,
       status: 'Pending'
-    });
+    };
+
+    // Also try ObjectId form if the string is a valid ObjectId
+    if (mongoose.Types.ObjectId.isValid(userIdStr)) {
+      referralQuery = {
+        $or: [
+          { referee: userIdStr },
+          { referee: new mongoose.Types.ObjectId(userIdStr) }
+        ],
+        status: 'Pending'
+      };
+    }
+
+    console.log(`[Referral Bonus] Searching ReferralModel with query:`, JSON.stringify(referralQuery));
+    const referral = await ReferralModel.findOne(referralQuery);
 
     if (!referral) {
-      console.log(`[Referral Bonus] No pending referral found for referee: ${userId}`);
+      console.log(`[Referral Bonus] ❌ No pending referral found for referee: ${userIdStr}`);
       return { success: false, message: 'No eligible referral record found' };
     }
+
+    console.log(`[Referral Bonus] ✅ Found pending referral: ${referral.referralId} (type: ${referral.referralType})`);
 
     // Trigger the actual credit
     return await creditReferralBonus(referral._id, eventType);

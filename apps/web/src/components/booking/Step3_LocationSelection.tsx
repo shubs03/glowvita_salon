@@ -77,7 +77,6 @@ export function Step3_LocationSelection({
   const [isLoading, setIsLoading] = useState(false);
   const [registeredAddress, setRegisteredAddress] = useState<HomeServiceLocation | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
-  const lastSavedLocationKeyRef = useRef<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const autocompleteInstanceRef = useRef<any>(null); // Track autocomplete instance
   const hasInitiallyLoadedAddress = useRef(false); // Track if we've loaded address on mount
@@ -96,59 +95,6 @@ export function Step3_LocationSelection({
     lat: undefined,
     lng: undefined
   });
-
-  // When form is complete (from map selection), enable summary button by setting location
-  useEffect(() => {
-    const isFormComplete =
-      showMapSelector &&
-      locationForm.address &&
-      locationForm.city &&
-      locationForm.state &&
-      locationForm.pincode &&
-      locationForm.lat &&
-      locationForm.lng;
-
-    if (isFormComplete) {
-      const locationData: HomeServiceLocation = {
-        address: locationForm.address,
-        city: locationForm.city,
-        state: locationForm.state,
-        pincode: locationForm.pincode,
-        landmark: locationForm.landmark || '',
-        lat: Number(locationForm.lat),
-        lng: Number(locationForm.lng),
-        coordinates: {
-          lat: Number(locationForm.lat),
-          lng: Number(locationForm.lng)
-        }
-      };
-      // Silently enable the button without toast
-      console.log('[Step3_Location] Form complete, confirming location:', locationData);
-      onLocationConfirm(locationData);
-      hasInitiallyLoadedAddress.current = true; // Mark as loaded to prevent future auto-selects
-
-      const existingMatch = savedAddresses.some((address) => {
-        const addrLat = Number(address.location?.lat ?? address.lat ?? 0);
-        const addrLng = Number(address.location?.lng ?? address.lng ?? 0);
-        return addrLat === locationData.lat && addrLng === locationData.lng;
-      });
-      const locationKey = `${locationData.lat},${locationData.lng}`;
-
-      if (!existingMatch && lastSavedLocationKeyRef.current !== locationKey) {
-        lastSavedLocationKeyRef.current = locationKey;
-        saveAddressToProfile(locationData);
-      }
-    }
-  }, [
-    locationForm.address,
-    locationForm.city,
-    locationForm.state,
-    locationForm.pincode,
-    locationForm.lat,
-    locationForm.lng,
-    savedAddresses,
-    showMapSelector
-  ]);
 
   // Fetch user's registered address and saved addresses (skip for wedding packages)
   useEffect(() => {
@@ -1047,7 +993,7 @@ export function Step3_LocationSelection({
                 <Button
                   size="lg"
                   className="w-full"
-                  onClick={() => {
+                  onClick={async () => {
                     const locationData: HomeServiceLocation = {
                       address: locationForm.address,
                       city: locationForm.city,
@@ -1062,6 +1008,8 @@ export function Step3_LocationSelection({
                       }
                     };
                     onLocationConfirm(locationData);
+                    await saveAddressToProfile(locationData);
+                    hasInitiallyLoadedAddress.current = true;
                     toast.success('Address confirmed!');
                   }}
                 >

@@ -879,6 +879,11 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             });
         } else {
             // Logic for completing an appointment and calculating staff commission
+            console.log(`[CRM PATCH] ===== PATCH HANDLER REACHED =====`);
+            console.log(`[CRM PATCH] Appointment ID: ${appointmentId}`);
+            console.log(`[CRM PATCH] New status: ${body.status}`);
+            console.log(`[CRM PATCH] existingAppointment.client (raw):`, existingAppointment.client?.toString());
+
             const updateFields = { status: body.status };
 
             // Use findOne and save instead of findOneAndUpdate to trigger pre-save hooks (like commission calculation)
@@ -900,6 +905,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
 
             // CENTRALIZED INVOICE GENERATION LOGIC
             if (body.status === 'completed' || body.status === 'completed without payment') {
+                console.log(`[CRM PATCH] Status is completion status — running referral + invoice logic`);
                 try {
                     const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
                     const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
@@ -921,46 +927,51 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                     console.error("[PATCH] Error syncing staff commission:", commError);
                 }
 
-                // Check and credit referral bonus if user was referred (triggers on first completed appointment)
+                // ===== REFERRAL BONUS CHECK =====
+                // Use existingAppointment.client (raw ObjectId BEFORE any populate) for user ID resolution
                 console.log(`[CRM Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
                 console.log(`[CRM Referral] Appointment ID: ${appointmentId}`);
-                console.log(`[CRM Referral] Appointment status: ${updatedAppointment.status}`);
-                // LOGIC FIX: Handle both online (User ID) and offline (Client ID) modes
+                console.log(`[CRM Referral] existingAppointment.client:`, existingAppointment.client?.toString());
+
+                // ROBUST USER ID RESOLUTION:
+                // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
+                // Step 1: Try using the client field value directly as a User ID.
+                // Step 2: If not found, look up Client model to get the linked userId.
                 let targetUserId = null;
+                // Always use existingAppointment.client — it is the raw ObjectId before populate
+                const rawClientValue = existingAppointment.client?.toString();
 
-                if (updatedAppointment.mode === 'online') {
-                    // For online appointments, client field IS the User ID
-                    // We need to check if it's an object (populated) or string/ObjectId
-                    if (updatedAppointment.client && updatedAppointment.client._id) {
-                        targetUserId = updatedAppointment.client._id.toString();
-                    } else {
-                        targetUserId = updatedAppointment.client?.toString();
-                    }
-                    console.log(`[CRM Referral] Online appointment detected. Using client field as User ID: ${targetUserId}`);
-                } else {
-                    // For offline appointments, client field is Client ID. We need to find if this Client is linked to a User.
-                    // Note: The client field might be populated or just an ID depending on the finding logic
-                    let clientIdToCheck = null;
-                    if (updatedAppointment.client && updatedAppointment.client._id) {
-                        clientIdToCheck = updatedAppointment.client._id;
-                    } else if (updatedAppointment.client) {
-                        clientIdToCheck = updatedAppointment.client;
+                console.log(`[CRM Referral] rawClientValue: ${rawClientValue}`);
+                if (rawClientValue) {
+                    try {
+                        // Step 1: Check if rawClientValue is a valid User ID directly
+                        const UserModelRef = (await import('@repo/lib/models/user/User.model')).default;
+                        const userDoc = await UserModelRef.findById(rawClientValue).select('_id').lean();
+                        if (userDoc) {
+                            targetUserId = rawClientValue;
+                            console.log(`[CRM Referral] client field resolved directly to User ID: ${targetUserId}`);
+                        }
+                    } catch (userErr) {
+                        console.warn(`[CRM Referral] client field not a direct User ID, trying Client model:`, userErr.message);
                     }
 
-                    if (clientIdToCheck) {
+                    if (!targetUserId) {
                         try {
-                            const ClientModel = (await import('@repo/lib/models/Vendor/Client.model')).default;
-                            const clientDoc = await ClientModel.findById(clientIdToCheck).select('userId');
+                            // Step 2: client field is a Client record ID — look up linked userId
+                            const ClientModelRef = (await import('@repo/lib/models/Vendor/Client.model')).default;
+                            const clientDoc = await ClientModelRef.findById(rawClientValue).select('userId').lean();
                             if (clientDoc && clientDoc.userId) {
                                 targetUserId = clientDoc.userId.toString();
-                                console.log(`[CRM Referral] Offline appointment linked to User ID: ${targetUserId}`);
+                                console.log(`[CRM Referral] Resolved via Client model → User ID: ${targetUserId}`);
                             } else {
-                                console.log(`[CRM Referral] Offline appointment client not linked to any User`);
+                                console.log(`[CRM Referral] Client record found but not linked to any User account`);
                             }
                         } catch (clientErr) {
-                            console.error(`[CRM Referral] Error fetching client details:`, clientErr);
+                            console.error(`[CRM Referral] Error fetching Client record:`, clientErr);
                         }
                     }
+                } else {
+                    console.log(`[CRM Referral] No client value on appointment, cannot resolve User ID`);
                 }
 
                 if (targetUserId) {

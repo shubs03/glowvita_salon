@@ -110,30 +110,43 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             console.log(`[CRM ID Route] Update status: ${updateObject.status}`);
             console.log(`[CRM ID Route] existingAppointment.client:`, existingAppointment.client);
 
-            // LOGIC FIX: Handle both online (User ID) and offline (Client ID) modes
+            // ROBUST USER ID RESOLUTION:
+            // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
+            // Step 1: Try using the client field value directly as a User ID.
+            // Step 2: If no referral found, look up Client model to get the linked userId.
             let targetUserId = null;
+            const rawClientValue = existingAppointment.client?.toString();
 
-            if (existingAppointment.mode === 'online') {
-                // For online appointments, client field IS the User ID
-                targetUserId = existingAppointment.client?.toString();
-                console.log(`[CRM ID Route] Online appointment detected. Using client field as User ID: ${targetUserId}`);
-            } else {
-                // For offline appointments, client field is Client ID. We need to find if this Client is linked to a User.
-                // Note: existingAppointment.client is an ObjectId (not populated yet in this scope)
-                if (existingAppointment.client) {
+            if (rawClientValue) {
+                try {
+                    // Step 1: Check if rawClientValue is a valid User ID directly
+                    const UserModel = (await import('@repo/lib/models/user/User.model')).default;
+                    const userDoc = await UserModel.findById(rawClientValue).select('_id').lean();
+                    if (userDoc) {
+                        targetUserId = rawClientValue;
+                        console.log(`[CRM ID Route] client field resolved directly to User ID: ${targetUserId}`);
+                    }
+                } catch (userErr) {
+                    console.warn(`[CRM ID Route] client field not a direct User ID, trying Client model:`, userErr.message);
+                }
+
+                if (!targetUserId) {
                     try {
+                        // Step 2: client field is a Client record ID — look up linked userId
                         const ClientModel = (await import('@repo/lib/models/Vendor/Client.model')).default;
-                        const clientDoc = await ClientModel.findById(existingAppointment.client).select('userId');
+                        const clientDoc = await ClientModel.findById(rawClientValue).select('userId').lean();
                         if (clientDoc && clientDoc.userId) {
                             targetUserId = clientDoc.userId.toString();
-                            console.log(`[CRM ID Route] Offline appointment linked to User ID: ${targetUserId}`);
+                            console.log(`[CRM ID Route] Resolved via Client model → User ID: ${targetUserId}`);
                         } else {
-                            console.log(`[CRM ID Route] Offline appointment client not linked to any User`);
+                            console.log(`[CRM ID Route] Client record found but not linked to any User account`);
                         }
                     } catch (clientErr) {
-                        console.error(`[CRM ID Route] Error fetching client details:`, clientErr);
+                        console.error(`[CRM ID Route] Error fetching Client record:`, clientErr);
                     }
                 }
+            } else {
+                console.log(`[CRM ID Route] No client value on appointment, cannot resolve User ID`);
             }
 
             if (targetUserId) {

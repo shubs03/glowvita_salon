@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@repo/ui/badge';
 import { Pagination } from '@repo/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { useGetClientReferralsQuery, useClaimReferralBonusMutation } from '@repo/store/api';
+import { useGetClientReferralsQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 import { NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from '@repo/config/config';
 
@@ -41,8 +41,7 @@ export default function ReferralsPage() {
     skip: !isAuthenticated || !user?._id
   });
 
-  // Claim bonus mutation
-  const [claimBonus, { isLoading: isClaiming }] = useClaimReferralBonusMutation();
+
 
   const referralCode = referralData?.data?.referralCode || 'LOADING';
   const isValidCode = referralCode !== 'N/A' && referralCode !== 'LOADING' && referralCode !== 'NOTAVAILABLE';
@@ -102,20 +101,7 @@ export default function ReferralsPage() {
     }
   };
 
-  const handleClaimBonus = async (referralId: string) => {
-    try {
-      const result = await claimBonus({ referralId }).unwrap();
-      if (result.success) {
-        toast.success('Bonus claimed successfully! Check your wallet.');
-        refetch(); // Refresh the referral data
-      } else {
-        toast.error(result.message || 'Failed to claim bonus');
-      }
-    } catch (error: any) {
-      console.error('Error claiming bonus:', error);
-      toast.error(error?.data?.message || 'Failed to claim bonus. Please try again.');
-    }
-  };
+
 
   if (isLoading) {
     return (
@@ -423,17 +409,6 @@ export default function ReferralsPage() {
                           <Badge className={getStatusColor(referral.status)}>
                             {referral.status}
                           </Badge>
-                          {referral.status === 'Joined' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleClaimBonus(referral.id)}
-                              disabled={isClaiming}
-                              className="h-7 px-2 text-xs"
-                            >
-                              {isClaiming ? 'Claiming...' : 'Claim Bonus'}
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

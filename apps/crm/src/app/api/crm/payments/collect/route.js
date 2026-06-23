@@ -687,34 +687,64 @@ export const POST = authMiddlewareCrm(async (req) => {
       // This is crucial for offline/pay-at-salon appointments handled via Collect Payment
       if (appointmentStatus === 'completed') {
           console.log(`[Collect Payment Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
+
+          // ROBUST USER ID RESOLUTION:
+          // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
+          // Step 1: Try using the client field value directly as a User ID.
+          // Step 2: If not found, look up Client model to get the linked userId.
           let targetUserId = null;
-          
-          if (finalAppointment.mode === 'online') {
-              targetUserId = finalAppointment.client?.toString();
-          } else {
-              // For offline, check if client is linked to a system user
-              const clientId = finalAppointment.client;
-              if (clientId) {
+          const rawClientValue = finalAppointment.client?.toString();
+          console.log(`[Collect Payment Referral] Raw client value from appointment: ${rawClientValue}`);
+
+          if (rawClientValue) {
+              try {
+                  // Step 1: Check if rawClientValue is a valid User ID directly
+                  const { default: UserModelLib } = await import('../../../../../../../../packages/lib/src/models/user/User.model');
+                  const userDoc = await UserModelLib.findById(rawClientValue).select('_id').lean();
+                  if (userDoc) {
+                      targetUserId = rawClientValue;
+                      console.log(`[Collect Payment Referral] client field resolved directly to User ID: ${targetUserId}`);
+                  }
+              } catch (userErr) {
+                  console.warn(`[Collect Payment Referral] client field not a direct User ID, trying Client model:`, userErr.message);
+              }
+
+              if (!targetUserId) {
                   try {
-                      // Import dynamically to avoid issues
+                      // Step 2: client field is a Client record ID — look up linked userId
                       const { default: ClientModelLib } = await import('../../../../../../../../packages/lib/src/models/Vendor/Client.model');
-                      const clientDoc = await ClientModelLib.findById(clientId).select('userId');
+                      const clientDoc = await ClientModelLib.findById(rawClientValue).select('userId').lean();
                       if (clientDoc && clientDoc.userId) {
                           targetUserId = clientDoc.userId.toString();
+                          console.log(`[Collect Payment Referral] Resolved via Client model → User ID: ${targetUserId}`);
+                      } else {
+                          console.log(`[Collect Payment Referral] Client record found but not linked to any User account`);
                       }
                   } catch (err) {
-                      console.error(`[Collect Payment Referral] Error fetching client:`, err);
+                      console.error(`[Collect Payment Referral] Error fetching Client record:`, err);
                   }
               }
+          } else {
+              console.log(`[Collect Payment Referral] No client value on appointment, cannot resolve User ID`);
           }
 
           if (targetUserId) {
               try {
+                  console.log(`[Collect Payment Referral] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
                   const { checkAndCreditReferralBonus } = await import('../../../../../../../../packages/lib/src/utils/referralWalletCredit');
-                  await checkAndCreditReferralBonus(targetUserId, 'appointment');
+                  const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
+                  console.log(`[Collect Payment Referral] Success: ${referralResult.success}`);
+                  console.log(`[Collect Payment Referral] Message: ${referralResult.message}`);
+                  if (referralResult.success) {
+                      console.log(`[Collect Payment Referral] ✅ Referral bonus credited successfully!`);
+                  } else {
+                      console.warn(`[Collect Payment Referral] ⚠️ Referral bonus not credited: ${referralResult.message}`);
+                  }
               } catch (referralError) {
                   console.error('[Collect Payment Referral] Error crediting bonus:', referralError);
               }
+          } else {
+              console.log(`[Collect Payment Referral] ❌ No valid User ID found for referral bonus check`);
           }
       }
 
