@@ -128,6 +128,7 @@ export interface WeddingPackage {
   }>;
   totalPrice: number;
   discountedPrice?: number | null;
+  discountPercent?: number | null;
   duration: number;
   staffCount?: number;
   assignedStaff?: Array<string | { _id: string; name: string }>;
@@ -327,6 +328,7 @@ export const useWeddingPackages = (salonId: string) => {
         services: processedServices,
         totalPrice: pkg.totalPrice || 0,
         discountedPrice: pkg.discountedPrice !== undefined ? pkg.discountedPrice : null,
+        discountPercent: pkg.discountPercent !== undefined ? pkg.discountPercent : null,
         duration: pkg.duration || 0,
         image: pkg.image || '',
         status: pkg.status || 'approved',

@@ -103,9 +103,11 @@ export function Step1_WeddingPackageCustomizer({
     const totalPrice = calculateTotalPrice();
     const totalDuration = calculateTotalDuration();
 
-    // Calculate package discount percentage based on original package price vs discounted package price
+    // Calculate package discount percentage — use stored discountPercent if available for precision
     const discountPercent = weddingPackage.totalPrice && weddingPackage.discountedPrice
-        ? (weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice
+        ? ((weddingPackage as any).discountPercent != null
+            ? (weddingPackage as any).discountPercent / 100
+            : Math.round(((weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice) * 100) / 100)
         : 0;
     const calculatedDiscountedPrice = totalPrice * (1 - discountPercent);
     const savings = totalPrice - calculatedDiscountedPrice;

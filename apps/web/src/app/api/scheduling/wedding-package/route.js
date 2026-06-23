@@ -223,18 +223,58 @@ export async function PUT(request) {
     const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
     const vendor = await VendorModel.findById(weddingPackage.vendorId).select('regionId').lean();
 
-    // Calculate amounts with offer code discount
-    // baseAmount is the subtotal (service price)
-    const baseAmount = Number(selectedSlot.totalAmount) || (weddingPackage.discountedPrice || weddingPackage.totalPrice);
-    const discountAmount = Number(selectedSlot.discountAmount) || 0;
-    
+    // Calculate implicit discount percentage from wedding package if it exists
+    let packageDiscountPercentage = 0;
+    if (weddingPackage.totalPrice > 0 && weddingPackage.discountedPrice !== null && weddingPackage.discountedPrice < weddingPackage.totalPrice) {
+      packageDiscountPercentage = ((weddingPackage.totalPrice - weddingPackage.discountedPrice) / weddingPackage.totalPrice) * 100;
+    }
+
+    const isEditablePackage = !!customizedPackageServices && customizedPackageServices.length > 0;
+
+    // We only apply the percentage if we don't already have an explicit discountAmount provided
+    const discount = Number(selectedSlot.discount) || packageDiscountPercentage || 0;
+    const explicitDiscountAmount = Number(selectedSlot.discountAmount);
+
+    let baseAmount;
+    let discountAmount;
+    let subtotal;
+
+    if (isEditablePackage) {
+      // Editable Packages: calculate from rawServicesTotal
+      const rawServicesTotal = customizedPackageServices.reduce((sum, svc) => {
+        // Handle nested or flat price properties depending on what's available
+        let price = svc.price;
+        if (price === undefined && svc.servicePrice !== undefined) price = svc.servicePrice;
+        if (price === undefined && svc.amount !== undefined) price = svc.amount;
+        return sum + (Number(price) || 0);
+      }, 0);
+
+      discountAmount = explicitDiscountAmount > 0
+        ? explicitDiscountAmount
+        : (discount > 0 ? (rawServicesTotal * discount / 100) : 0);
+
+      subtotal = rawServicesTotal - discountAmount;
+      baseAmount = rawServicesTotal; // Keep consistent for finalAmount formula
+    } else {
+      // Non-Editable Packages: keep current behavior exactly as it is
+      baseAmount = Number(selectedSlot.totalAmount) || weddingPackage.totalPrice;
+
+      discountAmount = explicitDiscountAmount > 0
+        ? explicitDiscountAmount
+        : (discount > 0 ? (baseAmount * discount / 100) : 0);
+
+      subtotal = baseAmount - discountAmount;
+    }
+
     // Extract fee fields from selectedSlot
     const platformFee = Number(selectedSlot.platformFee) || 0;
     const serviceTax = Number(selectedSlot.serviceTax) || 0;
     const taxRate = Number(selectedSlot.taxRate) || 0;
 
-    // finalAmount = subtotal + fees + taxes - discount
-    const finalAmount = selectedSlot.finalAmount || (baseAmount + platformFee + serviceTax - discountAmount);
+    // finalAmount = subtotal + fees + taxes
+    const calculatedFinalAmount = subtotal + platformFee + serviceTax;
+    // Prefer our backend calculation if it differs to fix incorrect frontend payloads
+    const finalAmount = calculatedFinalAmount;
 
     // Helper functions for time conversion
     const timeToMinutes = (timeStr) => {
@@ -281,10 +321,10 @@ export async function PUT(request) {
     if (!!selectedSlot.location && travelTime > 0) {
       const startMin = timeToMinutes(selectedSlot.startTime);
       const endMin = timeToMinutes(selectedSlot.endTime);
-      
+
       const preTravelStart = startMin - travelTime;
       const preTravelEnd = startMin;
-      
+
       const postTravelStart = endMin;
       const postTravelEnd = endMin + travelTime;
 
@@ -331,8 +371,9 @@ export async function PUT(request) {
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
       duration: weddingPackage.duration || 120,
-      amount: baseAmount,
-      totalAmount: baseAmount,
+      amount: subtotal,
+      totalAmount: subtotal,
+      discount: discount,
       discountAmount: discountAmount,
       couponCode: selectedSlot.couponCode || null,
       platformFee: platformFee,
