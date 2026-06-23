@@ -62,6 +62,12 @@ export async function GET(request) {
           applicableServices: offer.applicableServices,
           applicableServiceNames: offer.applicableServices ? offer.applicableServices.map(id => serviceMap[id.toString()]).filter(Boolean) : [],
           applicableServiceCategories: offer.applicableServiceCategories,
+          applicableSpecialties: offer.applicableSpecialties || [],
+          applicableCategories: offer.applicableCategories || [],
+          businessType: 'vendor',
+          businessId: offer.businessId,
+          isVendorOffer: true,
+          isAdminGlobal: false,
           createdAt: offer.createdAt
         });
       }

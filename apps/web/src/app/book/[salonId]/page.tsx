@@ -232,14 +232,26 @@ function BookingPageContent() {
     error
   } = useBookingData(salonId as string);
 
-  // Fetch all offers (Admin + CRM)
-  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicAllOffersQuery({
+  // Fetch all offers (Admin)
+  const { data: adminOffersData, isLoading: isAdminOffersLoading } = useGetPublicAllOffersQuery({
     vendorId: salonId as string,
     regionId: (salonInfo as any)?.regionId
   }, {
     skip: !salonId
   });
-  const vendorOffers = vendorOffersData?.data || [];
+
+  // Fetch CRM offers
+  const { data: crmOffersData, isLoading: isCrmOffersLoading } = useGetPublicVendorOffersQuery(salonId as string, {
+    skip: !salonId
+  });
+
+  const vendorOffers = useMemo(() => {
+    const adminOffers = Array.isArray(adminOffersData) ? adminOffersData : (adminOffersData?.data || []);
+    const crmOffers = Array.isArray(crmOffersData) ? crmOffersData : (crmOffersData?.data || []);
+    return [...adminOffers, ...crmOffers];
+  }, [adminOffersData, crmOffersData]);
+
+  const isOffersLoading = isAdminOffersLoading || isCrmOffersLoading;
 
   // Debug log for offers
   useEffect(() => {
@@ -4821,7 +4833,7 @@ function BookingPageContent() {
 
                       {/* Offer Dropdown */}
                       {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
+                        <div id="offer-dropdown" className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
                           {isOffersLoading ? (
                             <div className="p-4 text-center text-xs text-muted-foreground">
                               <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
