@@ -2,7 +2,7 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Dialog, DialogContent } from "@repo/ui/dialog";
-import { Calendar, Clock, Scissors, User, DollarSign, Info, X, Edit, Trash2, FileText, Printer, Download } from 'lucide-react';
+import { Calendar, Clock, Scissors, User, Banknote, Info, X, Edit, FileText, Printer, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Appointment, ServiceItem } from '@repo/types';
 import { useState, useMemo } from 'react';
@@ -352,9 +352,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
                 <Edit className="h-4 w-4" />
               </Button>
             )}
-          <Button variant="outline" size="icon" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </Button>
+
           <Button variant="outline" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -574,7 +572,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
         <Card className="flex flex-col h-full">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
-              <DollarSign className="h-4 w-4 mr-2" />
+              <Banknote className="h-4 w-4 mr-2" />
               Payment
             </CardTitle>
           </CardHeader>
@@ -627,11 +625,11 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             {remainingAmount > 0 && appointment.status !== 'cancelled' && onPaymentCollect && (
               <Button
                 onClick={onPaymentCollect}
-                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isFutureAppointment}
                 title={isFutureAppointment ? "Cannot collect payment before appointment date" : "Collect Payment"}
               >
-                <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
+                Collect Remaining ₹{remainingAmount.toFixed(2)}
               </Button>
             )}
           </CardContent>
