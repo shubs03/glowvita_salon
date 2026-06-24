@@ -6,6 +6,10 @@ import { Textarea } from "@repo/ui/textarea";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { toast } from "sonner";
 
+// Google Fonts to load (includes Marathi/Devanagari fonts)
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Mukta:wght@400;700&family=Khand:wght@400;700&family=Yatra+One&family=Rozha+One&family=Noto+Sans+Devanagari:wght@400;700&family=Poppins:wght@400;700&family=Montserrat:wght@400;700&family=Inter:wght@400;700&family=Playfair+Display:wght@400;700&family=Dancing+Script:wght@400;700&family=Pacifico&display=swap";
+
 interface CanvasTemplateEditorProps {
   initialImage?: string;
   initialJsonData?: any;
@@ -118,6 +122,19 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
       .catch(() => toast.error("Could not load design editor."));
   }, []);
 
+  // ── Load Google Fonts (Marathi + premium) ───────────────────────────────────
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const id = 'gf-canvas-editor';
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = GOOGLE_FONTS_URL;
+      document.head.appendChild(link);
+    }
+  }, []);
+
   // ── Sync sidebar text controls ─────────────────────────────────────────────
   const syncControls = useCallback((obj: any) => {
     if (!obj || obj.type !== "textbox") return;
@@ -210,9 +227,11 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
     // Helper: fetch image as data URL to avoid CORS taint, then set as canvas background
     const addBg = (src: string, done: () => void) => {
-      const absUrl = (src.startsWith("data:") || src.startsWith("http"))
+      const absUrl = src.startsWith("data:")
         ? src
-        : `${window.location.origin}${src.startsWith("/") ? "" : "/"}${src}`;
+        : src.startsWith("http")
+          ? (() => { try { const u = new URL(src); return `${window.location.origin}${u.pathname}`; } catch { return src; } })()
+          : `${window.location.origin}${src.startsWith("/") ? "" : "/"}${src}`;
 
       // Always store the canonical (non-data) URL for JSON serialisation
       if (!src.startsWith("data:")) {
@@ -413,6 +432,8 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
   const removeSelected = () => {
     const c = fcRef.current; const o = c?.getActiveObject();
+    // Never allow the watermark to be removed
+    if (o && (o as any).name === 'watermark') { return; }
     if (o && c) { c.remove(o); c.discardActiveObject(); c.renderAll(); setSel(null); }
   };
 
@@ -572,8 +593,16 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 500, display: "block", marginBottom: 4 }}>Font Family</label>
-                <select value={fontFamily} onChange={e => { setFontFamily(e.target.value); setProp("fontFamily", e.target.value); }} style={selectStyle}>
-                  {["Arial","Times New Roman","Helvetica","Georgia","Verdana","Impact","Courier New","Trebuchet MS"].map(f => <option key={f}>{f}</option>)}
+                <select value={fontFamily} onChange={e => { setFontFamily(e.target.value); setProp("fontFamily", e.target.value); }} style={{ ...selectStyle, fontFamily: fontFamily }}>
+                  <optgroup label="Standard">
+                    {["Arial","Times New Roman","Helvetica","Georgia","Verdana","Impact","Courier New","Trebuchet MS"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="Premium">
+                    {["Poppins","Montserrat","Inter","Playfair Display","Dancing Script","Pacifico"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="मराठी / Devanagari">
+                    {["Mukta","Khand","Yatra One","Rozha One","Noto Sans Devanagari"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
                 </select>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

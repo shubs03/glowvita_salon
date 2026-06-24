@@ -128,10 +128,19 @@ function SocialMediaTemplateFormContent({
     if (!imagePreview) return null;
     // Already a data URL — use as-is
     if (imagePreview.startsWith('data:image')) return imagePreview;
+    
+    // Normalize URL to current origin to handle local port mismatch (e.g. 3001 vs 3002)
+    if (imagePreview.startsWith('http')) {
+      try {
+        const u = new URL(imagePreview);
+        return u.pathname;
+      } catch {
+        return imagePreview;
+      }
+    }
+    
     // Already a relative path — use as-is
     if (imagePreview.startsWith('/')) return imagePreview;
-    // Full URL (http:// or https://) — use as-is
-    if (imagePreview.startsWith('http')) return imagePreview;
     // Plain filename — serve from current app uploads
     return `/uploads/${imagePreview}`;
   }, [imagePreview]);

@@ -9,6 +9,7 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
+  serverExternalPackages: ['html-pdf-node', 'inline-css'],
   transpilePackages: ["@repo/ui", "@repo/store", "@repo/lib", "@repo/config"],
   webpack: (config, { isServer }) => {
 
