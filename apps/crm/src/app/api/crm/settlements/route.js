@@ -126,8 +126,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         prevAppointments.forEach(appt => {
             const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
             if (appt.paymentMethod === 'Pay Online') {
-                openingAdminOwesVendor += ((appt.totalAmount || 0) - fees);
+                // For Pay Online: admin collected payment and owes vendor (service amount - fees)
+                const serviceAmount = (appt.finalAmount || appt.totalAmount || 0);
+                openingAdminOwesVendor += (serviceAmount - fees);
             } else {
+                // For Pay at Salon: vendor collected full payment from client.
+                // Vendor owes admin the platform fee + service tax.
+                // Fees are already computed on post-discount amount, so no extra adjustment needed.
                 openingVendorOwesAdmin += fees;
             }
         });
@@ -247,6 +252,7 @@ export const GET = authMiddlewareCrm(async (req) => {
                 totalAmount: appt.totalAmount || 0,
                 platformFee: appt.platformFee || 0,
                 serviceTax: appt.serviceTax || 0,
+                discountAmount: appt.discountAmount || appt.discount || 0,
                 finalAmount: appt.finalAmount || 0,
                 paymentStatus: appt.paymentStatus || 'pending',
                 paymentMethod: appt.paymentMethod || 'N/A',
@@ -256,16 +262,21 @@ export const GET = authMiddlewareCrm(async (req) => {
 
             settlement.appointments.push(appointmentData);
 
-            const serviceAmount = (appt.totalAmount || 0);
             const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
 
-            settlement.totalAmount += appt.finalAmount || 0;
+            // Use finalAmount (actual amount paid by client) for total volume tracking
+            settlement.totalAmount += appt.finalAmount || appt.totalAmount || 0;
             settlement.platformFeeTotal += appt.platformFee || 0;
             settlement.serviceTaxTotal += appt.serviceTax || 0;
 
             if (appt.paymentMethod === 'Pay Online') {
-                settlement.adminOwesVendor += (serviceAmount - fees);
+                // Admin collected the payment; owes vendor (finalAmount - fees)
+                const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+                settlement.adminOwesVendor += (finalAmt - fees);
             } else {
+                // Pay at Salon: vendor collected full payment from client.
+                // Fees (platformFee + serviceTax) are already computed on post-discount amount.
+                // Vendor simply owes admin those fees — no discount reimbursement from admin.
                 settlement.vendorOwesAdmin += fees;
             }
         });

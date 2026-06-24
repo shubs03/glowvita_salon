@@ -535,8 +535,13 @@ appointmentSchema.pre('save', async function (next) {
       const [hours, minutes] = this.endTime.split(':');
       endDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
 
-      if (endDateTime < now) {
-        this.status = 'completed';
+      // Add a 15-minute grace period before auto-marking as cancelled
+      if (endDateTime.getTime() + (15 * 60 * 1000) < now.getTime()) {
+        this.status = 'cancelled';
+        if (!this.cancellationReason) {
+          this.cancellationReason = 'This appointment was automatically cancelled due to client unavailability or not showing up.';
+          this.notes = this.notes ? this.notes + '\nAutomatically cancelled by system: Client unavailability.' : 'Automatically cancelled by system: Client unavailability.';
+        }
       }
     }
 
@@ -566,13 +571,13 @@ appointmentSchema.pre('save', async function (next) {
         if (travelTimeVal > 0) {
           const travelStartMin = startMin - travelTimeVal - bufferBeforeVal;
           const travelEndMin = startMin - bufferBeforeVal;
-          
+
           blocking.push({
             startTime: minutesToTime(travelStartMin),
             endTime: minutesToTime(travelEndMin),
             reason: 'Travel to customer location'
           });
-          
+
           blockedTravel.push({
             startTime: minutesToTime(travelStartMin),
             endTime: minutesToTime(travelEndMin),

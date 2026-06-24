@@ -1813,7 +1813,11 @@ export default function DayScheduleView({
       {/* New Appointment Dialog - only show for non-doctors */}
       {role !== 'doctor' && (
         <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent 
+            className="sm:max-w-2xl"
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
                 New Appointment for {newAppointmentDate && format(newAppointmentDate, 'EEEE, MMMM d, yyyy')}

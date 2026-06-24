@@ -647,6 +647,37 @@ export default function DailySchedulePage() {
             isVirtual: true // Flag to identify auto-generated staff
           });
         }
+
+        // For wedding/multi-service appointments, also scan serviceItems
+        // so every team member gets a column even if not the primary staff
+        if ((appt.isWeddingService || appt.isMultiService) && Array.isArray(appt.serviceItems)) {
+          appt.serviceItems.forEach((item: any) => {
+            if (!item.staffName || item.staffName === 'Any Professional') return;
+            const itemStaffExists = transformed.some(s =>
+              s.id === item.staff ||
+              s.name === item.staffName ||
+              (s.id && item.staff && s.id.toString() === item.staff.toString())
+            );
+            if (!itemStaffExists && !missingStaffMap.has(item.staffName)) {
+              missingStaffMap.set(item.staffName, {
+                id: item.staff || `virtual-${item.staffName.replace(/\s+/g, '-')}`,
+                name: item.staffName,
+                position: appt.isWeddingService ? 'Wedding Team' : 'Team Member',
+                isActive: true,
+                isAvailable: true,
+                isCurrentlyAvailable: true,
+                workingHours: { startTime: '08:00', endTime: '20:00', startHour: 8, endHour: 20 },
+                mondayAvailable: true, tuesdayAvailable: true, wednesdayAvailable: true,
+                thursdayAvailable: true, fridayAvailable: true, saturdayAvailable: true,
+                sundayAvailable: true, mondaySlots: [], tuesdaySlots: [], wednesdaySlots: [],
+                thursdaySlots: [], fridaySlots: [], saturdaySlots: [], sundaySlots: [],
+                hasWeekdayAvailability: true, hasWeekendAvailability: true, blockedTimes: [],
+                startTime: '08:00', endTime: '20:00', timezone: 'Asia/Kolkata',
+                isVirtual: true
+              });
+            }
+          });
+        }
       });
     }
 
@@ -1098,7 +1129,11 @@ export default function DailySchedulePage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
               {selectedAppointment ? 'Edit Appointment' : 'New Appointment'}

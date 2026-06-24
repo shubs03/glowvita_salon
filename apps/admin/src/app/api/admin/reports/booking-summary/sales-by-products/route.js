@@ -117,6 +117,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Build city filter pipeline
     const cityFilterPipeline = [
       { $match: combinedFilter },
+      { $unwind: "$items" },
       { 
         $lookup: { 
           from: "crm_products", 
@@ -182,7 +183,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get sales by products data
     const salesByProductsPipeline = [
       ...cityFilterPipeline,
-      { $unwind: "$items" }, // Unwind the items array to process each product separately
       {
         $group: {
           _id: {
@@ -354,6 +354,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique cities for the filter dropdown
     const cityPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
+      { $unwind: "$items" },
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
       {
@@ -392,6 +393,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique business names for the filter dropdown
     const businessNamePipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
+      { $unwind: "$items" },
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
       {
@@ -452,6 +454,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique categories for the filter dropdown
     const categoryPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
+      { $unwind: "$items" },
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
       // Lookup vendor/supplier info to apply userType filter
@@ -499,6 +502,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique brands for the filter dropdown
     const brandPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
+      { $unwind: "$items" },
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
       // Lookup vendor/supplier info to apply userType filter
