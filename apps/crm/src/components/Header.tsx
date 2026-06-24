@@ -9,7 +9,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
-import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import {
   DropdownMenu,
@@ -69,18 +68,19 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Remove all possible auth tokens from cookies
-      Cookies.remove('crm_access_token', { path: '/' });
-      Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
-      Cookies.remove('access_token', { path: '/' });
-      Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+      // IMPORTANT: Call server-side logout API to clear the httpOnly cookie.
+      // js-cookie (client-side) CANNOT remove httpOnly cookies — only the server can.
+      await fetch('/api/crm/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
 
       // Clear all auth-related data from localStorage
       localStorage.removeItem('crmAuthState');
       localStorage.removeItem('userAuthState');
       localStorage.removeItem('adminAuthState');
 
-      // Clear any other possible tokens
+      // Clear any other possible tokens from localStorage
       Object.keys(localStorage).forEach(key => {
         if (key.includes('token') || key.includes('auth')) {
           try {
@@ -91,10 +91,10 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
         }
       });
 
-      // This action will now trigger the root reducer to reset the entire state
+      // Clear Redux state
       dispatch(clearCrmAuth());
 
-      // Redirect to login page after state is cleared
+      // Redirect to login page
       router.push('/login');
       // Force a page refresh to ensure all state is cleared
       router.refresh();
