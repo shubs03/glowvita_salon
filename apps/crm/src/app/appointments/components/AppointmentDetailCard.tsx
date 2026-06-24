@@ -76,6 +76,9 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
   const paymentMethod = (appointment as any).paymentMethod ?? (appointment as any).payment?.paymentMethod ?? null;
   const paymentStatus = (appointment as any).paymentStatus ?? (appointment as any).payment?.paymentStatus ?? null;
 
+  // Check if appointment is in the future (after today)
+  const isFutureAppointment = new Date(new Date(appointment.date).setHours(0, 0, 0, 0)) > new Date(new Date().setHours(0, 0, 0, 0));
+
   // Calculate totals for services and add-ons
   const { totalBaseAmount, originalTotalBaseAmount, totalAddOnsAmount } = useMemo(() => {
     if (appointment.serviceItems && appointment.serviceItems.length > 0) {
@@ -624,7 +627,9 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
             {remainingAmount > 0 && appointment.status !== 'cancelled' && onPaymentCollect && (
               <Button
                 onClick={onPaymentCollect}
-                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white gap-2"
+                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isFutureAppointment}
+                title={isFutureAppointment ? "Cannot collect payment before appointment date" : "Collect Payment"}
               >
                 <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
               </Button>
