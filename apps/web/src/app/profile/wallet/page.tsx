@@ -14,32 +14,32 @@ import { Pagination } from '@repo/ui/pagination';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Alert, AlertDescription } from '@repo/ui/alert';
-import { 
-  useGetClientWalletQuery, 
-  useAddMoneyToWalletMutation,
-  useVerifyWalletPaymentMutation,
-  useWithdrawFromWalletMutation,
-  useGetWithdrawalHistoryQuery
+import {
+    useGetClientWalletQuery,
+    useAddMoneyToWalletMutation,
+    useVerifyWalletPaymentMutation,
+    useWithdrawFromWalletMutation,
+    useGetWithdrawalHistoryQuery
 } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 
 declare global {
-  interface Window {
-    Razorpay: any;
-  }
+    interface Window {
+        Razorpay: any;
+    }
 }
 
 type Transaction = {
-  _id: string;
-  transactionId: string;
-  transactionType: 'credit' | 'debit';
-  amount: number;
-  source: string;
-  status: string;
-  description: string;
-  createdAt: string;
-  balanceBefore: number;
-  balanceAfter: number;
+    _id: string;
+    transactionId: string;
+    transactionType: 'credit' | 'debit';
+    amount: number;
+    source: string;
+    status: string;
+    description: string;
+    createdAt: string;
+    balanceBefore: number;
+    balanceAfter: number;
 };
 
 export default function WalletPage() {
@@ -47,11 +47,11 @@ export default function WalletPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
-    
+
     // Add money states
     const [addAmount, setAddAmount] = useState('');
     const [isAddingMoney, setIsAddingMoney] = useState(false);
-    
+
     // Withdrawal states
     const [showWithdrawalDialog, setShowWithdrawalDialog] = useState(false);
     const [withdrawalAmount, setWithdrawalAmount] = useState('');
@@ -89,34 +89,24 @@ export default function WalletPage() {
 
     const handleAddMoney = async () => {
         const amount = parseFloat(addAmount);
-        
+
         if (isNaN(amount) || amount <= 0) {
             toast.error('Please enter a valid amount');
             return;
         }
 
-        if (amount < 10) {
-            toast.error('Minimum amount to add is ₹10');
-            return;
-        }
-
-        if (amount > 100000) {
-            toast.error('Maximum amount to add is ₹100,000');
-            return;
-        }
-
         try {
             setIsAddingMoney(true);
-            
+
             // Create Razorpay order
             const result = await addMoneyToWallet({ amount }).unwrap();
-            
+
             if (result.success && result.data.order) {
                 const { order, transactionId } = result.data;
-                
+
                 // Initialize Razorpay
                 const options = {
-                    key: order.razorpayKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                    key: order.razorpayKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                     amount: order.amount,
                     currency: order.currency,
                     name: 'GlowVita',
@@ -171,7 +161,7 @@ export default function WalletPage() {
                         color: '#7c3aed'
                     },
                     modal: {
-                        ondismiss: function() {
+                        ondismiss: function () {
                             setIsAddingMoney(false);
                             toast.info('Payment cancelled');
                         },
@@ -218,18 +208,18 @@ export default function WalletPage() {
             }
             return;
         }
-        
+
         if (!bankDetails.accountHolderName) {
             toast.error('Account holder name is required');
             return;
-        }   
+        }
 
         if (method === 'upi') {
             if (!(bankDetails as any).upiId) {
                 toast.error('Please enter UPI ID');
                 return;
             }
-            
+
             // Validate UPI ID format
             const upiRegex = /^[\w.-]+@[\w.-]+$/;
             if (!upiRegex.test((bankDetails as any).upiId)) {
@@ -326,29 +316,29 @@ export default function WalletPage() {
         <div className="space-y-6">
             {/* Stats Cards */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard 
-                    icon={Wallet} 
-                    title="Current Balance" 
-                    value={`₹${balance.toFixed(2)}`} 
-                    change="Available to spend" 
+                <StatCard
+                    icon={Wallet}
+                    title="Current Balance"
+                    value={`₹${balance.toFixed(2)}`}
+                    change="Available to spend"
                 />
-                <StatCard 
-                    icon={Gift} 
-                    title="Total Deposits" 
-                    value={`₹${stats.totalDeposits.toFixed(2)}`} 
-                    change="From all sources" 
+                <StatCard
+                    icon={Gift}
+                    title="Total Deposits"
+                    value={`₹${stats.totalDeposits.toFixed(2)}`}
+                    change="From all sources"
                 />
-                <StatCard 
-                    icon={Send} 
-                    title="Total Withdrawn" 
-                    value={`₹${stats.totalWithdrawals.toFixed(2)}`} 
-                    change="Transferred to bank" 
+                <StatCard
+                    icon={Send}
+                    title="Total Withdrawn"
+                    value={`₹${stats.totalWithdrawals.toFixed(2)}`}
+                    change="Transferred to bank"
                 />
-                <StatCard 
-                    icon={Gift} 
-                    title="Referral Earnings" 
-                    value={`₹${stats.totalReferralEarnings.toFixed(2)}`} 
-                    change="From referrals" 
+                <StatCard
+                    icon={Gift}
+                    title="Referral Earnings"
+                    value={`₹${stats.totalReferralEarnings.toFixed(2)}`}
+                    change="From referrals"
                 />
             </div>
 
@@ -366,19 +356,19 @@ export default function WalletPage() {
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="addAmount">Amount (₹)</Label>
-                                <Input 
+                                <Input
                                     id="addAmount"
-                                    type="number" 
-                                    placeholder="Enter amount" 
-                                    value={addAmount} 
+                                    type="number"
+                                    placeholder="Enter amount"
+                                    value={addAmount}
                                     onChange={(e) => setAddAmount(e.target.value)}
                                     min="10"
                                     max="100000"
                                     disabled={isAddingMoney || isAddingMoneyLoading}
                                 />
                             </div>
-                            <Button 
-                                onClick={handleAddMoney} 
+                            <Button
+                                onClick={handleAddMoney}
                                 className="w-full"
                                 disabled={isAddingMoney || isAddingMoneyLoading}
                             >
@@ -389,7 +379,7 @@ export default function WalletPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <Plus className="mr-2 h-4 w-4" /> 
+                                        <Plus className="mr-2 h-4 w-4" />
                                         Add Money
                                     </>
                                 )}
@@ -432,13 +422,13 @@ export default function WalletPage() {
                                     </AlertDescription>
                                 </Alert>
                             )}
-                            <Button 
-                                onClick={() => setShowWithdrawalDialog(true)} 
-                                variant="outline" 
+                            <Button
+                                onClick={() => setShowWithdrawalDialog(true)}
+                                variant="outline"
                                 className="w-full"
                                 disabled={balance < (withdrawalLimits.minWalletBalanceForWithdrawal || 50) || (withdrawalLimits && withdrawalLimits.canWithdrawToday === false)}
                             >
-                                <Send className="mr-2 h-4 w-4" /> 
+                                <Send className="mr-2 h-4 w-4" />
                                 Request Withdrawal
                             </Button>
                         </div>
@@ -455,23 +445,23 @@ export default function WalletPage() {
                             <CardDescription>A record of all your wallet transactions</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                            <Button 
-                                variant={filter === 'all' ? 'default' : 'outline'} 
-                                size="sm" 
+                            <Button
+                                variant={filter === 'all' ? 'default' : 'outline'}
+                                size="sm"
                                 onClick={() => { setFilter('all'); setCurrentPage(1); }}
                             >
                                 All
                             </Button>
-                            <Button 
-                                variant={filter === 'credit' ? 'default' : 'outline'} 
-                                size="sm" 
+                            <Button
+                                variant={filter === 'credit' ? 'default' : 'outline'}
+                                size="sm"
                                 onClick={() => { setFilter('credit'); setCurrentPage(1); }}
                             >
                                 Credits
                             </Button>
-                            <Button 
-                                variant={filter === 'debit' ? 'default' : 'outline'} 
-                                size="sm" 
+                            <Button
+                                variant={filter === 'debit' ? 'default' : 'outline'}
+                                size="sm"
                                 onClick={() => { setFilter('debit'); setCurrentPage(1); }}
                             >
                                 Debits
@@ -503,11 +493,10 @@ export default function WalletPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`p-1.5 rounded-full ${
-                                                        tx.transactionType === 'credit' 
-                                                            ? 'bg-green-100 text-green-600' 
+                                                    <div className={`p-1.5 rounded-full ${tx.transactionType === 'credit'
+                                                            ? 'bg-green-100 text-green-600'
                                                             : 'bg-red-100 text-red-600'
-                                                    }`}>
+                                                        }`}>
                                                         {tx.transactionType === 'credit' ? (
                                                             <ArrowDown className="h-3 w-3" />
                                                         ) : (
@@ -525,17 +514,16 @@ export default function WalletPage() {
                                             <TableCell>
                                                 <Badge variant={
                                                     tx.status === 'completed' ? 'default' :
-                                                    tx.status === 'pending' ? 'secondary' :
-                                                    tx.status === 'failed' ? 'destructive' : 'outline'
+                                                        tx.status === 'pending' ? 'secondary' :
+                                                            tx.status === 'failed' ? 'destructive' : 'outline'
                                                 }>
                                                     {tx.status}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className={`text-right font-semibold ${
-                                                tx.transactionType === 'credit' 
-                                                    ? 'text-green-600' 
+                                            <TableCell className={`text-right font-semibold ${tx.transactionType === 'credit'
+                                                    ? 'text-green-600'
                                                     : 'text-red-600'
-                                            }`}>
+                                                }`}>
                                                 {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
                                             </TableCell>
                                         </TableRow>
@@ -550,7 +538,7 @@ export default function WalletPage() {
                             </TableBody>
                         </Table>
                     </div>
-                    
+
                     {pagination.totalPages > 1 && (
                         <Pagination
                             className="mt-4"
@@ -574,14 +562,14 @@ export default function WalletPage() {
                             Enter withdrawal amount and bank details. Money will be credited within 30 minutes to 2 hours.
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4 py-4">
                         <div>
                             <Label htmlFor="withdrawalAmount">Withdrawal Amount (₹)</Label>
-                            <Input 
+                            <Input
                                 id="withdrawalAmount"
-                                type="number" 
-                                placeholder="Enter amount" 
+                                type="number"
+                                placeholder="Enter amount"
                                 value={withdrawalAmount}
                                 onChange={(e) => setWithdrawalAmount(e.target.value)}
                                 min={withdrawalLimits.minWithdrawal || 100}
@@ -601,46 +589,44 @@ export default function WalletPage() {
                                 <div className="flex bg-muted p-1 rounded-md">
                                     <button
                                         onClick={() => setBankDetails(prev => ({ ...prev, withdrawalMethod: 'bank_transfer' }))}
-                                        className={`text-xs px-3 py-1 rounded-sm transition-all ${
-                                            (bankDetails as any).withdrawalMethod !== 'upi' 
-                                                ? 'bg-background shadow-sm font-medium' 
+                                        className={`text-xs px-3 py-1 rounded-sm transition-all ${(bankDetails as any).withdrawalMethod !== 'upi'
+                                                ? 'bg-background shadow-sm font-medium'
                                                 : 'text-muted-foreground hover:text-foreground'
-                                        }`}
+                                            }`}
                                     >
                                         Bank Transfer
                                     </button>
                                     <button
                                         onClick={() => setBankDetails(prev => ({ ...prev, withdrawalMethod: 'upi' }))}
-                                        className={`text-xs px-3 py-1 rounded-sm transition-all ${
-                                            (bankDetails as any).withdrawalMethod === 'upi' 
-                                                ? 'bg-background shadow-sm font-medium' 
+                                        className={`text-xs px-3 py-1 rounded-sm transition-all ${(bankDetails as any).withdrawalMethod === 'upi'
+                                                ? 'bg-background shadow-sm font-medium'
                                                 : 'text-muted-foreground hover:text-foreground'
-                                        }`}
+                                            }`}
                                     >
                                         UPI
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <div className="space-y-3">
                                 <div>
                                     <Label htmlFor="accountHolderName">Account Holder Name</Label>
-                                    <Input 
+                                    <Input
                                         id="accountHolderName"
-                                        placeholder="As per bank account/UPI" 
+                                        placeholder="As per bank account/UPI"
                                         value={bankDetails.accountHolderName}
-                                        onChange={(e) => setBankDetails({...bankDetails, accountHolderName: e.target.value})}
+                                        onChange={(e) => setBankDetails({ ...bankDetails, accountHolderName: e.target.value })}
                                     />
                                 </div>
 
                                 {(bankDetails as any).withdrawalMethod === 'upi' ? (
                                     <div>
                                         <Label htmlFor="upiId">UPI ID</Label>
-                                        <Input 
+                                        <Input
                                             id="upiId"
-                                            placeholder="username@upi" 
+                                            placeholder="username@upi"
                                             value={(bankDetails as any).upiId || ''}
-                                            onChange={(e) => setBankDetails({...bankDetails, upiId: e.target.value} as any)}
+                                            onChange={(e) => setBankDetails({ ...bankDetails, upiId: e.target.value } as any)}
                                         />
                                         <p className="text-xs text-muted-foreground mt-1">
                                             E.g. mobilenumber@upi, username@oksbi
@@ -650,33 +636,33 @@ export default function WalletPage() {
                                     <>
                                         <div>
                                             <Label htmlFor="accountNumber">Account Number</Label>
-                                            <Input 
+                                            <Input
                                                 id="accountNumber"
                                                 type="text"
-                                                placeholder="Enter account number" 
+                                                placeholder="Enter account number"
                                                 value={bankDetails.accountNumber}
-                                                onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
+                                                onChange={(e) => setBankDetails({ ...bankDetails, accountNumber: e.target.value })}
                                             />
                                         </div>
 
                                         <div>
                                             <Label htmlFor="ifsc">IFSC Code</Label>
-                                            <Input 
+                                            <Input
                                                 id="ifsc"
-                                                placeholder="SBIN0001234" 
+                                                placeholder="SBIN0001234"
                                                 value={bankDetails.ifsc}
-                                                onChange={(e) => setBankDetails({...bankDetails, ifsc: e.target.value.toUpperCase()})}
+                                                onChange={(e) => setBankDetails({ ...bankDetails, ifsc: e.target.value.toUpperCase() })}
                                                 maxLength={11}
                                             />
                                         </div>
 
                                         <div>
                                             <Label htmlFor="bankName">Bank Name (Optional)</Label>
-                                            <Input 
+                                            <Input
                                                 id="bankName"
-                                                placeholder="State Bank of India" 
+                                                placeholder="State Bank of India"
                                                 value={bankDetails.bankName}
-                                                onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
+                                                onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
                                             />
                                         </div>
                                     </>
@@ -686,14 +672,14 @@ export default function WalletPage() {
                     </div>
 
                     <DialogFooter>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => setShowWithdrawalDialog(false)}
                             disabled={isWithdrawing}
                         >
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             onClick={handleWithdrawal}
                             disabled={isWithdrawing}
                         >
