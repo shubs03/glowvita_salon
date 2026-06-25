@@ -6,6 +6,7 @@ import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
 import SubscriptionPlanModel from "@repo/lib/models/admin/SubscriptionPlan.model";
+import { queueOrActivateSubscription } from "@repo/lib/utils/subscriptionSchedule";
 
 const getUserModel = (userType) => {
   switch (userType) {
@@ -70,50 +71,7 @@ export const POST = authMiddlewareCrm(async (req) => {
       }
     }
 
-    // Referral check will be run on active regular subscription after saving the updated user document
-
-    // Calculate new subscription dates
-    const startDate = new Date();
-    const endDate = new Date();
-
-    switch (newPlan.durationType) {
-      case 'days':
-        endDate.setDate(endDate.getDate() + newPlan.duration);
-        break;
-      case 'weeks':
-        endDate.setDate(endDate.getDate() + (newPlan.duration * 7));
-        break;
-      case 'months':
-        endDate.setMonth(endDate.getMonth() + newPlan.duration);
-        break;
-      case 'years':
-        endDate.setFullYear(endDate.getFullYear() + newPlan.duration);
-        break;
-    }
-
-    // Add current plan to history if exists
-    if (user.subscription && user.subscription.plan) {
-      const currentPlan = {
-        plan: user.subscription.plan,
-        startDate: user.subscription.startDate,
-        endDate: user.subscription.endDate,
-        status: user.subscription.status
-      };
-
-      if (!user.subscription.history) {
-        user.subscription.history = [];
-      }
-      user.subscription.history.push(currentPlan);
-    }
-
-    // Update subscription
-    user.subscription = {
-      plan: newPlan._id,
-      status: 'Active',
-      startDate,
-      endDate,
-      history: user.subscription?.history || []
-    };
+    const subscriptionUpdate = queueOrActivateSubscription(user, newPlan);
 
     await user.save();
 
@@ -131,7 +89,9 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     return NextResponse.json({
       success: true,
-      message: "Subscription plan changed successfully",
+      message: subscriptionUpdate.mode === 'Scheduled'
+        ? "Subscription plan purchased and scheduled successfully"
+        : "Subscription plan changed successfully",
       data: user.subscription
     }, { status: 200 });
 

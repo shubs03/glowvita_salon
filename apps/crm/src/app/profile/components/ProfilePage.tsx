@@ -29,6 +29,12 @@ import { ProfileSkeleton } from './ProfileSkeleton';
 type SalonCategory = "unisex" | "men" | "women";
 type SubCategory = "at-salon" | "at-home" | "custom-location";
 type UserType = 'vendor' | 'supplier' | 'doctor';
+type SubscriptionStatus = "Active" | "Scheduled" | "Expired";
+type PlanRef = string | {
+  _id?: string;
+  $oid?: string;
+  name?: string;
+};
 
 interface VendorProfile {
   _id: string;
@@ -64,21 +70,15 @@ interface VendorProfile {
 }
 
 interface Subscription {
-  plan: {
-    _id: string;
-    name: string;
-  };
-  status: "Active" | "Expired";
+  plan: PlanRef;
+  status: SubscriptionStatus;
   startDate: string;
   endDate: string;
   history: Array<{
-    plan: {
-      _id: string;
-      name: string;
-    };
+    plan: PlanRef;
     startDate: string;
     endDate: string;
-    status: "Active" | "Expired";
+    status: SubscriptionStatus;
   }>;
 }
 
