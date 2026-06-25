@@ -38,7 +38,7 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
-  
+
   const [newAddress, setNewAddress] = useState({
     fullName: '',
     mobileNo: '',
@@ -194,7 +194,7 @@ export default function CheckoutPage() {
     const parts = addr.address.split(', ');
     const houseNo = parts[0] || '';
     const area = parts.slice(1).join(', ') || '';
-    
+
     setNewAddress({
       fullName: addr.fullName || '',
       mobileNo: addr.mobileNo || '',
@@ -267,7 +267,7 @@ export default function CheckoutPage() {
 
     try {
       const fullAddress = `${newAddress.houseNo}, ${newAddress.area}`;
-      const url = editingAddressId 
+      const url = editingAddressId
         ? `/api/client/addresses/${editingAddressId}`
         : '/api/client/addresses';
       const method = editingAddressId ? 'PUT' : 'POST';
@@ -283,7 +283,7 @@ export default function CheckoutPage() {
           state: newAddress.state,
           pincode: newAddress.pincode,
           landmark: newAddress.landmark,
-          lat: 1, 
+          lat: 1,
           lng: 1,
           isPrimary: newAddress.isPrimary
         })
@@ -411,10 +411,10 @@ export default function CheckoutPage() {
     // Support both direct object and nested data property if transformResponse was bypassed
     const configData = (shippingConfig as any)?.data || shippingConfig;
     const config = Array.isArray(configData) ? configData[0] : configData;
-    
+
     const shippingAmount = Number(config?.amount || 0);
     const shippingEnabled = config?.isEnabled === true || String(config?.isEnabled) === 'true';
-    
+
     console.log('Shipping calculation debug (Place Order):', {
       config,
       shippingAmount,
@@ -693,7 +693,7 @@ export default function CheckoutPage() {
   // Support both direct object and nested data property if transformResponse was bypassed
   const configData = (shippingConfig as any)?.data || shippingConfig;
   const config = Array.isArray(configData) ? configData[0] : configData;
-  
+
   const shippingAmount = Number(config?.amount || 0);
   const shippingEnabled = config?.isEnabled === true || String(config?.isEnabled) === 'true';
 
@@ -731,23 +731,23 @@ export default function CheckoutPage() {
   const totalSavings = originalSubtotal - subtotal;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
           {product?.isCartOrder ? 'Back to Cart' : 'Back to Product'}
         </Button>
 
-          {isSubscriptionExpired && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 shadow-sm">
-              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
-              <p className="text-sm text-red-700">
-                <strong>Attention:</strong> This salon is temporarily closed. You won't be able to place your order until the salon is back online.
-              </p>
-            </div>
-          )}
+        {isSubscriptionExpired && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+            <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <p className="text-sm text-red-700">
+              <strong>Attention:</strong> This salon is temporarily closed. You won't be able to place your order until the salon is back online.
+            </p>
+          </div>
+        )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Card>
               <CardHeader>
@@ -898,17 +898,17 @@ export default function CheckoutPage() {
                               <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} - {addr.pincode}</p>
                               <p className="text-sm text-muted-foreground">Phone: {addr.mobileNo || contactNumber}</p>
                               <div className="pt-2 flex items-center gap-4">
-                                <Button 
-                                  variant="link" 
-                                  size="sm" 
+                                <Button
+                                  variant="link"
+                                  size="sm"
                                   className="h-auto p-0 text-sky-600 hover:text-sky-700 font-normal"
                                   onClick={(e) => handleEditAddress(addr, e)}
                                 >
                                   Edit address
                                 </Button>
-                                <Button 
-                                  variant="link" 
-                                  size="sm" 
+                                <Button
+                                  variant="link"
+                                  size="sm"
                                   className="h-auto p-0 text-red-600 hover:text-red-700 font-normal flex items-center gap-1"
                                   onClick={(e) => handleDeleteAddress(addr._id, e)}
                                 >
@@ -937,13 +937,13 @@ export default function CheckoutPage() {
                   )}
 
                   {(savedAddresses.length === 0 || showAddressForm) && (
-                    <div className="space-y-4 border p-4 rounded-lg bg-white dark:bg-gray-800">
+                    <div className="space-y-4 border p-4 rounded-lg bg-white">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-lg">{editingAddressId ? 'Edit shipping address' : 'Enter a new shipping address'}</h3>
                         {savedAddresses.length > 0 && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
                               setShowAddressForm(false);
                               setEditingAddressId(null);
@@ -958,7 +958,7 @@ export default function CheckoutPage() {
                           </Button>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="fullName">Full Name (First and Last name) <span className="text-red-500">*</span></Label>
@@ -1217,7 +1217,7 @@ export default function CheckoutPage() {
                 >
                   {isLoading ? 'Processing...' :
                     isSubscriptionExpired ? 'Salon Temporarily Closed' :
-                    paymentMethod === 'pay-online' ? 'Pay & Place Order' : 'Place Order'
+                      paymentMethod === 'pay-online' ? 'Pay & Place Order' : 'Place Order'
                   }
                 </Button>
                 <div className="flex items-center text-xs text-muted-foreground">

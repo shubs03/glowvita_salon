@@ -224,7 +224,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={ShoppingCart}
           title="Total Orders"
@@ -235,6 +235,12 @@ export default function OrdersPage() {
           icon={Package}
           title="Delivered"
           value={orderHistory.filter((o) => o.status === "Delivered").length}
+          change="All time"
+        />
+        <StatCard
+          icon={X}
+          title="Cancelled"
+          value={orderHistory.filter((o) => o.status?.toLowerCase() === "cancelled").length}
           change="All time"
         />
         <StatCard

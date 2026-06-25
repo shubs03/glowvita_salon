@@ -499,13 +499,13 @@ export default function SalonDetailsPage() {
     try {
       if (isFavorited) {
         await removeFromWishlist(id).unwrap();
-        toast.success("Removed from favorites");
+        toast.success("Removed from Wishlist");
       } else {
         await addToWishlist(id).unwrap();
-        toast.success("Added to favorites");
+        toast.success("Added to Wishlist");
       }
     } catch (err) {
-      toast.error("Failed to update favorites");
+      toast.error("Failed to update Wishlist");
     }
   };
 
@@ -1038,7 +1038,7 @@ export default function SalonDetailsPage() {
                   onClick={toggleFavorite}
                 >
                   <Heart className={cn("h-4 w-4", isFavorited && "fill-red-500 text-red-500")} />
-                  {isFavorited ? "Liked" : "Like"}
+                  {isFavorited ? "Wishlisted" : "Wishlist"}
                 </Button>
               </div>
             </div>
