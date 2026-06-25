@@ -4659,13 +4659,13 @@ function BookingPageContent() {
                     </div>
                     {priceBreakdown && priceBreakdown.platformFee > 0 && (
                       <div className="flex items-center justify-between py-1 text-sm">
-                        <span className="text-muted-foreground">Platform Fee</span>
+                        <span className="text-muted-foreground">Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}</span>
                         <span className="font-medium">₹{priceBreakdown.platformFee.toFixed(2)}</span>
                       </div>
                     )}
                     {priceBreakdown && priceBreakdown.serviceTax > 0 && (
                       <div className="flex items-center justify-between py-1 text-sm">
-                        <span className="text-muted-foreground">GST</span>
+                        <span className="text-muted-foreground">GST {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}</span>
                         <span className="font-medium">₹{priceBreakdown.serviceTax.toFixed(2)}</span>
                       </div>
                     )}
