@@ -140,7 +140,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
               $cond: [
                 { $eq: ["$appointments.status", "completed"] }, 
                 { $subtract: [
-                    { $ifNull: ["$appointments.totalAmount", 0] },
+                    { $ifNull: ["$appointments.finalAmount", 0] },
                     { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
                 ]}, 
                 0
@@ -152,7 +152,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
               $cond: [
                 { $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, 
                 { $subtract: [
-                    { $ifNull: ["$appointments.totalAmount", 0] },
+                    { $ifNull: ["$appointments.finalAmount", 0] },
                     { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
                 ]}, 
                 0

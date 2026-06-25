@@ -446,10 +446,10 @@ export default function SettlementsPage() {
                     <div className="text-sm text-muted-foreground">Total Volume</div>
                     <div className="text-xl font-bold">₹{selectedSettlement.totalAmount.toFixed(2)}</div>
                   </div>
-                  <div>
+                   <div>
                     <div className="text-sm text-green-600 font-medium">From Online Bookings</div>
                     <div className="text-xs text-muted-foreground">Service amount admin owes you</div>
-                    <div className="text-xl font-bold text-green-600">₹{selectedSettlement.appointments.filter(a => a.paymentMethod === 'Pay Online').reduce((sum, appt) => sum + (appt.totalAmount || 0), 0).toFixed(2)}</div>
+                    <div className="text-xl font-bold text-green-600">₹{selectedSettlement.appointments.filter(a => a.paymentMethod === 'Pay Online').reduce((sum, appt) => sum + (appt.finalAmount || appt.totalAmount || 0), 0).toFixed(2)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-red-600 font-medium">From Salon Bookings</div>
@@ -467,7 +467,7 @@ export default function SettlementsPage() {
                     <div className="text-sm text-green-600 font-medium">Product amount admin owes you</div>
                     <div className="text-xs text-muted-foreground">Pay Online product vendor share</div>
                     <div className="text-xl font-bold text-green-600">
-                      ₹{(selectedSettlement.orders ? selectedSettlement.orders.filter(order => order.paymentMethod === 'pay-online').reduce((sum, order) => {
+                      ₹{(selectedSettlement.orders ? selectedSettlement.orders.filter(order => order.paymentMethod === 'Pay Online').reduce((sum, order) => {
                         const fees = (order.platformFee || 0) + (order.gstAmount || 0);
                         return sum + ((order.totalAmount || 0) - fees);
                       }, 0) : 0).toFixed(2)}
@@ -477,7 +477,7 @@ export default function SettlementsPage() {
                     <div className="text-sm text-red-600 font-medium">Product amount you owe admin</div>
                     <div className="text-xs text-muted-foreground">COD product fees and GST</div>
                     <div className="text-xl font-bold text-red-600">
-                      ₹{(selectedSettlement.orders ? selectedSettlement.orders.filter(order => order.paymentMethod !== 'pay-online').reduce((sum, order) => sum + ((order.platformFee || 0) + (order.gstAmount || 0)), 0) : 0).toFixed(2)}
+                      ₹{(selectedSettlement.orders ? selectedSettlement.orders.filter(order => order.paymentMethod !== 'Pay Online').reduce((sum, order) => sum + ((order.platformFee || 0) + (order.gstAmount || 0)), 0) : 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -625,14 +625,16 @@ export default function SettlementsPage() {
                           <th className="px-3 py-2 text-left">Service</th>
                           <th className="px-3 py-2 text-left">Method</th>
                           <th className="px-3 py-2 text-right">Amount</th>
+                          <th className="px-3 py-2 text-right">Discount</th>
                           <th className="px-3 py-2 text-right">Owner Owed</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {selectedSettlement.appointments.map((appt) => {
+                          const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
                           const ownerOwed = appt.paymentMethod === 'Pay Online'
-                            ? appt.totalAmount // What admin owes vendor
-                            : appt.platformFee + appt.serviceTax; // What vendor owes admin
+                            ? (appt.finalAmount || appt.totalAmount || 0) - fees // What admin owes vendor
+                            : fees; // What vendor owes admin
 
                           return (
                             <tr key={appt._id}>
@@ -644,7 +646,10 @@ export default function SettlementsPage() {
                                   {appt.paymentMethod}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-right">₹{appt.finalAmount.toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right">₹{(appt.finalAmount || 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right text-purple-600">
+                                {(appt.discountAmount || 0) > 0 ? `-₹${(appt.discountAmount || 0).toFixed(2)}` : '—'}
+                              </td>
                               <td className={`px-3 py-2 text-right font-medium ${appt.paymentMethod === 'Pay Online' ? 'text-green-600' : 'text-red-600'}`}>
                                 {appt.paymentMethod === 'Pay Online' ? '+' : '-'}₹{ownerOwed.toFixed(2)}
                               </td>
@@ -675,8 +680,8 @@ export default function SettlementsPage() {
                         <tbody className="divide-y">
                           {selectedSettlement.orders.map((order) => {
                             const ownerOwed = order.paymentMethod === 'Pay Online'
-                              ? order.totalAmount - (order.platformFee + order.gstAmount) // What admin owes vendor
-                              : order.platformFee + order.gstAmount; // What vendor owes admin
+                              ? order.totalAmount - ((order.platformFee || 0) + (order.gstAmount || 0)) // What admin owes vendor
+                              : (order.platformFee || 0) + (order.gstAmount || 0); // What vendor owes admin
 
                             return (
                               <tr key={order._id}>

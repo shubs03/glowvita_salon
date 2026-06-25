@@ -540,6 +540,7 @@ export default function NewAppointmentForm({
       duration: pkg.duration || 0,
       services: pkg.services || [],
       staffCount: pkg.staffCount || 1,
+      assignedStaff: pkg.assignedStaff || [], // package-level assigned staff IDs
       description: pkg.description || ''
     }));
   }, [weddingPackagesResponse]);
@@ -731,12 +732,13 @@ export default function NewAppointmentForm({
     const pkg = weddingPackages.find((p: any) => p.id === packageId);
     if (!pkg) return;
 
-    setAppointmentData(prev => {
-      const packageServices = prev.weddingPackageDetails?.packageServices || [];
-      const teamMembers = prev.weddingPackageDetails?.teamMembers || [];
+    // Wedding Team/Owner staff — used as fallback when a service has no assigned staff
+    const weddingTeamStaff = staffData.find((s: StaffMember) => {
+      const name = s.name.toLowerCase();
+      return name.includes('wedding') || name.includes('owner');
+    });
 
-      // Add services from the selected package to current ones if preferred, 
-      // or replace them. Usually selecting a package replaces the current selection.
+    setAppointmentData(prev => {
       const newPackageServices = pkg.services.map((s: any) => ({
         serviceId: s.serviceId || s._id || s.id,
         serviceName: s.serviceName || s.name,
@@ -745,7 +747,18 @@ export default function NewAppointmentForm({
         duration: s.duration || 0
       }));
 
-      const newTeamMembers = pkg.services.map(() => "");
+      // The WeddingPackage model stores staff at the PACKAGE level in assignedStaff[].
+      // Map them to services by index. If no staff at that index → use Wedding Team.
+      const packageStaff: string[] = (pkg.assignedStaff || []).map((sid: any) =>
+        (sid?._id || sid || '').toString()
+      );
+
+      const newTeamMembers = pkg.services.map((_: any, idx: number) => {
+        const assignedId = packageStaff[idx] || '';
+        if (assignedId) return assignedId;
+        // No staff assigned for this service → fall back to Wedding Team member
+        return weddingTeamStaff?._id || '';
+      });
 
       // Recalculate financials
       const addOnAmount = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
@@ -754,7 +767,12 @@ export default function NewAppointmentForm({
 
       return {
         ...prev,
-        serviceName: pkg.name, // Use package name as service name
+        // Primary appointment staff = Wedding Team / Owner
+        ...(weddingTeamStaff ? {
+          staff: weddingTeamStaff._id,
+          staffName: weddingTeamStaff.name
+        } : {}),
+        serviceName: pkg.name,
         amount: pkg.price,
         duration: pkg.duration + addOnDuration,
         endTime: calculateEndTime(prev.startTime, pkg.duration + addOnDuration),
@@ -772,6 +790,7 @@ export default function NewAppointmentForm({
       };
     });
   };
+
 
   // Handler to edit a service name in wedding package
   const handleEditWeddingService = (index: number, newName: string) => {
@@ -1327,13 +1346,20 @@ export default function NewAppointmentForm({
           }));
         }
       }
-      // If no staff selected, select the first one
-      else if (staffData[0]) {
-        setAppointmentData((prev: Appointment) => ({
-          ...prev,
-          staff: staffData[0]._id,
-          staffName: staffData[0].name
-        }));
+      // If no staff selected, prioritize Wedding Team or Owner Staff by default
+      else {
+        const defaultStaff = staffData.find((s: StaffMember) => {
+          const name = s.name.toLowerCase();
+          return name.includes('wedding') || name.includes('owner');
+        }) || staffData[0];
+
+        if (defaultStaff) {
+          setAppointmentData((prev: Appointment) => ({
+            ...prev,
+            staff: defaultStaff._id,
+            staffName: defaultStaff.name
+          }));
+        }
       }
     }
   }, [staffData, appointmentData.staff, appointmentData.staffName]);
@@ -2056,6 +2082,11 @@ export default function NewAppointmentForm({
         homeServiceLocation: appointmentData.isHomeService ? appointmentData.homeServiceLocation : undefined,
         isWeddingService: appointmentData.isWeddingService,
         weddingPackageDetails: appointmentData.isWeddingService ? appointmentData.weddingPackageDetails : undefined,
+        // Root-level teamMembers for calendar blocking (Wedding appointments)
+        // The DayScheduleView checks appt.teamMembers to block all wedding staff columns
+        teamMembers: appointmentData.isWeddingService
+          ? (appointmentData.weddingPackageDetails?.teamMembers || []).filter(Boolean)
+          : undefined,
       };
 
       // Include multiple services if available (as serviceItems)
@@ -2066,7 +2097,31 @@ export default function NewAppointmentForm({
       // Update root payload with calculated add-on amount
       appointmentPayload.addOnsAmount = totalAddOnAmount;
 
-      if (appointmentData.services && appointmentData.services.length > 0) {
+      if (appointmentData.isWeddingService && appointmentData.weddingPackageDetails?.packageServices && appointmentData.weddingPackageDetails.packageServices.length > 0) {
+        let currentTime = appointmentData.startTime;
+        appointmentPayload.serviceItems = appointmentData.weddingPackageDetails.packageServices.map((pkgService: any, index: number) => {
+          const staffId = appointmentData.weddingPackageDetails?.teamMembers?.[index] || appointmentData.staff;
+          const staffName = staffData.find((s: StaffMember) => s._id === staffId)?.name || appointmentPayload.staffName;
+          const itemDuration = Number(pkgService.duration) || 60;
+          const endTime = calculateEndTime(currentTime, itemDuration);
+
+          const serviceItem = {
+            service: pkgService.serviceId || pkgService._id || pkgService.id,
+            serviceName: pkgService.serviceName || pkgService.name,
+            staff: staffId,
+            staffName: staffName,
+            startTime: currentTime,
+            endTime: endTime,
+            duration: itemDuration,
+            amount: Number(pkgService.amount || pkgService.price) || 0,
+            addOns: index === 0 ? currentAddOns : [] // Attach addons to the first service
+          };
+
+          currentTime = endTime;
+          return serviceItem;
+        });
+        appointmentPayload.isMultiService = true;
+      } else if (appointmentData.services && appointmentData.services.length > 0) {
         appointmentPayload.serviceItems = appointmentData.services.map((si: any) => {
           // Use string comparison for IDs to handle potential ObjectId objects
           const isMain = String(si.service) === String(appointmentData.service);
@@ -2739,89 +2794,99 @@ export default function NewAppointmentForm({
               </button>
             </div>
 
-            {/* Condition Fields for Home Service */}
-            {appointmentData.isHomeService && (
-              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="hs-address" className="text-xs">Home Address <span className="text-red-500">*</span></Label>
-                    <Textarea
-                      id="hs-address"
-                      value={appointmentData.homeServiceLocation?.address || ''}
-                      onChange={(e) => handleHomeLocationChange('address', e.target.value)}
-                      placeholder="Enter full address"
-                      disabled={isRescheduling}
-                      className="resize-none h-20"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hs-city" className="text-xs">City</Label>
-                    <Input
-                      id="hs-city"
-                      value={appointmentData.homeServiceLocation?.city || ''}
-                      onChange={(e) => handleHomeLocationChange('city', e.target.value)}
-                      placeholder="City"
-                      disabled={isRescheduling}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hs-pincode" className="text-xs">Pincode</Label>
-                    <Input
-                      id="hs-pincode"
-                      value={appointmentData.homeServiceLocation?.pincode || ''}
-                      onChange={(e) => handleHomeLocationChange('pincode', e.target.value)}
-                      placeholder="Pincode"
-                      disabled={isRescheduling}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+          </div>
+        )}
 
-            {/* Condition Fields for Wedding Service */}
-            {appointmentData.isWeddingService && (
-              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="space-y-2">
-                  <Label htmlFor="wp-name" className="text-xs">Wedding Package <span className="text-red-500">*</span></Label>
-                  {isLoadingWeddingPackages ? (
-                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span className="text-[10px]">Loading packages...</span>
-                    </div>
-                  ) : (
-                    <Select
-                      value={weddingPackages.find((p: any) => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
-                      onValueChange={handleWeddingPackageSelect}
-                      disabled={weddingPackages.length === 0 || isRescheduling}
-                    >
-                      <SelectTrigger id="wp-name" className="h-9 text-xs bg-background border-pink-100 dark:border-pink-900/30">
-                        <SelectValue placeholder={weddingPackages.length === 0 ? "No packages available" : "Select a wedding package"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {weddingPackages.map((pkg) => (
-                          <SelectItem key={pkg.id} value={pkg.id} className="text-xs">
-                            <div className="flex justify-between w-full gap-4">
-                              <span>{pkg.name}</span>
-                              <span className="text-muted-foreground">₹{pkg.price}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <p className="text-[10px] text-muted-foreground">Select a predefined package to auto-fill details</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="wp-venue" className="text-xs">Venue Address <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    id="wp-venue"
-                    value={appointmentData.weddingPackageDetails?.venueAddress || ''}
-                    onChange={(e) => handleWeddingDetailsChange('venueAddress', e.target.value)}
-                    placeholder="Enter venue address"
-                    disabled={isRescheduling}
-                    className="resize-none h-20"
-                  />
-                </div>
+        {/* Condition Fields for Home Service - Visible anytime isHomeService is true */}
+        {appointmentData.isHomeService && (
+          <div className="space-y-4 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30 animate-in fade-in slide-in-from-top-2 duration-200">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
+              <Home className="h-4 w-4" /> Home Service Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="hs-address" className="text-xs">Home Address <span className="text-red-500">*</span></Label>
+                <Textarea
+                  id="hs-address"
+                  value={appointmentData.homeServiceLocation?.address || ''}
+                  onChange={(e) => handleHomeLocationChange('address', e.target.value)}
+                  placeholder="Enter full address"
+                  disabled={isRescheduling}
+                  className="resize-none h-20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hs-city" className="text-xs">City</Label>
+                <Input
+                  id="hs-city"
+                  value={appointmentData.homeServiceLocation?.city || ''}
+                  onChange={(e) => handleHomeLocationChange('city', e.target.value)}
+                  placeholder="City"
+                  disabled={isRescheduling}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hs-pincode" className="text-xs">Pincode</Label>
+                <Input
+                  id="hs-pincode"
+                  value={appointmentData.homeServiceLocation?.pincode || ''}
+                  onChange={(e) => handleHomeLocationChange('pincode', e.target.value)}
+                  placeholder="Pincode"
+                  disabled={isRescheduling}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Condition Fields for Wedding Service - Visible anytime isWeddingService is true */}
+        {appointmentData.isWeddingService && (
+          <div className="space-y-4 p-4 bg-pink-50/50 dark:bg-pink-900/10 rounded-lg border border-pink-100 dark:border-pink-900/30 animate-in fade-in slide-in-from-top-2 duration-200">
+            <h3 className="text-sm font-medium text-pink-800 dark:text-pink-300 flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Wedding Venue Details
+            </h3>
+            <div className="space-y-2">
+              <Label htmlFor="wp-venue" className="text-xs">Venue Address <span className="text-red-500">*</span></Label>
+              <Textarea
+                id="wp-venue"
+                value={appointmentData.weddingPackageDetails?.venueAddress || ''}
+                onChange={(e) => handleWeddingDetailsChange('venueAddress', e.target.value)}
+                placeholder="Enter venue address"
+                disabled={isRescheduling}
+                className="resize-none h-20"
+              />
+            </div>
+            
+            {/* Package selector is still needed here if they want to switch packages */}
+            {(isEditing || isRescheduling) && (
+              <div className="space-y-2 mt-4">
+                <Label htmlFor="wp-name" className="text-xs">Change Wedding Package</Label>
+                {isLoadingWeddingPackages ? (
+                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span className="text-[10px]">Loading packages...</span>
+                  </div>
+                ) : (
+                  <Select
+                    value={weddingPackages.find((p: any) => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
+                    onValueChange={handleWeddingPackageSelect}
+                    disabled={weddingPackages.length === 0 || isRescheduling}
+                  >
+                    <SelectTrigger id="wp-name" className="h-9 text-xs bg-background border-pink-100 dark:border-pink-900/30">
+                      <SelectValue placeholder={weddingPackages.length === 0 ? "No packages available" : "Select a wedding package"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {weddingPackages.map((pkg) => (
+                        <SelectItem key={pkg.id} value={pkg.id} className="text-xs">
+                          <div className="flex justify-between w-full gap-4">
+                            <span>{pkg.name}</span>
+                            <span className="text-muted-foreground">₹{pkg.price}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
           </div>
@@ -3175,7 +3240,7 @@ export default function NewAppointmentForm({
               <Select
                 value={appointmentData.staff}
                 onValueChange={handleStaffChange}
-                disabled={isLoadingStaff || staffData.length === 0 || isRescheduling}
+                disabled={isLoadingStaff || staffData.length === 0 || isRescheduling || appointmentData.isWeddingService}
               >
                 <SelectTrigger className="w-full bg-background text-foreground border border-border">
                   <SelectValue placeholder={
@@ -3294,7 +3359,7 @@ export default function NewAppointmentForm({
               value={appointmentData.amount || ''}
               onChange={(e) => handleFieldChange('amount', e.target.value)}
               placeholder="0.00"
-              disabled={isRescheduling}
+              disabled={isRescheduling || appointmentData.isWeddingService}
               className="w-full bg-background text-foreground border border-border"
             />
           </div>
@@ -3332,7 +3397,7 @@ export default function NewAppointmentForm({
 
           <div className="space-y-2">
             <Label htmlFor="totalAmount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Total Amount (₹)
+              Total Amount (₹) {(appointmentData as any).addOns?.length > 0 ? <span className="text-xs font-normal text-muted-foreground ml-1">(inc. Add-ons)</span> : null}
             </Label>
             <Input
               id="totalAmount"

@@ -389,12 +389,19 @@ export function AppointmentDetailView({
   const { totalBaseAmount, totalAddOnsAmount } = useMemo(() => {
     if (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0) {
       const base = liveAppointment.serviceItems.reduce((sum: number, item: any) =>
-        sum + (Number(item.amount) || Number(item.price) || 0), 0);
+        sum + (Number(item.amount) || Number(item.discountedPrice) || Number(item.price) || catalogPriceMap[String(item.serviceId || item.service || item._id)] || catalogPriceMap[String(item.serviceName)] || 0), 0);
       const addOns = liveAppointment.serviceItems.reduce((sum: number, item: any) => {
         const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
         return sum + itemAddOns.reduce((aSum: number, a: any) => aSum + (Number(a.price) || 0), 0);
       }, 0);
-      return { totalBaseAmount: base, totalAddOnsAmount: addOns };
+
+      // If all service items have ₹0 amount (e.g. wedding packages where individual prices aren't set),
+      // fall back to root-level amount as the total service amount
+      const effectiveBase = base > 0
+        ? base
+        : (Number(liveAppointment.amount) || Number((liveAppointment as any).weddingPackageDetails?.totalAmount) || 0);
+
+      return { totalBaseAmount: effectiveBase, totalAddOnsAmount: addOns };
     }
     // Fallback: use amount, but if it's 0 fall back to totalAmount / finalAmount
     const singleBase =
@@ -407,6 +414,7 @@ export function AppointmentDetailView({
       totalAddOnsAmount: Number((liveAppointment as any).addOnsAmount) || 0
     };
   }, [liveAppointment]);
+
 
   // Prepare default values for edit/reschedule form
   const defaultFormValues = useMemo(() => {
@@ -1181,9 +1189,9 @@ export function AppointmentDetailView({
         : liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
           {
             name: item.serviceName,
-            price: item.amount,
+            price: Number(item.amount || item.discountedPrice || item.price || catalogPriceMap[String(item.serviceId || item.service || item._id)] || catalogPriceMap[String(item.serviceName)] || 0),
             quantity: 1,
-            totalPrice: item.amount,
+            totalPrice: Number(item.amount || item.discountedPrice || item.price || catalogPriceMap[String(item.serviceId || item.service || item._id)] || catalogPriceMap[String(item.serviceName)] || 0),
             discount: 0,
             staff: resolveName(item.staffName || item.staff),
             duration: item.duration,
@@ -1390,6 +1398,8 @@ export function AppointmentDetailView({
     return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const isFutureAppointment = new Date(liveAppointment.date).setHours(0,0,0,0) > new Date().setHours(0,0,0,0);
+
   return (
     <>
       {renderStatusConfirmDialog()}
@@ -1481,6 +1491,7 @@ export function AppointmentDetailView({
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
+                      disabled={isFutureAppointment}
                       onClick={() => {
                         // When opening the payment form, set the amount to the remaining balance
                         if (!isCollectingPayment) {
@@ -2089,6 +2100,31 @@ export function AppointmentDetailView({
 
                       {/* Service Items List */}
                       {(() => {
+                        const addMinutesToTimeStr = (timeStr: string, mins: number) => {
+                          if (!timeStr) return '';
+                          const [time, period] = timeStr.trim().split(/\s+/);
+                          const parts = time.split(':');
+                          let hours = parseInt(parts[0], 10);
+                          const minutes = parseInt(parts[1] || '0', 10);
+                          if (isNaN(hours) || isNaN(minutes)) return timeStr;
+
+                          if (period && period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                          if (period && period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+
+                          const totalMinutes = hours * 60 + minutes + mins;
+                          let newHours24 = Math.floor(totalMinutes / 60) % 24;
+                          if (newHours24 < 0) newHours24 += 24;
+                          const newMinutes = ((totalMinutes % 60) + 60) % 60;
+
+                          const pad = (n: number) => String(n).padStart(2, '0');
+                          if (period) {
+                            const isPM = newHours24 >= 12;
+                            const newHours12 = newHours24 % 12 || 12;
+                            return `${pad(newHours12)}:${pad(newMinutes)} ${isPM ? 'PM' : 'AM'}`;
+                          }
+                          return `${pad(newHours24)}:${pad(newMinutes)}`;
+                        };
+
                         const servicesList = (appointment.serviceItems && appointment.serviceItems.length > 0)
                           ? appointment.serviceItems
                           : (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices)
@@ -2107,14 +2143,19 @@ export function AppointmentDetailView({
                                   }
                                 }
                               }
+                              
+                              const duration = Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length);
+                              const staggeredStartTime = addMinutesToTimeStr(appointment.startTime, idx * duration);
+                              const staggeredEndTime = addMinutesToTimeStr(appointment.startTime, (idx + 1) * duration);
+
                               return {
                                 _id: srv._id || srv.serviceId || String(idx),
                                 serviceName: srv.serviceName,
                                 staffName: staffName,
-                                startTime: appointment.startTime,
-                                endTime: appointment.endTime,
-                                duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length),
-                                amount: Number(srv.amount || srv.price || srv.originalAmount || weddingServicePriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.service || '')] || 0),
+                                startTime: staggeredStartTime,
+                                endTime: staggeredEndTime,
+                                duration: duration,
+                                amount: Number(srv.amount || srv.discountedPrice || srv.price || srv.originalAmount || weddingServicePriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.serviceId || srv._id || '')] || catalogPriceMap[String(srv.service || '')] || 0),
                                 addOns: []
                               };
                             })
@@ -2139,7 +2180,7 @@ export function AppointmentDetailView({
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium font-mono">
-                                        {formatCurrency(item.amount)}
+                                        {formatCurrency(Number(item.amount || item.discountedPrice || item.price || catalogPriceMap[String(item.serviceId || item.service || item._id)] || catalogPriceMap[String(item.serviceName)] || 0))}
                                       </p>
                                     </div>
                                   </div>

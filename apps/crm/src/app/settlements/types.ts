@@ -1,3 +1,4 @@
+
 // Appointment details for settlement
 export interface SettlementAppointment {
     _id: string;
@@ -9,6 +10,7 @@ export interface SettlementAppointment {
     totalAmount: number;
     platformFee: number;
     serviceTax: number;
+    discountAmount?: number;
     finalAmount: number;
     paymentStatus: string;
     paymentMethod: string;

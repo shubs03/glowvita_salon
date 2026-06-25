@@ -19,7 +19,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const { searchParams } = new URL(req.url);
 
         // Get filter parameters
-        const period = searchParams.get('period') || 'all';
+        const period = searchParams.get('period') || 'month';
         const startDateParam = searchParams.get('startDate');
         const endDateParam = searchParams.get('endDate');
         const statusFilter = searchParams.get('status') || 'all';
@@ -141,12 +141,20 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 $group: {
                     _id: "$vendorId",
                     adminOwesVendor: {
-                        $sum: { 
-                            $cond: [
-                                { $eq: ["$paymentMethod", "Pay Online"] }, 
-                                { $subtract: ["$totalAmount", { $add: [{ $ifNull: ["$platformFee", 0] }, { $ifNull: ["$serviceTax", 0] }] }] }, 
-                                0
-                            ] 
+                        $sum: {
+                            $switch: {
+                                branches: [
+                                    {
+                                        case: { $eq: ["$paymentMethod", "Pay Online"] },
+                                        then: { $subtract: [{ $ifNull: ["$finalAmount", "$totalAmount"] }, { $add: [{ $ifNull: ["$platformFee", 0] }, { $ifNull: ["$serviceTax", 0] }] }] }
+                                    },
+                                    {
+                                        case: { $eq: ["$paymentMethod", "Pay at Salon"] },
+                                        then: 0
+                                    }
+                                ],
+                                default: 0
+                            }
                         }
                     },
                     vendorOwesAdmin: {
@@ -287,21 +295,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 finalAmount: appt.finalAmount || 0,
                 platformFee: appt.platformFee || 0,
                 serviceTax: appt.serviceTax || 0,
+                discountAmount: appt.discountAmount || appt.discount || 0,
                 paymentMethod: appt.paymentMethod || 'N/A',
             };
 
             settlement.appointments.push(appointmentData);
 
-            const serviceAmount = (appt.totalAmount || 0);
             const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
 
-            settlement.totalAmount += appt.finalAmount || 0;
-            settlement.serviceTotalAmount += appt.finalAmount || 0;
+            settlement.totalAmount += appt.finalAmount || appt.totalAmount || 0;
+            settlement.serviceTotalAmount += appt.finalAmount || appt.totalAmount || 0;
             settlement.platformFeeTotal += appt.platformFee || 0;
             settlement.serviceTaxTotal += appt.serviceTax || 0;
 
             if (appt.paymentMethod === 'Pay Online') {
-                settlement.adminOwesVendor += (serviceAmount - fees);
+                const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+                settlement.adminOwesVendor += (finalAmt - fees);
             } else {
                 settlement.vendorOwesAdmin += fees;
             }

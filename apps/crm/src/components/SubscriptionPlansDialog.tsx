@@ -33,7 +33,7 @@ interface SubscriptionPlan {
 }
 
 interface Subscription {
-  plan: { _id: string; name: string };
+  plan?: unknown;
   endDate: string;
 }
 
@@ -117,7 +117,8 @@ export function SubscriptionPlansDialog({
 
         if (response?.success) {
           if (response.user) dispatch(updateCrmUser(response.user));
-          toast.success(isExpired ? 'Subscription renewed!' : 'Plan changed successfully!');
+          if (response.data) dispatch(updateCrmUser({ subscription: response.data }));
+          toast.success(response.message || (isExpired ? 'Subscription renewed!' : 'Plan changed successfully!'));
           onOpenChange(false);
         } else {
           throw new Error(response?.message || 'Subscription update failed');

@@ -116,8 +116,9 @@ export async function autoCancelExpiredAppointments(options = {}) {
                 const updated = await Appointment.findByIdAndUpdate(
                     appointment._id,
                     {
-                        status: 'no-show',
-                        cancellationReason: `Your appointment has been automatically cancelled as it was not marked as completed after the scheduled end time.`,
+                        status: 'cancelled',
+                        cancellationReason: `This appointment was automatically cancelled due to client unavailability or not showing up.`,
+                        notes: `Automatically cancelled by system: Client unavailability.`,
                         cancelledAt: now
                     },
                     { new: true }

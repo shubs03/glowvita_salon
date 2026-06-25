@@ -6,6 +6,51 @@ import { Textarea } from "@repo/ui/textarea";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { toast } from "sonner";
 
+// Google Fonts to load (includes premium, display, script & Marathi/Devanagari fonts)
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?" +
+  // Modern Sans
+  "family=Poppins:wght@400;700&family=Montserrat:wght@400;700&family=Inter:wght@400;700" +
+  "&family=Raleway:wght@400;700&family=Nunito:wght@400;700&family=Lato:wght@400;700" +
+  "&family=Outfit:wght@400;700&family=DM+Sans:wght@400;700&family=Josefin+Sans:wght@400;700" +
+  "&family=Quicksand:wght@400;700&family=Rubik:wght@400;700" +
+  // Serif & Elegance
+  "&family=Playfair+Display:wght@400;700&family=Lora:wght@400;700&family=Cormorant+Garamond:wght@400;700" +
+  "&family=EB+Garamond:wght@400;700&family=Libre+Baskerville:wght@400;700&family=Merriweather:wght@400;700" +
+  "&family=Crimson+Text:wght@400;700" +
+  // Display & Decorative
+  "&family=Bebas+Neue&family=Oswald:wght@400;700&family=Righteous" +
+  "&family=Fredoka+One&family=Boogaloo&family=Acme" +
+  "&family=Lilita+One&family=Black+Han+Sans" +
+  // Script & Handwriting
+  "&family=Dancing+Script:wght@400;700&family=Pacifico&family=Great+Vibes" +
+  "&family=Sacramento&family=Satisfy&family=Cookie" +
+  "&family=Caveat:wght@400;700&family=Kaushan+Script&family=Courgette" +
+  // Marathi / Devanagari
+  "&family=Mukta:wght@400;700&family=Khand:wght@400;700&family=Yatra+One" +
+  "&family=Rozha+One&family=Noto+Sans+Devanagari:wght@400;700&family=Tiro+Devanagari+Sanskrit" +
+  "&display=swap";
+
+const ALL_FONTS = [
+  // Standard
+  "Arial", "Times New Roman", "Helvetica", "Georgia", "Verdana",
+  "Impact", "Courier New", "Trebuchet MS",
+  // Modern Sans
+  "Poppins", "Montserrat", "Inter", "Raleway", "Nunito", "Lato",
+  "Outfit", "DM Sans", "Josefin Sans", "Quicksand", "Rubik",
+  // Serif & Elegance
+  "Playfair Display", "Lora", "Cormorant Garamond", "EB Garamond",
+  "Libre Baskerville", "Merriweather", "Crimson Text",
+  // Display & Decorative
+  "Bebas Neue", "Oswald", "Righteous", "Fredoka One",
+  "Boogaloo", "Acme", "Lilita One",
+  // Script & Handwriting
+  "Dancing Script", "Pacifico", "Great Vibes", "Sacramento",
+  "Satisfy", "Cookie", "Caveat", "Kaushan Script", "Courgette",
+  // Marathi / Devanagari
+  "Mukta", "Khand", "Yatra One", "Rozha One", "Noto Sans Devanagari", "Tiro Devanagari Sanskrit",
+];
+
 interface CanvasTemplateEditorProps {
   initialImage?: string;
   initialJsonData?: any;
@@ -86,7 +131,7 @@ async function preloadJsonImages(json: any): Promise<any> {
 
   // Extract background image so addBg can load it as data URL instead of loadFromJSON
   if (copy.backgroundImage?.src) {
-    copy._originalBgSrc  = copy.backgroundImage.src;  // original URL for compact JSON
+    copy._originalBgSrc = copy.backgroundImage.src;  // original URL for compact JSON
     copy._extractedBgSrc = await urlToDataUrl(copy.backgroundImage.src);
     delete copy.backgroundImage;
   }
@@ -111,8 +156,8 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
   const [textAlign, setTextAlign] = useState("center");
 
   const mountRef = useRef<HTMLDivElement>(null);
-  const wrapRef  = useRef<HTMLDivElement>(null);
-  const fcRef    = useRef<any>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const fcRef = useRef<any>(null);
   // Track the original (server) URL of the background image so we can
   // restore it in toJSON() after converting to data URL for rendering
   const bgOriginalUrlRef = useRef<string>('');
@@ -137,6 +182,19 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
       .catch(() => toast.error("Could not load design editor."));
   }, []);
 
+  // ── Load Google Fonts (Marathi + premium) ───────────────────────────────────
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const id = 'gf-canvas-editor';
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = GOOGLE_FONTS_URL;
+      document.head.appendChild(link);
+    }
+  }, []);
+
   // ── Sync sidebar text controls ─────────────────────────────────────────────
   const syncControls = useCallback((obj: any) => {
     if (!obj || obj.type !== "textbox") return;
@@ -147,6 +205,56 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
     setFontWeight(obj.fontWeight ?? "normal");
     setTextAlign(obj.textAlign ?? "center");
   }, []);
+
+  // ── Auto-watermark: ensures glowvita.com/vendor-name is always on canvas ────
+  const ensureWatermark = useCallback((c: any, fabricLib: any) => {
+    if (!c || !fabricLib) return;
+    const existing = (c.getObjects() as any[]).find((o: any) => o.name === 'watermark');
+    if (existing) return; // already present (e.g. restored from saved JSON)
+
+    const vendorSlug = businessName
+      ? businessName.trim().replace(/\s+/g, '-').toLowerCase()
+      : 'your-salon';
+    const wmText = `glowvitasalon.com/${vendorSlug}`;
+
+    const watermark = new fabricLib.Textbox(wmText, {
+      left: c.getWidth() / 2,
+      top: c.getHeight() - 30,
+      fontSize: 16,
+      fill: "#ffffff",
+      textAlign: "center",
+      fontFamily: "Poppins",
+      fontWeight: "bold",
+      originX: "center",
+      originY: "center",
+      // Fully locked — cannot be selected, moved, resized, or deleted
+      selectable: false,
+      evented: false,
+      editable: false,
+      lockMovementX: true,
+      lockMovementY: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockRotation: true,
+      hasBorders: false,
+      hasControls: false,
+      hoverCursor: 'default',
+      name: 'watermark',
+      opacity: 0.92,
+    });
+
+    watermark.set('shadow', new fabricLib.Shadow({
+      color: 'rgba(0,0,0,0.7)',
+      blur: 6,
+      offsetX: 1,
+      offsetY: 1,
+    }));
+
+    c.add(watermark);
+    c.bringToFront(watermark);
+    c.discardActiveObject();
+    c.renderAll();
+  }, [businessName]);
 
   // ── CSS scale (no Fabric zoom — keeps pointer events correct) ─────────────
   const reScale = useCallback(() => {
@@ -171,21 +279,31 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
     if (!fab || !mountRef.current) return;
 
     // Dispose previous instance
-    if (fcRef.current) { try { fcRef.current.dispose(); } catch (_) {} fcRef.current = null; }
+    if (fcRef.current) { try { fcRef.current.dispose(); } catch (_) { } fcRef.current = null; }
 
     const el = document.createElement("canvas");
     mountRef.current.innerHTML = "";
     mountRef.current.appendChild(el);
 
-    const canvas = new fab.Canvas(el, { 
-      width: canvasDims.w, 
-      height: canvasDims.h, 
-      backgroundColor: "#ffffff", 
-      preserveObjectStacking: true 
+    const canvas = new fab.Canvas(el, {
+      width: canvasDims.w,
+      height: canvasDims.h,
+      backgroundColor: "#ffffff",
+      preserveObjectStacking: true
     });
     fcRef.current = canvas;
 
     const attachEvents = () => {
+      // Add default watermark automatically
+      ensureWatermark(canvas, fab);
+
+      // Guard: if the watermark is ever removed (e.g. via keyboard Delete), immediately restore it
+      canvas.on('object:removed', (e: any) => {
+        if (e.target?.name === 'watermark') {
+          setTimeout(() => ensureWatermark(canvas, fab), 0);
+        }
+      });
+
       canvas.on("selection:created", (e: any) => { const o = e.selected?.[0]; setSel(o ?? null); syncControls(o); });
       canvas.on("selection:updated", (e: any) => { const o = e.selected?.[0]; setSel(o ?? null); syncControls(o); });
       canvas.on("selection:cleared", () => setSel(null));
@@ -229,9 +347,11 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
     // Helper: fetch image as data URL to avoid CORS taint, then set as canvas background
     const addBg = (src: string, done: () => void) => {
-      const absUrl = (src.startsWith("data:") || src.startsWith("http"))
+      const absUrl = src.startsWith("data:")
         ? src
-        : `${window.location.origin}${src.startsWith("/") ? "" : "/"}${src}`;
+        : src.startsWith("http")
+          ? (() => { try { const u = new URL(src); return `${window.location.origin}${u.pathname}`; } catch { return src; } })()
+          : `${window.location.origin}${src.startsWith("/") ? "" : "/"}${src}`;
 
       // Always store the canonical (non-data) URL for JSON serialisation
       if (!src.startsWith("data:")) {
@@ -257,14 +377,12 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
         try {
           return await tryFetch(url);
         } catch (err) {
-          // If we failed on localhost, try the local proxy to read from admin's public directory
-          if (url.includes('localhost')) {
-            try {
-              const proxyUrl = `/api/local-image?url=${encodeURIComponent(url)}`;
-              return await tryFetch(proxyUrl);
-            } catch {
-              // Fall through
-            }
+          // Try the local proxy to read from admin's public directory
+          try {
+            const proxyUrl = `/api/local-image?url=${encodeURIComponent(url)}`;
+            return await tryFetch(proxyUrl);
+          } catch {
+            // Fall through
           }
           throw err;
         }
@@ -354,8 +472,8 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
           if (cancelled) return;
 
           // Extract bg data URL and original URL
-          const bgDataUrl: string | undefined    = processed._extractedBgSrc || undefined;
-          const bgOriginalUrl: string | undefined = processed._originalBgSrc  || undefined;
+          const bgDataUrl: string | undefined = processed._extractedBgSrc || undefined;
+          const bgOriginalUrl: string | undefined = processed._originalBgSrc || undefined;
           delete processed._extractedBgSrc;
           delete processed._originalBgSrc;
 
@@ -390,7 +508,7 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
       return () => {
         cancelled = true;
-        if (fcRef.current) { try { fcRef.current.dispose(); } catch (_) {} fcRef.current = null; }
+        if (fcRef.current) { try { fcRef.current.dispose(); } catch (_) { } fcRef.current = null; }
         setIsReady(false); setSel(null);
       };
     }
@@ -404,7 +522,7 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
     }
 
     return () => {
-      if (fcRef.current) { try { fcRef.current.dispose(); } catch (_) {} fcRef.current = null; }
+      if (fcRef.current) { try { fcRef.current.dispose(); } catch (_) { } fcRef.current = null; }
       setIsReady(false);
       setSel(null);
     };
@@ -426,48 +544,6 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
     });
     c.add(o); c.setActiveObject(o); c.renderAll();
     setSel(o); syncControls(o);
-  };
-
-  const addWatermark = () => {
-    const c = fcRef.current;
-    if (!c || !fab) return;
-    
-    const existing = c.getObjects().find((o: any) => o.name === 'watermark');
-    if (existing) {
-      toast.info("Watermark already exists!");
-      c.setActiveObject(existing);
-      c.renderAll();
-      return;
-    }
-
-    const name = businessName ? businessName.replace(/\s+/g, '') : 'BusinessName';
-    const text = `Glowvitasalon.com/${name}`;
-    
-    const watermark = new fab.Textbox(text, {
-      left: c.getWidth() / 2,
-      top: c.getHeight() - 40,
-      fontSize: 18,
-      fill: "#ffffff",
-      textAlign: "center",
-      fontFamily: "Arial",
-      fontWeight: "bold",
-      originX: "center",
-      originY: "center",
-      selectable: true,
-      editable: true,
-      name: 'watermark'
-    });
-    
-    watermark.set('shadow', new fab.Shadow({
-      color: 'rgba(0,0,0,0.6)',
-      blur: 4,
-      offsetX: 1,
-      offsetY: 1
-    }));
-    
-    c.add(watermark);
-    c.setActiveObject(watermark);
-    c.renderAll();
   };
 
   const uploadLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -494,6 +570,8 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
   const removeSelected = () => {
     const c = fcRef.current; const o = c?.getActiveObject();
+    // Never allow the watermark to be removed
+    if (o && o.name === 'watermark') { toast.info("The watermark cannot be removed."); return; }
     if (o && c) { c.remove(o); c.discardActiveObject(); c.renderAll(); setSel(null); }
   };
 
@@ -502,13 +580,13 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
     if (!c) return null;
 
     // Step 1: deselect & render (guard individually)
-    try { c.discardActiveObject(); } catch (_) {}
-    try { c.renderAll(); } catch (_) {}
+    try { c.discardActiveObject(); } catch (_) { }
+    try { c.renderAll(); } catch (_) { }
 
     // Step 2: serialize canvas state manually (object-by-object)
     let jsonData: any = null;
     try {
-      const EXTRA_PROPS = ["name","selectable","evented","lockMovementX","lockMovementY","hoverCursor","_originalSrc"];
+      const EXTRA_PROPS = ["name", "selectable", "evented", "lockMovementX", "lockMovementY", "hoverCursor", "_originalSrc"];
 
       // 1. Serialize each object individually
       const objects: any[] = [];
@@ -629,9 +707,6 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
             <button onClick={addText} disabled={!isReady} style={{ ...sidebarBtn(), opacity: isReady ? 1 : 0.4, cursor: isReady ? "pointer" : "not-allowed", justifyContent: "flex-start" }}>
               <Type style={{ width: 15, height: 15, color: "var(--primary)", flexShrink: 0 }} /> Add Text Block
             </button>
-            <button onClick={addWatermark} disabled={!isReady} style={{ ...sidebarBtn(), opacity: isReady ? 1 : 0.4, cursor: isReady ? "pointer" : "not-allowed", justifyContent: "flex-start" }}>
-              <Type style={{ width: 15, height: 15, color: "var(--primary)", flexShrink: 0 }} /> Add Watermark
-            </button>
             <label style={{ ...sidebarBtn(), opacity: isReady ? 1 : 0.4, cursor: isReady ? "pointer" : "not-allowed", justifyContent: "flex-start" }}>
               <ImageIcon style={{ width: 15, height: 15, color: "var(--primary)", flexShrink: 0 }} /> Upload Image / Logo
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={uploadLogo} disabled={!isReady} />
@@ -656,8 +731,25 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 500, display: "block", marginBottom: 4 }}>Font Family</label>
-                <select value={fontFamily} onChange={e => { setFontFamily(e.target.value); setProp("fontFamily", e.target.value); }} style={selectStyle}>
-                  {["Arial","Times New Roman","Helvetica","Georgia","Verdana","Impact","Courier New","Trebuchet MS"].map(f => <option key={f}>{f}</option>)}
+                <select value={fontFamily} onChange={e => { setFontFamily(e.target.value); setProp("fontFamily", e.target.value); }} style={{ ...selectStyle, fontFamily: fontFamily }}>
+                  <optgroup label="── Standard">
+                    {["Arial", "Times New Roman", "Helvetica", "Georgia", "Verdana", "Impact", "Courier New", "Trebuchet MS"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="── Modern Sans">
+                    {["Poppins", "Montserrat", "Inter", "Raleway", "Nunito", "Lato", "Outfit", "DM Sans", "Josefin Sans", "Quicksand", "Rubik"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="── Serif & Elegance">
+                    {["Playfair Display", "Lora", "Cormorant Garamond", "EB Garamond", "Libre Baskerville", "Merriweather", "Crimson Text"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="── Display & Decorative">
+                    {["Bebas Neue", "Oswald", "Righteous", "Fredoka One", "Boogaloo", "Acme", "Lilita One"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="── Script & Handwriting">
+                    {["Dancing Script", "Pacifico", "Great Vibes", "Sacramento", "Satisfy", "Cookie", "Caveat", "Kaushan Script", "Courgette"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
+                  <optgroup label="── मराठी / Devanagari">
+                    {["Mukta", "Khand", "Yatra One", "Rozha One", "Noto Sans Devanagari", "Tiro Devanagari Sanskrit"].map(f => <option key={f} style={{ fontFamily: f }}>{f}</option>)}
+                  </optgroup>
                 </select>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -686,11 +778,13 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 500, display: "block", marginBottom: 4 }}>Align</label>
                   <div style={{ display: "flex", border: "1px solid var(--input)", borderRadius: 6, padding: 3, background: "var(--background)", gap: 2 }}>
-                    {(["left","center","right"] as const).map(a => (
+                    {(["left", "center", "right"] as const).map(a => (
                       <button key={a} onClick={() => { setTextAlign(a); setProp("textAlign", a); }}
-                        style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, borderRadius: 4, border: "none",
+                        style={{
+                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, borderRadius: 4, border: "none",
                           background: textAlign === a ? "var(--primary)" : "transparent",
-                          color: textAlign === a ? "var(--primary-foreground)" : "var(--foreground)", cursor: "pointer" }}>
+                          color: textAlign === a ? "var(--primary-foreground)" : "var(--foreground)", cursor: "pointer"
+                        }}>
                         {a === "left" ? <AlignLeft style={{ width: 12, height: 12 }} /> : a === "center" ? <AlignCenter style={{ width: 12, height: 12 }} /> : <AlignRight style={{ width: 12, height: 12 }} />}
                       </button>
                     ))}

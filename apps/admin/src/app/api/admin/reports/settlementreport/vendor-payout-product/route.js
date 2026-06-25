@@ -107,6 +107,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Build aggregation pipeline
     const pipeline = [
       { $match: mainFilter },
+      { $unwind: "$items" },
       // Lookup product information to get vendorId and origin
       {
         $lookup: {
@@ -180,8 +181,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
           ownerType: userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
         }
       }] : []),
-      // Unwind items array to process each product separately
-      { $unwind: "$items" },
       // Group by order and owner to avoid overcounting order-level fields (fees/tax)
       {
         $group: {
@@ -278,6 +277,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique cities for filter dropdown
     const cityPipeline = [
       { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: { $ne: 'Cancelled' } } },
+      { $unwind: "$items" },
       {
         $lookup: {
           from: "crm_products",
@@ -325,6 +325,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique business names for filter dropdown
     const businessNamePipeline = [
       { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: { $ne: 'Cancelled' } } },
+      { $unwind: "$items" },
       {
         $lookup: {
           from: "crm_products",

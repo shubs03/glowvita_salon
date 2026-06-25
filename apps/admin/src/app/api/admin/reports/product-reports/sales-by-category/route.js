@@ -114,6 +114,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Build city filter pipeline
     const cityFilterPipeline = [
       { $match: combinedFilter },
+      { $unwind: "$items" },
       { 
         $lookup: { 
           from: "crm_products", 
@@ -179,7 +180,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get sales by category data
     const salesByCategoryPipeline = [
       ...cityFilterPipeline,
-      { $unwind: "$items" }, // Unwind the items array to process each product separately
       {
         $lookup: {
           from: "productcategories", // Assuming categories are stored in a separate collection
@@ -276,6 +276,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique cities for the filter dropdown
     const cityPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
+      { $unwind: "$items" },
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
       {
@@ -320,6 +321,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique business names for the filter dropdown
     const businessNamePipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
+      { $unwind: "$items" },
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
       {

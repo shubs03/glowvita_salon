@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import ClientOrderModel from '@repo/lib/models/user/ClientOrder.model';
 import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
@@ -150,21 +151,20 @@ export const GET = authMiddlewareCrm(async (req) => {
       baseQuery.status = statusFilter;
     }
 
-    // For settlement summary report, only include appointments where money actually exchanged hands:
-    // - Pay Online: client paid platform via Razorpay → paymentStatus must be 'completed'
-    // - Pay at Salon: client paid vendor in cash → paymentStatus is never auto-set, use status:'completed'
+    // For settlement summary report, only include appointments where money actually exchanged hands
     if (!statusFilter || statusFilter === '') {
-      // No status filter from UI — default to completed appointments
-      baseQuery.status = 'completed';
+      baseQuery.status = { $in: ['completed', 'partially-completed'] };
       baseQuery.$or = [
         { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
-        { paymentMethod: 'Pay at Salon' }
+        { paymentMethod: 'Pay at Salon' },
+        { mode: 'online' }
       ];
     } else {
-      // User selected a specific status — respect it, but still apply paymentMethod logic
+      baseQuery.status = statusFilter;
       baseQuery.$or = [
         { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
-        { paymentMethod: 'Pay at Salon' }
+        { paymentMethod: 'Pay at Salon' },
+        { mode: 'online' }
       ];
     }
 
@@ -229,8 +229,26 @@ export const GET = authMiddlewareCrm(async (req) => {
     // Fetch Recorded Transfers (Payments)
     const transfers = await VendorSettlementPaymentModel.find({
       vendorId: vendorId,
-      paymentDate: { $gte: startDate, $lte: endDate }
+      paymentDate: { $gte: startDate, $lte: endDate },
+      verified: { $ne: false }
     }).sort({ paymentDate: 1 });
+
+    // Fetch Orders
+    const orders = await ClientOrderModel.find({
+        vendorId: vendorId,
+        createdAt: { $gte: startDate, $lte: endDate },
+        status: { $in: ['Delivered', 'Shipped', 'Processing', 'Packed'] },
+        $or: [
+            { paymentMethod: 'pay-online' },
+            { paymentMethod: 'cash-on-delivery' }
+        ]
+    })
+    .populate({
+        path: 'userId',
+        select: 'firstName lastName email mobileNo',
+        strictPopulate: false
+    })
+    .sort({ createdAt: 1 });
 
     // Process appointments to create settlement summary data
     // This is a simplified version - in a real implementation, you'd need to connect
@@ -252,13 +270,36 @@ export const GET = authMiddlewareCrm(async (req) => {
     let totalPlatformReceived = 0;
 
     allAppointments.forEach(appt => {
-      // Handle multi-service appointments
+      // Calculate appointment-level financial totals exactly ONCE to match Settlements API
+      const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
+      const isPayOnline = appt.paymentMethod === 'Pay Online';
+      const apptAdminOwesVendor = isPayOnline ? ((appt.totalAmount || 0) - fees) : 0;
+      const apptVendorOwesAdmin = !isPayOnline ? fees : 0;
+      const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+
+      // Update global totals ONCE per appointment
+      totalGrossServiceAmount += appt.amount || 0;
+      totalDiscountAmount += appt.discountAmount || 0;
+      totalPlatformFee += appt.platformFee || 0;
+      totalTaxAmount += appt.serviceTax || 0;
+      totalAdminOwesVendor += apptAdminOwesVendor;
+      totalVendorOwesAdmin += apptVendorOwesAdmin;
+      if (!isPayOnline) totalVendorReceived += finalAmt;
+      if (isPayOnline) totalPlatformReceived += finalAmt;
+
+      // Handle multi-service appointments (just for creating display rows)
       if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
+        
+        // Sum of item amounts to properly calculate proportional display values
+        const totalItemsAmount = appt.serviceItems.reduce((sum, item) => sum + (item.amount || 0), 0) || 1;
+
         appt.serviceItems.forEach((item, index) => {
-          const receivedBy = appt.paymentMethod === 'Pay Online' ? 'Platform' : 'Vendor';
-          const adminOwesVendor = appt.paymentMethod === 'Pay Online' ? (item.amount || 0) : 0;
-          const vendorOwesAdmin = appt.paymentMethod === 'Pay at Salon' ? (appt.platformFee || 0) + (appt.serviceTax || 0) : 0;
-          const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+          const receivedBy = isPayOnline ? 'Platform' : 'Vendor';
+          
+          // Proportional calculation purely for the detailed breakdown rows
+          const itemRatio = (item.amount || 0) / totalItemsAmount;
+          const displayAdminOwesVendor = apptAdminOwesVendor * itemRatio;
+          const displayVendorOwesAdmin = apptVendorOwesAdmin * itemRatio;
 
           const settlementAppointment = {
             settlementFromDate: settlementStartDate,
@@ -276,27 +317,19 @@ export const GET = authMiddlewareCrm(async (req) => {
             duration: appt.duration || 0,
 
             amount: item.amount || 0,
-            discountAmount: appt.discountAmount || 0,
-            totalAmount: appt.totalAmount || 0,
-            platformFee: appt.platformFee || 0,
-            serviceTax: appt.serviceTax || 0,
+            discountAmount: (appt.discountAmount || 0) * itemRatio,
+            totalAmount: (appt.totalAmount || 0) * itemRatio,
+            platformFee: (appt.platformFee || 0) * itemRatio,
+            serviceTax: (appt.serviceTax || 0) * itemRatio,
             taxRate: appt.taxRate || 0,
-            finalAmount: finalAmt,
+            finalAmount: finalAmt * itemRatio,
 
             receivedBy,
-            adminOwesVendor,
-            vendorOwesAdmin,
-            vendorAmountHandled: appt.paymentMethod === 'Pay at Salon' ? finalAmt : 0,
-            platformAmountHandled: appt.paymentMethod === 'Pay Online' ? finalAmt : 0,
+            adminOwesVendor: displayAdminOwesVendor,
+            vendorOwesAdmin: displayVendorOwesAdmin,
+            vendorAmountHandled: !isPayOnline ? (finalAmt * itemRatio) : 0,
+            platformAmountHandled: isPayOnline ? (finalAmt * itemRatio) : 0,
 
-            grossServiceAmount: item.amount || 0,
-            netServiceAmount: (item.amount || 0) - (appt.discountAmount || 0) + (appt.serviceTax || 0),
-            vendorCommissionRate: appt.vendorCommissionRate || 0.7,
-            vendorServiceEarning: (item.amount || 0) * (appt.vendorCommissionRate || 0.7),
-            salonCommissionAmount: (item.amount || 0) * (1 - (appt.vendorCommissionRate || 0.7)),
-
-            amountPaid: appt.amountPaid || 0,
-            amountRemaining: (appt.totalAmount || 0) - (appt.amountPaid || 0),
             paymentMethod: appt.paymentMethod || 'N/A',
             paymentStatus: appt.paymentStatus || 'N/A',
             mode: appt.mode || 'N/A',
@@ -304,28 +337,10 @@ export const GET = authMiddlewareCrm(async (req) => {
           };
 
           settlementAppointments.push(settlementAppointment);
-
-          // Update totals
-          totalGrossServiceAmount += settlementAppointment.grossServiceAmount;
-          totalDiscountAmount += settlementAppointment.discountAmount;
-          totalPlatformFee += settlementAppointment.platformFee;
-          totalTaxAmount += settlementAppointment.serviceTax;
-          totalNetServiceAmount += settlementAppointment.netServiceAmount;
-          totalVendorEarning += settlementAppointment.vendorServiceEarning;
-          totalSalonCommission += settlementAppointment.salonCommissionAmount;
-
-          totalAdminOwesVendor += adminOwesVendor;
-          totalVendorOwesAdmin += vendorOwesAdmin;
-          if (appt.paymentMethod === 'Pay at Salon') totalVendorReceived += item.amount;
-          if (appt.paymentMethod === 'Pay Online') totalPlatformReceived += item.amount;
         });
       } else {
         // Handle single-service appointments
-        const receivedBy = appt.paymentMethod === 'Pay Online' ? 'Platform' : 'Vendor';
-        // For Pay Online: admin collected the money, owes vendor the service amount (totalAmount)
-        const adminOwesVendor = appt.paymentMethod === 'Pay Online' ? (appt.totalAmount || 0) : 0;
-        const vendorOwesAdmin = appt.paymentMethod === 'Pay at Salon' ? (appt.platformFee || 0) + (appt.serviceTax || 0) : 0;
-        const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+        const receivedBy = isPayOnline ? 'Platform' : 'Vendor';
 
         const settlementAppointment = {
           settlementFromDate: settlementStartDate,
@@ -351,19 +366,11 @@ export const GET = authMiddlewareCrm(async (req) => {
           finalAmount: finalAmt,
 
           receivedBy,
-          adminOwesVendor,
-          vendorOwesAdmin,
-          vendorAmountHandled: appt.paymentMethod === 'Pay at Salon' ? finalAmt : 0,
-          platformAmountHandled: appt.paymentMethod === 'Pay Online' ? finalAmt : 0,
+          adminOwesVendor: apptAdminOwesVendor,
+          vendorOwesAdmin: apptVendorOwesAdmin,
+          vendorAmountHandled: !isPayOnline ? finalAmt : 0,
+          platformAmountHandled: isPayOnline ? finalAmt : 0,
 
-          grossServiceAmount: appt.amount || 0,
-          netServiceAmount: (appt.amount || 0) - (appt.discountAmount || 0) + (appt.serviceTax || 0),
-          vendorCommissionRate: appt.vendorCommissionRate || 0.7,
-          vendorServiceEarning: (appt.amount || 0) * (appt.vendorCommissionRate || 0.7),
-          salonCommissionAmount: (appt.amount || 0) * (1 - (appt.vendorCommissionRate || 0.7)),
-
-          amountPaid: appt.amountPaid || 0,
-          amountRemaining: (appt.totalAmount || 0) - (appt.amountPaid || 0),
           paymentMethod: appt.paymentMethod || 'N/A',
           paymentStatus: appt.paymentStatus || 'N/A',
           mode: appt.mode || 'N/A',
@@ -371,23 +378,60 @@ export const GET = authMiddlewareCrm(async (req) => {
         };
 
         settlementAppointments.push(settlementAppointment);
-
-        // Update totals
-        totalGrossServiceAmount += settlementAppointment.grossServiceAmount;
-        totalDiscountAmount += settlementAppointment.discountAmount;
-        totalPlatformFee += settlementAppointment.platformFee;
-        totalTaxAmount += settlementAppointment.serviceTax;
-        totalNetServiceAmount += settlementAppointment.netServiceAmount;
-        totalVendorEarning += settlementAppointment.vendorServiceEarning;
-        totalSalonCommission += settlementAppointment.salonCommissionAmount;
-
-        totalAdminOwesVendor += adminOwesVendor;
-        totalVendorOwesAdmin += vendorOwesAdmin;
-        if (appt.paymentMethod === 'Pay at Salon') totalVendorReceived += appt.amount;
-        if (appt.paymentMethod === 'Pay Online') totalPlatformReceived += appt.amount;
       }
 
       totalAppointments++;
+    });
+
+    // Process Orders to include in settlement
+    const settlementOrders = [];
+    orders.forEach(order => {
+        const receivedBy = order.paymentMethod === 'pay-online' ? 'Platform' : 'Vendor';
+        const fees = (order.platformFeeAmount || 0) + (order.gstAmount || 0);
+        const adminOwesVendor = order.paymentMethod === 'pay-online' ? ((order.totalAmount || 0) - fees) : 0;
+        const vendorOwesAdmin = order.paymentMethod !== 'pay-online' ? fees : 0;
+        const paymentMethodFormatted = order.paymentMethod === 'pay-online' ? 'Pay Online' : 'Cash on Delivery';
+
+        const settlementOrder = {
+            settlementFromDate: settlementStartDate,
+            settlementToDate: settlementEndDate,
+            settlementDate: order.updatedAt || order.createdAt,
+            settlementId: `SETTLEMENT_ORDER_${order._id}`,
+            orderId: order._id.toString(),
+            date: order.createdAt,
+            serviceName: 'Product Order',
+            clientName: order.userId ? `${order.userId.firstName} ${order.userId.lastName}` : 'N/A',
+            
+            amount: order.totalAmount || 0,
+            discountAmount: order.discountAmount || 0,
+            totalAmount: order.totalAmount || 0,
+            platformFee: order.platformFeeAmount || 0,
+            serviceTax: order.gstAmount || 0,
+            finalAmount: order.totalAmount || 0,
+
+            receivedBy,
+            adminOwesVendor,
+            vendorOwesAdmin,
+            vendorAmountHandled: order.paymentMethod !== 'pay-online' ? order.totalAmount : 0,
+            platformAmountHandled: order.paymentMethod === 'pay-online' ? order.totalAmount : 0,
+
+            paymentMethod: paymentMethodFormatted,
+            paymentStatus: order.paymentStatus || 'completed',
+            mode: 'online',
+            type: 'order'
+        };
+
+        settlementAppointments.push(settlementOrder);
+
+        // Update totals
+        totalGrossServiceAmount += settlementOrder.amount;
+        totalPlatformFee += settlementOrder.platformFee;
+        totalTaxAmount += settlementOrder.serviceTax;
+
+        totalAdminOwesVendor += adminOwesVendor;
+        totalVendorOwesAdmin += vendorOwesAdmin;
+        if (order.paymentMethod !== 'pay-online') totalVendorReceived += order.totalAmount;
+        if (order.paymentMethod === 'pay-online') totalPlatformReceived += order.totalAmount;
     });
 
     // Process Transfers
