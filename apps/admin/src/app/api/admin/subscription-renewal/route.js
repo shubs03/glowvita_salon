@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js"; // Adjust based on file depth
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { forbiddenResponse } from "@repo/lib";
 import _db from "@repo/lib/db";
 import Vendor from "@repo/lib/models/Vendor.model";
 import Supplier from "@repo/lib/models/Vendor/Supplier.model";
 import Doctor from "@repo/lib/models/Vendor/Docters.model";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
+import { queueOrActivateSubscription } from "@repo/lib/utils/subscriptionSchedule";
 
 // Ensure DB connection
 await _db();
@@ -13,14 +14,14 @@ await _db();
 export const POST = authMiddlewareAdmin(async (req) => {
     try {
         const body = await req.json();
-        console.log("📝 Renewal Payload:", body);
+        console.log("📝 Admin Renewal Payload:", body);
 
         const { vendorId, userId, planId, userType: payloadUserType } = body;
         const targetUserId = vendorId || userId;
 
         if (!targetUserId || !planId) {
             return NextResponse.json(
-                { message: "User ID (vendorId or userId) and Plan ID are required" },
+                { success: false, message: "User ID (vendorId or userId) and Plan ID are required" },
                 { status: 400 }
             );
         }
@@ -29,7 +30,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         const plan = await SubscriptionPlan.findById(planId);
         if (!plan) {
             return NextResponse.json(
-                { message: "Subscription Plan not found" },
+                { success: false, message: "Subscription Plan not found" },
                 { status: 404 }
             );
         }
@@ -41,7 +42,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         // Optimization: Check specific type if provided
         if (payloadUserType) {
             const type = payloadUserType.toLowerCase();
-            if (type === 'vendor') {
+            if (type === 'vendor' || type === 'staff') {
                 user = await Vendor.findById(targetUserId);
                 foundUserType = 'vendor';
             } else if (type === 'supplier') {
@@ -58,12 +59,10 @@ export const POST = authMiddlewareAdmin(async (req) => {
             user = await Vendor.findById(targetUserId);
             foundUserType = 'vendor';
         }
-
         if (!user) {
             user = await Supplier.findById(targetUserId);
             foundUserType = 'supplier';
         }
-
         if (!user) {
             user = await Doctor.findById(targetUserId);
             foundUserType = 'doctor';
@@ -71,7 +70,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
 
         if (!user) {
             return NextResponse.json(
-                { message: "User not found" },
+                { success: false, message: "User not found" },
                 { status: 404 }
             );
         }
@@ -86,88 +85,39 @@ export const POST = authMiddlewareAdmin(async (req) => {
             }
         }
 
+        // 4. Use the shared scheduling utility (same as CRM)
+        //    - If user has an active subscription → SCHEDULES the new plan in history
+        //    - If user's subscription is expired/none → ACTIVATES immediately
         const now = new Date();
-        const startDate = new Date(now);
-        const endDate = new Date(now);
-
-        // Calculate endDate based on duration and durationType
-        const duration = plan.duration || 1;
-        const unit = (plan.durationType || 'months').toLowerCase();
-
-        switch (unit) {
-            case 'days':
-                endDate.setDate(endDate.getDate() + duration);
-                break;
-            case 'weeks':
-                endDate.setDate(endDate.getDate() + (duration * 7));
-                break;
-            case 'months':
-                endDate.setMonth(endDate.getMonth() + duration);
-                break;
-            case 'years':
-                endDate.setFullYear(endDate.getFullYear() + duration);
-                break;
-            default:
-                endDate.setMonth(endDate.getMonth() + duration);
-        }
-
-        // 4. Archive Current Subscription if exists
-        if (user.subscription && user.subscription.plan) {
-            if (user.subscription.status === 'Active' && user.subscription.endDate && new Date(user.subscription.endDate) > new Date()) {
-                const name = user.businessName || user.shopName || user.clinicName || (user.firstName + ' ' + user.lastName);
-                return NextResponse.json(
-                    { message: `Subscription is already active for ${name}` },
-                    { status: 400 }
-                );
-            }
-
-            if (!Array.isArray(user.subscription.history)) {
-                user.subscription.history = [];
-            }
-
-            // Create history entry
-            const historyEntry = {
-                plan: user.subscription.plan,
-                status: user.subscription.status || 'Expired',
-                startDate: user.subscription.startDate,
-                endDate: user.subscription.endDate,
-                archivedAt: new Date()
-            };
-
-            user.subscription.history.push(historyEntry);
-        } else {
-            if (!user.subscription) user.subscription = {};
-            if (!user.subscription.history) user.subscription.history = [];
-        }
-
-        // 5. Update Subscription Fields Individually
-        user.subscription.plan = plan._id;
-        user.subscription.status = 'Active';
-        user.subscription.startDate = startDate;
-        user.subscription.endDate = endDate;
+        const subscriptionUpdate = queueOrActivateSubscription(user, plan, now);
 
         // Save user
         await user.save();
 
-        // Check for referral credit — fires on first paid plan activation, ignored on subsequent renewals
+        // 5. Check for referral credit — only fires on paid plans
         const isRegularPlan = plan.planType === 'regular' || (plan.price !== undefined && plan.price > 0);
         if (isRegularPlan) {
-          try {
-            const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
-            const referralResult = await checkAndCreditSubscriptionReferral(user._id.toString(), plan);
-            console.log('[Referral Bonus] Admin subscription-renewal referral result:', referralResult);
-          } catch (err) {
-            console.error("[Referral Bonus] Check failed on admin subscription-renewal:", err);
-          }
+            try {
+                const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
+                const referralResult = await checkAndCreditSubscriptionReferral(user._id.toString(), plan);
+                console.log('[Referral Bonus] Admin subscription-renewal referral result:', referralResult);
+            } catch (err) {
+                console.error("[Referral Bonus] Check failed on admin subscription-renewal:", err);
+            }
         }
 
         // Populate the plan for the frontend
         await user.populate('subscription.plan');
 
+        const mode = subscriptionUpdate.mode; // 'Active' | 'Scheduled'
+
         return NextResponse.json(
             {
                 success: true,
-                message: "Subscription renewed successfully",
+                message: mode === 'Scheduled'
+                    ? "Subscription purchased and scheduled successfully (will activate after current plan ends)"
+                    : "Subscription renewed successfully",
+                schedulingMode: mode,
                 user: {
                     _id: user._id,
                     subscription: user.subscription,
@@ -180,7 +130,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
     } catch (error) {
         console.error("Error renewing subscription:", error);
         return NextResponse.json(
-            { message: "Internal server error", error: error.message },
+            { success: false, message: "Internal server error", error: error.message },
             { status: 500 }
         );
     }

@@ -205,9 +205,9 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-lg hover:bg-primary/10 transition-all duration-300 hover:scale-105">
               <Avatar className="h-9 w-9 border-2 border-primary/20 shadow-sm">
-                <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} />
+                <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.shopName || user?.name || `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || "User"} />
                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                  {(user?.businessName || user?.name || "U").charAt(0)}
+                  {(user?.businessName || user?.shopName || user?.name || user?.firstName || "U").charAt(0)}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -216,13 +216,13 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             <DropdownMenuLabel className="p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-sm">
-                  <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} />
+                  <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.shopName || user?.name || `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || "User"} />
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                    {(user?.businessName || user?.name || "U").charAt(0)}
+                    {(user?.businessName || user?.shopName || user?.name || user?.firstName || "U").charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-foreground truncate">{user?.businessName || user?.name}</p>
+                  <p className="font-bold text-foreground truncate">{user?.businessName || user?.shopName || user?.name || `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim()}</p>
                   <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </div>
               </div>

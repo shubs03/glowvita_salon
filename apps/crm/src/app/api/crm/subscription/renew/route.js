@@ -5,6 +5,7 @@ import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
 import SubscriptionPlanModel from "@repo/lib/models/admin/SubscriptionPlan.model";
+import { queueOrActivateSubscription } from "@repo/lib/utils/subscriptionSchedule";
 
 const getUserModel = (userType) => {
   switch (userType) {
@@ -67,49 +68,7 @@ export const POST = authMiddlewareCrm(async (req) => {
       }
     }
 
-    // Compute new subscription period (renew from now)
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-
-    switch (newPlan.durationType) {
-      case 'days':
-        endDate.setDate(endDate.getDate() + newPlan.duration);
-        break;
-      case 'weeks':
-        endDate.setDate(endDate.getDate() + (newPlan.duration * 7));
-        break;
-      case 'months':
-        endDate.setMonth(endDate.getMonth() + newPlan.duration);
-        break;
-      case 'years':
-        endDate.setFullYear(endDate.getFullYear() + newPlan.duration);
-        break;
-      default:
-        break;
-    }
-
-    // Push current subscription to history if exists
-    if (user.subscription && user.subscription.plan) {
-      const currentPlan = {
-        plan: user.subscription.plan,
-        startDate: user.subscription.startDate,
-        endDate: user.subscription.endDate,
-        status: user.subscription.status === 'Active' && user.subscription.endDate < new Date() ? 'Expired' : user.subscription.status
-      };
-
-      if (!Array.isArray(user.subscription.history)) {
-        user.subscription.history = [];
-      }
-      user.subscription.history.push(currentPlan);
-    }
-
-    user.subscription = {
-      plan: newPlan._id,
-      status: 'Active',
-      startDate,
-      endDate,
-      history: user.subscription?.history || []
-    };
+    const subscriptionUpdate = queueOrActivateSubscription(user, newPlan);
 
     await user.save();
 
@@ -128,7 +87,9 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     return NextResponse.json({
       success: true,
-      message: "Subscription renewed successfully",
+      message: subscriptionUpdate.mode === 'Scheduled'
+        ? "Subscription renewed and scheduled successfully"
+        : "Subscription renewed successfully",
       data: user.subscription
     }, { status: 200 });
 
