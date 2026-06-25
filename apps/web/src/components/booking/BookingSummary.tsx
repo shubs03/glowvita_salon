@@ -22,6 +22,7 @@ interface PriceBreakdown {
   totalTax: number;
   finalTotal: number;
   couponCode?: string | null;
+  taxFeeSettings?: any;
 }
 
 interface BookingSummaryProps {
@@ -715,14 +716,14 @@ export function BookingSummary({
 
             {priceBreakdown && priceBreakdown.platformFee > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Platform Fee</span>
+                <span className="text-muted-foreground">Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}</span>
                 <span>₹{priceBreakdown.platformFee.toFixed(2)}</span>
               </div>
             )}
 
             {priceBreakdown && priceBreakdown.serviceTax > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">GST</span>
+                <span className="text-muted-foreground">GST {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}</span>
                 <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
               </div>
             )}

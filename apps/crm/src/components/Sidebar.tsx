@@ -156,9 +156,9 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
                 <div className="relative">
                   <Avatar className="h-10 w-10 border border-border">
-                    <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} className="object-cover" />
+                    <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.shopName || user?.name || `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || "User"} className="object-cover" />
                     <AvatarFallback className="bg-secondary text-primary font-medium">
-                      {(user?.businessName || user?.name || "U").charAt(0)}
+                      {(user?.businessName || user?.shopName || user?.name || user?.firstName || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -166,7 +166,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-sm font-semibold text-foreground truncate transition-transform duration-300">
-                      {user?.businessName || user?.name}
+                      {user?.businessName || user?.shopName || user?.name || `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim()}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
@@ -178,9 +178,9 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
               <div className="flex justify-center">
                 <div className="relative">
                   <Avatar className="h-8 w-8 border border-border">
-                    <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} className="object-cover" />
+                    <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.shopName || user?.name || `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || "User"} className="object-cover" />
                     <AvatarFallback className="bg-secondary text-primary text-xs font-medium">
-                      {(user?.businessName || user?.name || "U").charAt(0)}
+                      {(user?.businessName || user?.shopName || user?.name || user?.firstName || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </div>

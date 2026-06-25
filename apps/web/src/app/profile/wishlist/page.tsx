@@ -62,8 +62,8 @@ interface SalonWishlistItem {
 }
 
 export default function WishlistPage() {
-  const [activeTab, setActiveTab] = useState('products');
-  const [previousTab, setPreviousTab] = useState('products');
+  const [activeTab, setActiveTab] = useState('all');
+  const [previousTab, setPreviousTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -324,10 +324,10 @@ export default function WishlistPage() {
       <CardContent>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">All ({wishlistItems.length + doctorWishlistItems.length + salonWishlistItems.length})</TabsTrigger>
             <TabsTrigger value="products">Products ({wishlistItems.length})</TabsTrigger>
             <TabsTrigger value="doctors">Doctors ({doctorWishlistItems.length})</TabsTrigger>
             <TabsTrigger value="salons">Salons ({salonWishlistItems.length})</TabsTrigger>
-            <TabsTrigger value="all">All ({wishlistItems.length + doctorWishlistItems.length + salonWishlistItems.length})</TabsTrigger>
           </TabsList>
           <TabsContent value={activeTab} className="mt-4">
             {activeTab === 'doctors' ? (

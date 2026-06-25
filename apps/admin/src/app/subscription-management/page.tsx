@@ -45,10 +45,11 @@ type Subscription = {
   endDate: string;
   status: string;
   history?: Array<{
-    plan: { _id: string; name: string };
+    plan: { _id: string; name: string } | string;
     status: string;
     startDate: string;
     endDate: string;
+    purchaseDate?: string;
   }>;
   userType?: 'vendor' | 'supplier' | 'doctor';
 };
@@ -142,6 +143,7 @@ export default function SubscriptionManagementPage() {
 
     // Return capitalized status for UI consistency
     if (normalizedStatus === 'active') return 'Active';
+    if (normalizedStatus === 'scheduled') return 'Scheduled';
     if (normalizedStatus === 'pending') return 'Pending';
     if (normalizedStatus === 'expired') return 'Expired';
 
@@ -416,7 +418,10 @@ export default function SubscriptionManagementPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success('Subscription renewed successfully!');
+        const msg = data.schedulingMode === 'Scheduled'
+          ? 'Plan scheduled — will activate after the current subscription ends.'
+          : 'Subscription renewed successfully!';
+        toast.success(msg);
         setIsRenewModalOpen(false);
         setSelectedSubscription(null);
         setSelectedRenewalPlan(null);
@@ -428,6 +433,7 @@ export default function SubscriptionManagementPage() {
       }
     } catch (error: any) {
       console.error('Error renewing subscription:', error);
+      toast.error(error?.message || 'Failed to process subscription. Please try again.');
     } finally {
       setIsRenewingManual(false);
     }
@@ -680,6 +686,7 @@ export default function SubscriptionManagementPage() {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Scheduled">Scheduled</SelectItem>
                     <SelectItem value="Expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
@@ -721,7 +728,17 @@ export default function SubscriptionManagementPage() {
                           <TableCell>{sub.planName}</TableCell>
                           <TableCell>{sub.startDate ? new Date(sub.startDate).toLocaleDateString() : '-'}</TableCell>
                           <TableCell>{sub.endDate ? new Date(sub.endDate).toLocaleDateString() : '-'}</TableCell>
-                          <TableCell>{sub.status}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium
+                              ${
+                                sub.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                sub.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                sub.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                              {sub.status}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('view', sub)}>
                               <Eye className="h-4 w-4" />
@@ -1190,9 +1207,11 @@ export default function SubscriptionManagementPage() {
                     px-3 py-1 rounded-full text-xs font-semibold
                     ${selectedSubscription.status === 'Active'
                       ? 'bg-green-100 text-green-700 border border-green-200'
-                      : selectedSubscription.status === 'Expired'
-                        ? 'bg-red-100 text-red-700 border border-red-200'
-                        : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                      : selectedSubscription.status === 'Scheduled'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : selectedSubscription.status === 'Expired'
+                          ? 'bg-red-100 text-red-700 border border-red-200'
+                          : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                     }
                   `}>
                     {selectedSubscription.status || 'Unknown'}
@@ -1348,7 +1367,9 @@ export default function SubscriptionManagementPage() {
                                     px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight
                                     ${historyItem.status === 'Active'
                                       ? 'bg-green-100 text-green-700 border border-green-200'
-                                      : 'bg-muted text-muted-foreground border border-muted-foreground/10'
+                                      : historyItem.status === 'Scheduled'
+                                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                        : 'bg-muted text-muted-foreground border border-muted-foreground/10'
                                     }
                                   `}
                                 >
@@ -1417,9 +1438,15 @@ export default function SubscriptionManagementPage() {
       <Dialog open={isRenewModalOpen} onOpenChange={setIsRenewModalOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Renew Subscription</DialogTitle>
+            <DialogTitle>
+              {selectedSubscription?.status === 'Active'
+                ? `Schedule Next Plan for ${selectedSubscription?.subscriberName}`
+                : `Renew Subscription for ${selectedSubscription?.subscriberName}`}
+            </DialogTitle>
             <DialogDescription>
-              Select a plan to renew subscription for {selectedSubscription?.subscriberName}
+              {selectedSubscription?.status === 'Active'
+                ? 'This user has an active subscription. The selected plan will be queued and will activate automatically when the current plan ends.'
+                : `Select a plan to renew the subscription for ${selectedSubscription?.subscriberName}.`}
             </DialogDescription>
           </DialogHeader>
           <div className="py-6">
@@ -1489,12 +1516,20 @@ export default function SubscriptionManagementPage() {
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                   Renewing...
                 </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4" />
-                  Renew Now
-                </span>
-              )}
+              ) : selectedRenewalPlan
+                ? selectedSubscription?.status === 'Active'
+                  ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      Schedule Plan
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      Renew Now
+                    </span>
+                  )
+                : 'Select a Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>

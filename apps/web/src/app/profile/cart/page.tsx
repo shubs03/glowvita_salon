@@ -346,11 +346,6 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  {/* Free shipping info - compact version */}
-                  <div className="text-sm text-green-600 font-medium flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    <span>Free shipping on orders over ₹500</span>
-                  </div>
                 </div>
               </div>
 

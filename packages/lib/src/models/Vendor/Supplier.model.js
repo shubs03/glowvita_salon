@@ -106,7 +106,7 @@ const supplierSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ["Active", "Expired", "Pending"],
+      enum: ["Active", "Expired", "Pending", "Scheduled"],
       default: "Pending",
     },
     startDate: {
@@ -116,6 +116,10 @@ const supplierSchema = new mongoose.Schema({
     endDate: {
       type: Date,
       required: true
+    },
+    purchaseDate: {
+      type: Date,
+      default: Date.now
     },
     history: {
       type: [{
@@ -132,9 +136,13 @@ const supplierSchema = new mongoose.Schema({
           type: Date,
           required: true
         },
+        purchaseDate: {
+          type: Date,
+          default: Date.now
+        },
         status: {
           type: String,
-          enum: ["Active", "Expired"],
+          enum: ["Active", "Expired", "Scheduled"],
           required: true
         }
       }],
@@ -218,9 +226,10 @@ supplierSchema.pre("validate", async function (next) {
     const now = new Date();
     const endDate = new Date(this.subscription.endDate);
 
-    // Auto-update status to Expired if endDate has passed
-    if (endDate <= now && this.subscription.status !== 'Expired') {
-      this.subscription.status = 'Expired';
+    // Auto-expire current plan and promote the next scheduled plan when available.
+    if (endDate <= now) {
+      const { reconcileSubscriptionSchedule } = await import("../../utils/subscriptionSchedule.js");
+      reconcileSubscriptionSchedule(this, now);
     }
   }
 

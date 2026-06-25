@@ -3,6 +3,7 @@ import connectDB from '@repo/lib/db';
 import Vendor from '@repo/lib/models/Vendor/Vendor.model';
 import Doctor from '@repo/lib/models/Vendor/Docters.model';
 import Supplier from '@repo/lib/models/Vendor/Supplier.model';
+import { reconcileSubscriptionSchedule } from '@repo/lib/utils/subscriptionSchedule';
 import * as jose from 'jose';
 
 const JWT_SECRETS = {
@@ -88,8 +89,15 @@ export function withSubscriptionCheck(handler) {
       subscriptionContainer = mainUser;
     }
 
-    const { subscription } = subscriptionContainer;
     const now = new Date();
+    if (subscriptionContainer.subscription) {
+      const changed = reconcileSubscriptionSchedule(subscriptionContainer, now);
+      if (changed) {
+        await subscriptionContainer.save();
+      }
+    }
+
+    const { subscription } = subscriptionContainer;
 
     const isSubExpired = !subscription ||
       (subscription.status?.toLowerCase() === 'expired') ||

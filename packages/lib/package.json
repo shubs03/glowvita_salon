@@ -110,6 +110,8 @@
     "./utils/assignRegion": "./src/utils/assignRegion.js",
     "./utils/assignRegion.js": "./src/utils/assignRegion.js",
     "./utils/referralWalletCredit": "./src/utils/referralWalletCredit.js",
+    "./utils/subscriptionSchedule": "./src/utils/subscriptionSchedule.js",
+    "./utils/subscriptionSchedule.js": "./src/utils/subscriptionSchedule.js",
     "./utils/razorpayPayout": "./src/utils/razorpayPayout.js",
     "./VPSUpload": "./VPSUpload.js",
     "./modules/scheduling/AutoCancellation": "./src/modules/scheduling/AutoCancellation.js",

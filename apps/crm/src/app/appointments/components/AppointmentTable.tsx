@@ -113,6 +113,9 @@ const AppointmentTable = ({
                 const paidAmount = (appointment as any).amountPaid ?? appointment.payment?.paid ?? 0;
                 const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
 
+                // Check if appointment is in the future (after today)
+                const isFutureAppointment = new Date(new Date(appointment.date).setHours(0, 0, 0, 0)) > new Date(new Date().setHours(0, 0, 0, 0));
+
                 return (
                   <TableRow key={appointment._id}>
                     <TableCell className="font-medium">
@@ -219,6 +222,7 @@ const AppointmentTable = ({
                         {remainingAmount > 0 &&
                           appointment.status !== 'cancelled' &&
                           ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) !== 'completed' && (
+<<<<<<< HEAD
                             <div className="relative group/tip">
                               <Button
                                 variant="ghost"
@@ -234,6 +238,20 @@ const AppointmentTable = ({
                                 Collect Payment
                               </span>
                             </div>
+=======
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onOpenPaymentModal(appointment)}
+                              className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={isFutureAppointment ? "Cannot collect payment before appointment date" : "Collect Payment"}
+                              disabled={isFutureAppointment}
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                            </Button>
+>>>>>>> 890575206c9edb6f59bbcfe018217c5ec6b79988
                           )}
                         <div className="relative group/tip">
                           <Button
