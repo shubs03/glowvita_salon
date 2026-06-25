@@ -34,18 +34,28 @@ export async function autoCancelExpiredAppointments(options = {}) {
         const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
         const cutoffTime = new Date(now.getTime() - gracePeriodMs);
 
+        // Build strict TODAY-only boundary (local server timezone)
+        // This ensures ONLY today's appointments are ever considered —
+        // tomorrow or any future date appointments are completely excluded.
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const endOfToday = new Date(now);
+        endOfToday.setHours(23, 59, 59, 999);
+
         console.log('=== Auto-Cancellation Job Started ===');
         console.log('Current time:', now.toISOString());
         console.log('Grace period:', gracePeriodMinutes, 'minutes');
         console.log('Cutoff time:', cutoffTime.toISOString());
+        console.log('Today range:', startOfToday.toISOString(), 'to', endOfToday.toISOString());
         console.log('Dry run mode:', dryRun);
 
         // Find appointments that should be auto-cancelled
         // 1. Status is 'scheduled' or 'confirmed' (not completed, cancelled, or no-show)
-        // 2. End time has passed (including grace period)
+        // 2. Appointment date is STRICTLY TODAY — future/tomorrow appointments are never touched
         const expiredAppointments = await Appointment.find({
             status: { $in: ['scheduled', 'confirmed'] },
-            date: { $lte: now }, // Appointment date is today or in the past
+            date: { $gte: startOfToday, $lte: endOfToday }, // ONLY today's appointments
         }).lean();
 
         console.log(`Found ${expiredAppointments.length} appointments to check`);
@@ -57,8 +67,14 @@ export async function autoCancelExpiredAppointments(options = {}) {
                 return false;
             }
 
-            // Construct the end datetime
-            const appointmentDate = new Date(appointment.date);
+            // Construct the full end datetime for this appointment.
+            // We always work in LOCAL time: today's local date + the stored endTime (HH:MM).
+            // Using setHours (local) consistently with how `now` and startOfToday are computed
+            // avoids any UTC-vs-local timezone shift that could make the endTime land on the
+            // wrong calendar day.
+            const appointmentDate = new Date(now); // start from today's local date
+            appointmentDate.setHours(0, 0, 0, 0);  // reset to midnight local
+
             const [hours, minutes] = appointment.endTime.split(':').map(Number);
 
             if (isNaN(hours) || isNaN(minutes)) {
@@ -66,6 +82,7 @@ export async function autoCancelExpiredAppointments(options = {}) {
                 return false;
             }
 
+            // Apply the appointment's end hour/minute in local time
             appointmentDate.setHours(hours, minutes, 0, 0);
 
             // Check if end time + grace period has passed
