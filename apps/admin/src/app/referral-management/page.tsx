@@ -528,73 +528,17 @@ export default function ReferralManagementPage() {
               <div className="space-y-2">
                 <Label className='text-base font-semibold'>Referrer Bonus</Label>
                 <div className="grid gap-4 mt-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Bonus Type</Label>
-                      <Select
-                        value={modal.settings.referrerBonus?.bonusType}
-                        onValueChange={(v: 'amount' | 'discount') => handleReferrerBonusChange('bonusType', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="amount">Fixed Amount</SelectItem>
-                          <SelectItem value="discount">Discount (%)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bonus-value">Bonus Value</Label>
-                      <Input
-                        id="bonus-value"
-                        type="number"
-                        value={modal.settings.referrerBonus?.bonusValue}
-                        onChange={(e) => handleReferrerBonusChange('bonusValue', Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="credit-time">Credit Time (in days)</Label>
+                    <Label htmlFor="bonus-value">Bonus Value (Fixed Amount)</Label>
                     <Input
-                      id="credit-time"
-                      placeholder="e.g., 7"
-                      value={modal.settings.referrerBonus?.creditTime?.split(' ')[0]}
-                      onChange={(e) => handleReferrerBonusChange('creditTime', `${e.target.value} days`)}
+                      id="bonus-value"
+                      type="number"
+                      value={modal.settings.referrerBonus?.bonusValue}
+                      onChange={(e) => handleReferrerBonusChange('bonusValue', Number(e.target.value))}
                     />
                   </div>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Usage Limit</Label>
-                <RadioGroup
-                  value={modal.settings.usageLimit}
-                  onValueChange={(v: 'unlimited' | 'manual') => handleModalChange('usageLimit', v)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="unlimited" id="unlimited" />
-                    <Label htmlFor="unlimited">Unlimited</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="manual" id="manual" />
-                    <Label htmlFor="manual">Manual Count</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-              {modal.settings.usageLimit === 'manual' && (
-                <div className="space-y-2">
-                  <Label htmlFor="usage-count">Number of Referrals</Label>
-                  <Input
-                    id="usage-count"
-                    type="number"
-                    placeholder="e.g., 100"
-                    value={modal.settings.usageCount || ''}
-                    onChange={(e) => handleModalChange('usageCount', Number(e.target.value))}
-                  />
-                </div>
-              )}
 
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center justify-between">
@@ -607,39 +551,13 @@ export default function ReferralManagementPage() {
                 </div>
                 {modal.settings.refereeBonus?.enabled && (
                   <div className="grid gap-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Bonus Type</Label>
-                        <Select
-                          value={modal.settings.refereeBonus?.bonusType}
-                          onValueChange={(v: 'amount' | 'discount') => handleRefereeBonusChange('bonusType', v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="amount">Fixed Amount</SelectItem>
-                            <SelectItem value="discount">Discount (%)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="referee-bonus-value">Bonus Value</Label>
-                        <Input
-                          id="referee-bonus-value"
-                          type="number"
-                          value={modal.settings.refereeBonus?.bonusValue}
-                          onChange={(e) => handleRefereeBonusChange('bonusValue', Number(e.target.value))}
-                        />
-                      </div>
-                    </div>
                     <div className="space-y-2">
-                      <Label htmlFor="referee-credit-time">Credit Time (in days)</Label>
+                      <Label htmlFor="referee-bonus-value">Bonus Value (Fixed Amount)</Label>
                       <Input
-                        id="referee-credit-time"
-                        placeholder="e.g., 7"
-                        value={modal.settings.refereeBonus?.creditTime?.split(' ')[0]}
-                        onChange={(e) => handleRefereeBonusChange('creditTime', `${e.target.value} days`)}
+                        id="referee-bonus-value"
+                        type="number"
+                        value={modal.settings.refereeBonus?.bonusValue}
+                        onChange={(e) => handleRefereeBonusChange('bonusValue', Number(e.target.value))}
                       />
                     </div>
                   </div>
