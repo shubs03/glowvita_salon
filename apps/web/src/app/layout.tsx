@@ -90,8 +90,10 @@ export default function RootLayout({
     pathname.startsWith('/reset-password');
   const isProfilePage = pathname.startsWith('/profile');
 
+  const isCheckoutPage = pathname.startsWith('/checkout');
+
   // Show header on marketing and profile pages, but not on auth pages
-  const showHeader = isMarketingPage || isProfilePage;
+  const showHeader = isMarketingPage || isProfilePage || isCheckoutPage;
   // Show footer only on marketing pages, but hide on Search to allow split-view to fill screen
   const showFooter = isMarketingPage && !isFooterHiddenPage;
 
