@@ -160,7 +160,7 @@ interface DoctorProfile {
   password?: string;
   createdAt?: string;
   updatedAt?: string;
-  // New working hours fields
+  // New working hours fields
   physicalConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
   videoConsultationEnabled?: boolean;
   videoConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
@@ -174,17 +174,23 @@ export default function ProfilePage() {
 
   // Vendor profile data
   const { data: vendorData, isLoading: isVendorLoading, isError: isVendorError, refetch: refetchVendor, error: vendorError } = useGetVendorProfileQuery(undefined, {
-    skip: !user?._id || role !== 'vendor'
+    skip: !user?._id || role !== 'vendor',
+    pollingInterval: 30000,
+    refetchOnFocus: true,
   });
 
   // Supplier profile data (current supplier's profile)
   const { data: supplierData, isLoading: isSupplierLoading, isError: isSupplierError, refetch: refetchSupplier, error: supplierError } = useGetCurrentSupplierProfileQuery(undefined, {
-    skip: !user?._id || role !== 'supplier'
+    skip: !user?._id || role !== 'supplier',
+    pollingInterval: 30000,
+    refetchOnFocus: true,
   });
 
   // Doctor profile data (current doctor's profile)
   const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
-    skip: !user?._id || role !== 'doctor'
+    skip: !user?._id || role !== 'doctor',
+    pollingInterval: 30000,
+    refetchOnFocus: true,
   });
 
   const [apiUpdateVendor] = useUpdateVendorProfileMutation();

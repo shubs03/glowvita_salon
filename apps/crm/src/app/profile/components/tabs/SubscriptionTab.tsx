@@ -88,7 +88,13 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const { data: plansResponse } = useGetCrmSubscriptionPlansQuery(undefined);
 
-  const now = new Date();
+  const [now, setNow] = useState(new Date());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const nowTime = now.getTime();
 
   const planById = React.useMemo(() => {
