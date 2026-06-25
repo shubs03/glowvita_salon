@@ -116,33 +116,45 @@ const ExpenseTable = ({
                 </TableCell>
                 <TableCell className="text-right sticky right-0 bg-background/80 backdrop-blur-sm">
                   <div className="flex justify-end gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => onOpenDetails(expense)} 
-                      title="View Details"
-                      className="hover:bg-primary/10 hover:text-primary transition-colors"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => onOpenModal(expense)} 
-                      title="Edit"
-                      className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-destructive hover:bg-destructive/10 transition-colors" 
-                      onClick={() => onDeleteClick(expense)} 
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="relative group/tip">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => onOpenDetails(expense)} 
+                        className="hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                        View Details
+                      </span>
+                    </div>
+                    <div className="relative group/tip">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => onOpenModal(expense)} 
+                        className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                        Edit
+                      </span>
+                    </div>
+                    <div className="relative group/tip">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive hover:bg-destructive/10 transition-colors" 
+                        onClick={() => onDeleteClick(expense)} 
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                        Delete
+                      </span>
+                    </div>
                   </div>
                 </TableCell>
               </TableRow>
