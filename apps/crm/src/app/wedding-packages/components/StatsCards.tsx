@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@repo/ui/card";
-import { Tag, DollarSign, Star, BarChart2 } from "lucide-react";
+import { Tag, IndianRupee, Star, BarChart2 } from "lucide-react";
 
 interface WeddingPackage {
   _id: string;
@@ -64,7 +64,7 @@ export function StatsCards({ packages }: StatsCardsProps) {
               <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Average package price</p>
             </div>
             <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
-              <DollarSign className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
+              <IndianRupee className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
