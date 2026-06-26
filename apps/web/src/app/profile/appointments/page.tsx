@@ -299,11 +299,21 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
     console.log("appointment ", appointment);
 
     // Safely parse the date
-    let displayDate = 'Invalid Date';
+    let displayDateTime = 'Invalid Date';
     try {
         const dateObj = new Date(appointment.date);
         if (!isNaN(dateObj.getTime())) {
-            displayDate = dateObj.toLocaleDateString();
+            const displayDate = dateObj.toLocaleDateString();
+            
+            const startTime = (appointment.serviceItems && appointment.serviceItems.length > 0)
+                ? appointment.serviceItems[0].startTime
+                : appointment.startTime;
+            
+            if (startTime) {
+                displayDateTime = `${displayDate} at ${startTime}`;
+            } else {
+                displayDateTime = `${displayDate} at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
         }
     } catch (e) {
         console.error('Error parsing date:', e);
@@ -332,7 +342,7 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
                     ) : (
                         <p className="font-semibold">{appointment.service}</p>
                     )}
-                    <p className="text-sm text-muted-foreground">{displayDate}</p>
+                    <p className="text-sm text-muted-foreground">{displayDateTime}</p>
                 </div>
                 <div className={`flex items-center text-xs font-medium gap-1 ${statusConfig[appointment.status]?.color}`}>
                     <StatusIcon className="h-3 w-3" />
