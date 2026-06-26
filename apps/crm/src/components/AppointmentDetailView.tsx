@@ -8,7 +8,7 @@ import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { X, Phone, Mail, MapPin, Clock, Calendar, User, Scissors, DollarSign, UserCheck, CreditCard, Wallet, Smartphone, History, CalendarPlus, ClipboardList, Printer, Download, Home, Building2 } from "lucide-react";
+import { X, Phone, Mail, MapPin, Clock, Calendar, User, Scissors, IndianRupee, UserCheck, CreditCard, Wallet, Smartphone, History, CalendarPlus, ClipboardList, Printer, Download, Home, Building2 } from "lucide-react";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { Badge } from "@repo/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
@@ -1503,7 +1503,7 @@ export function AppointmentDetailView({
                         setIsCollectingPayment(!isCollectingPayment);
                       }}
                     >
-                      <DollarSign className="w-4 h-4 mr-2" />
+                      <IndianRupee className="w-4 h-4 mr-2" />
                       {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
                     </Button>
                   )}
@@ -1572,7 +1572,7 @@ export function AppointmentDetailView({
                 <div className="bg-background p-5 rounded-lg border-2 border-muted">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-lg flex items-center text-foreground">
-                      <DollarSign className="w-5 h-5 mr-2 text-foreground" />
+                      <IndianRupee className="w-5 h-5 mr-2 text-foreground" />
                       Payment Collection
                     </h3>
                     {appointment.payment?.bookingSource && (
@@ -2555,7 +2555,7 @@ export function AppointmentDetailView({
                       setShowPaymentForm(true);
                     }}
                   >
-                    <DollarSign className="h-4 w-4" />
+                    <IndianRupee className="h-4 w-4" />
                     Collect Payment
                   </Button>
                 )} */}
@@ -2662,7 +2662,7 @@ export function AppointmentDetailView({
             <div className="space-y-2">
               <label className="text-sm font-medium">Amount</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   type="number" 
                   value={paymentData.amount}
