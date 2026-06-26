@@ -314,7 +314,7 @@ export default function DoctorSchedulePage() {
                           <span className="text-sm text-gray-500">({schedule.reviewCount} reviews)</span>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{schedule.clinic}</p>
-                        <p className="text-sm font-medium text-green-600">${schedule.consultationFee} consultation</p>
+                        <p className="text-sm font-medium text-green-600">₹{schedule.consultationFee} consultation</p>
                       </div>
                     </div>
                     <Badge variant="outline">

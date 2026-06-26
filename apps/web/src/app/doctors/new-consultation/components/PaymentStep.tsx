@@ -49,7 +49,7 @@ export function PaymentStep({ amount, onSuccess, onBack }: PaymentStepProps) {
             <div className="p-4 bg-background/50 rounded-lg border border-blue-400/10">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-medium">Total Amount</span>
-                <span className="text-2xl font-bold text-blue-400">${amount}</span>
+                <span className="text-2xl font-bold text-blue-400">₹{amount}</span>
               </div>
             </div>
 
@@ -98,7 +98,7 @@ export function PaymentStep({ amount, onSuccess, onBack }: PaymentStepProps) {
                 size="lg"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                Pay ${amount}
+                Pay ₹{amount}
               </Button>
             </div>
           </>
