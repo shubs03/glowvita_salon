@@ -32,7 +32,7 @@ import {
   ClipboardList,
   Info,
   Tag,
-  DollarSign,
+  IndianRupee,
   Clock,
   Check,
   HelpCircle,
@@ -334,7 +334,7 @@ export function PackageModal({
               <div className="space-y-4">
                 <div className="bg-primary/[0.03] border border-primary/20 rounded-xl p-5 space-y-4 shadow-sm">
                   <h4 className="text-sm font-bold text-foreground tracking-wide uppercase border-b border-muted pb-2 flex items-center gap-1.5">
-                    <DollarSign className="h-4 w-4 text-primary" /> Billing Breakdown
+                    <IndianRupee className="h-4 w-4 text-primary" /> Billing Breakdown
                   </h4>
                   <div className="space-y-2.5 text-sm">
                     <div className="flex justify-between text-muted-foreground">
@@ -769,7 +769,7 @@ export function PackageModal({
             {/* PRICING & DISCOUNTS METRICS WRAPPER */}
             <div className="bg-primary/[0.02] border border-primary/20 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
               <h4 className="text-sm font-bold text-foreground tracking-wide uppercase border-b border-muted pb-2 flex items-center gap-1.5">
-                <DollarSign className="h-4 w-4 text-primary" /> Pricing Summary
+                <IndianRupee className="h-4 w-4 text-primary" /> Pricing Summary
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">

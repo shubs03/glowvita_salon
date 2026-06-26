@@ -416,7 +416,7 @@ export default function NearbyDoctorsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-green-600">${doctor.consultationFee}</p>
+                          <p className="font-semibold text-green-600">₹{doctor.consultationFee}</p>
                           <p className="text-sm text-gray-600">consultation</p>
                         </div>
                       </div>

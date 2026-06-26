@@ -25,7 +25,11 @@ export async function GET(req) {
 
     const orders = await ClientOrder.find({ userId: payload.userId }).sort({ createdAt: -1 }).lean();
 
-    // Enhance orders with product origin information
+    // Lazy-load models to avoid circular imports
+    const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+    const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
+
+    // Enhance orders with product origin information + seller name
     const enhancedOrders = await Promise.all(orders.map(async (order) => {
       const enhancedItems = await Promise.all(order.items.map(async (item) => {
         try {
@@ -43,9 +47,30 @@ export async function GET(req) {
         }
       }));
 
+      // Determine seller name from vendorId
+      let sellerName = 'N/A';
+      if (order.vendorId) {
+        try {
+          // Try vendor first
+          const vendor = await VendorModel.findById(order.vendorId).select('businessName').lean();
+          if (vendor?.businessName) {
+            sellerName = vendor.businessName;
+          } else {
+            // Try supplier
+            const supplier = await SupplierModel.findById(order.vendorId).select('shopName').lean();
+            if (supplier?.shopName) {
+              sellerName = supplier.shopName;
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching seller name for order ${order._id}:`, err);
+        }
+      }
+
       return {
         ...order,
-        items: enhancedItems
+        items: enhancedItems,
+        sellerName
       };
     }));
 

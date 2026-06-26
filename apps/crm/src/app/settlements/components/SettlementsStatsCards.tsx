@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@repo/ui/card";
-import { DollarSign, Hourglass, Users, RefreshCw } from 'lucide-react';
+import { IndianRupee, Hourglass, Users, RefreshCw } from 'lucide-react';
 import { PayoutData } from "../types";
 
 interface SettlementsStatsCardsProps {
@@ -23,7 +23,7 @@ const SettlementsStatsCards = ({ payouts }: SettlementsStatsCardsProps) => {
               <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">All-time paid to vendors</p>
             </div>
             <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
-              <DollarSign className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
+              <IndianRupee className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>

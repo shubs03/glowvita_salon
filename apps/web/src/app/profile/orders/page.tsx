@@ -84,6 +84,7 @@ interface Order {
   customerEmail?: string;
   customerPhone?: string;
   vendorId?: string;
+  sellerName?: string;
   cancellationReason?: string;
   cancelledAt?: string;
   cancelledBy?: string;
@@ -224,7 +225,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={ShoppingCart}
           title="Total Orders"
@@ -235,6 +236,12 @@ export default function OrdersPage() {
           icon={Package}
           title="Delivered"
           value={orderHistory.filter((o) => o.status === "Delivered").length}
+          change="All time"
+        />
+        <StatCard
+          icon={X}
+          title="Cancelled"
+          value={orderHistory.filter((o) => o.status?.toLowerCase() === "cancelled").length}
           change="All time"
         />
         <StatCard
@@ -311,6 +318,7 @@ export default function OrdersPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Items</TableHead>
                   <TableHead>Qty</TableHead>
+                  <TableHead>Seller</TableHead>
                   <TableHead>Origin</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Total</TableHead>
@@ -321,14 +329,14 @@ export default function OrdersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={10} className="text-center py-8">
                       Loading orders...
                     </TableCell>
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={10}
                       className="text-center py-8 text-destructive"
                     >
                       Failed to load orders.
@@ -375,6 +383,9 @@ export default function OrdersPage() {
                         </TableCell>
                         <TableCell className="font-medium">
                           {totalQuantity}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm font-medium">{order.sellerName || 'N/A'}</span>
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -551,7 +562,7 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-primary" />
+                    <span className="h-5 w-5 text-primary font-bold text-base">₹</span>
                     Payment Summary
                   </h3>
                   <div className="space-y-2 text-sm p-4 bg-secondary rounded-lg">
@@ -593,10 +604,13 @@ export default function OrdersPage() {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                <h3 className="font-semibold mb-1 text-lg flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5 text-primary" />
                   Items Ordered ({selectedOrder.items.length})
                 </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Seller: <span className="font-medium text-foreground">{selectedOrder.sellerName || 'N/A'}</span>
+                </p>
                 <div className="space-y-4">
                   {selectedOrder.items.map((item, index) => (
                     <div

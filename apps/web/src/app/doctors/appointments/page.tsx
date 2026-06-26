@@ -257,7 +257,7 @@ export default function DoctorAppointmentsPage() {
                             {appointment.type}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600">{appointment.clinic} - ${appointment.fee}</p>
+                        <p className="text-sm text-gray-600">{appointment.clinic} - ₹{appointment.fee}</p>
                         {appointment.notes && (
                           <p className="text-sm italic text-gray-500">{appointment.notes}</p>
                         )}
@@ -308,7 +308,7 @@ export default function DoctorAppointmentsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">${doctor.consultationFee} consultation</p>
+                      <p className="text-sm font-medium">₹{doctor.consultationFee} consultation</p>
                       <p className="text-sm text-gray-600">{doctor.clinicName}</p>
                       <div className="flex flex-wrap gap-1">
                         {doctor.availability.map(slot => (

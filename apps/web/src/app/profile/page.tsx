@@ -14,7 +14,6 @@ import {
 import {
   Tag,
   UserPlus,
-  DollarSign,
   LayoutDashboard,
   Star,
   Gift,
@@ -25,6 +24,7 @@ import {
   Target,
   ArrowRight,
   Package,
+  IndianRupee,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -357,7 +357,7 @@ function OverviewContent() {
           change={`${stats.totalAppointments} bookings`}
         />
         <StatCard
-          icon={DollarSign}
+          icon={IndianRupee}
           title="Cart Items"
           value={stats.cartItemsCount}
           change={`${stats.cartItemsCount} items in cart`}
@@ -510,29 +510,29 @@ function OverviewContent() {
                       {((offer.applicableServices && offer.applicableServices.length > 0) ||
                         (offer.applicableSpecialties && offer.applicableSpecialties.length > 0) ||
                         (offer.applicableCategories && offer.applicableCategories.length > 0)) && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {offer.applicableServices?.slice(0, 2).map((s: string) => (
-                            <span key={s} className="text-[8px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-blue-200/50">
-                              {s}
-                            </span>
-                          ))}
-                          {offer.applicableSpecialties?.slice(0, 1).map((s: string) => (
-                            <span key={s} className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-purple-200/50">
-                              {s}
-                            </span>
-                          ))}
-                          {offer.applicableCategories?.slice(0, 1).map((c: string) => (
-                            <span key={c} className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-green-200/50">
-                              {c}
-                            </span>
-                          ))}
-                          {((offer.applicableServices?.length ?? 0) > 2) && (
-                            <span className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium leading-none">
-                              +{(offer.applicableServices?.length ?? 0) - 2} more
-                            </span>
-                          )}
-                        </div>
-                      )}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {offer.applicableServices?.slice(0, 2).map((s: string) => (
+                              <span key={s} className="text-[8px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-blue-200/50">
+                                {s}
+                              </span>
+                            ))}
+                            {offer.applicableSpecialties?.slice(0, 1).map((s: string) => (
+                              <span key={s} className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-purple-200/50">
+                                {s}
+                              </span>
+                            ))}
+                            {offer.applicableCategories?.slice(0, 1).map((c: string) => (
+                              <span key={c} className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-green-200/50">
+                                {c}
+                              </span>
+                            ))}
+                            {((offer.applicableServices?.length ?? 0) > 2) && (
+                              <span className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium leading-none">
+                                +{(offer.applicableServices?.length ?? 0) - 2} more
+                              </span>
+                            )}
+                          </div>
+                        )}
                     </div>
 
                     {/* Discount Badge */}
