@@ -276,26 +276,42 @@ export function InvoiceUI({
                       {item.type === "addon" ? "+ " : item.type === "wedding_included_service" ? "└ " : ""}
                       {isProduct(item) ? item.productName : item.name}
                     </div>
-                    {item.staff && !isProduct(item) && (
-                      <div
-                        className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
-                          }`}
-                      >
-                        Staff: {item.staff}
-                      </div>
-                    )}
+                    {(() => {
+                      let staffName = item.staffMember?.name || item.staffName;
+                      if (!staffName && typeof item.staff === 'string' && item.staff.length !== 24) {
+                        staffName = item.staff;
+                      } else if (!staffName && typeof item.staff === 'string' && item.staff.length === 24) {
+                        staffName = "Assigned";
+                      }
+                      
+                      // Check if the staffName is just a Mongo ID or an array of Mongo IDs
+                      const isMongoId = (str: string) => /^[a-f\d]{24}$/i.test(str);
+                      
+                      // If it's still an array (like item.staff which is string[]), or it's a direct MongoID, hide it.
+                      if (Array.isArray(item.staff) && !item.staffMember?.name && !item.staffName) {
+                         staffName = null;
+                      }
+
+                      if (staffName && isMongoId(String(staffName))) {
+                        staffName = null;
+                      }
+
+                      return staffName && !isProduct(item) ? (
+                        <div
+                          className={`text-xs text-gray-600 print:text-[10px] mt-0.5 ${item.type === "addon" || item.type === "wedding_included_service" ? "pl-4" : ""
+                            }`}
+                        >
+                          Staff: {staffName}
+                        </div>
+                      ) : null;
+                    })()}
                   </td>
 
                   {item.type === "wedding_included_service" ? (
                     <>
                       <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
                         <div className="flex flex-col items-end gap-0.5">
-                          {itemPrice > discountedUnitPrice && (
-                            <span className="line-through text-gray-400 text-[10px] leading-none">
-                              ₹{itemPrice.toFixed(2)}
-                            </span>
-                          )}
-                          <span className={itemPrice > discountedUnitPrice ? "text-green-700 leading-none" : "leading-none"}>
+                          <span className={itemPrice > discountedUnitPrice ? "text-green-700 leading-none" : "leading-none"} style={{ textDecoration: "none" }}>
                             ₹{discountedUnitPrice.toFixed(2)}
                           </span>
                         </div>
@@ -311,12 +327,7 @@ export function InvoiceUI({
                           "Included"
                         ) : (
                           <div className="flex flex-col items-end gap-0.5">
-                            {itemPrice > discountedUnitPrice && (
-                              <span className="line-through text-gray-400 text-[10px] leading-none">
-                                ₹{itemPrice.toFixed(2)}
-                              </span>
-                            )}
-                            <span className={itemPrice > discountedUnitPrice ? "text-green-700 leading-none" : "leading-none"}>
+                            <span className={itemPrice > discountedUnitPrice ? "text-green-700 leading-none" : "leading-none"} style={{ textDecoration: "none" }}>
                               ₹{discountedUnitPrice.toFixed(2)}
                             </span>
                           </div>
@@ -355,6 +366,21 @@ export function InvoiceUI({
                 ).toFixed(2)}
               </td>
             </tr>
+
+            {/* Discount */}
+            {invoiceData.discount && invoiceData.discount > 0 ? (
+              <tr className="border border-black">
+                <td
+                  className="border border-black p-1 sm:p-2 text-right font-semibold text-green-600 text-xs sm:text-sm print:text-xs print:p-1"
+                  colSpan={4}
+                >
+                  Discount:
+                </td>
+                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-green-600 print:text-xs print:p-1">
+                  -₹{invoiceData.discount.toFixed(2)}
+                </td>
+              </tr>
+            ) : null}
 
             {/* Tax */}
             <tr className="border border-black">

@@ -113,22 +113,32 @@ export default function BillingTable({ billings, onViewInvoice, onDownloadInvoic
                     </TableCell>
                     <TableCell className="text-right w-24">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onViewInvoice(billing)}
-                          className="rounded-lg hover:bg-primary/10 hover:border-primary/30 h-8 w-8 p-0"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDownloadInvoice(billing)}
-                          className="rounded-lg hover:bg-primary/10 hover:border-primary/30 h-8 w-8 p-0"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                        <div className="relative group/tip">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onViewInvoice(billing)}
+                            className="rounded-lg hover:bg-primary/10 hover:border-primary/30 h-8 w-8 p-0"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                            View Invoice
+                          </span>
+                        </div>
+                        <div className="relative group/tip">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDownloadInvoice(billing)}
+                            className="rounded-lg hover:bg-primary/10 hover:border-primary/30 h-8 w-8 p-0"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                            Download Invoice
+                          </span>
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>

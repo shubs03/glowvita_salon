@@ -92,13 +92,13 @@ class PricingEngine {
     const distance = this.calculateHaversineDistance(vendorLocation, customerLocation);
     
     // Simple distance-based surcharge
-    // $5 for every 5km beyond 10km
+    // ₹5 for every 5km beyond 10km
     if (distance <= 10) {
       return 0; // No surcharge within 10km
     }
     
     const surcharge = Math.ceil((distance - 10) / 5) * 5;
-    return Math.min(surcharge, 50); // Cap at $50
+    return Math.min(surcharge, 50); // Cap at ₹50
   }
   
   /**
@@ -123,8 +123,8 @@ class PricingEngine {
       }
       
       // Simple fee structure:
-      // - $10 base fee
-      // - $2 per km beyond 5km
+      // - ₹10 base fee
+      // - ₹2 per km beyond 5km
       if (distance <= 5) {
         return 10; // Base fee only
       }

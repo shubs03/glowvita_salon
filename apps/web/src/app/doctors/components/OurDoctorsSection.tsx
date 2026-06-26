@@ -170,7 +170,7 @@ export function OurDoctorsSection() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Consultation fee: <span className="font-medium text-foreground">${doctor.consultationFee}</span>
+                    Consultation fee: <span className="font-medium text-foreground">₹{doctor.consultationFee}</span>
                   </div>
                 </div>
 

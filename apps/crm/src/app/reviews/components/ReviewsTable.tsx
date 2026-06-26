@@ -177,44 +177,64 @@ const ReviewsTable = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewReview(review)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {!review.isApproved && (
+                      <div className="relative group/tip">
                         <Button
-                          variant="default"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => onApproveReview(review._id, true)}
-                          disabled={isApproving}
+                          onClick={() => onViewReview(review)}
                           className="h-8 w-8 p-0"
                         >
-                          <CheckCircle className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                          View
+                        </span>
+                      </div>
+                      {!review.isApproved && (
+                        <div className="relative group/tip">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => onApproveReview(review._id, true)}
+                            disabled={isApproving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                            Approve
+                          </span>
+                        </div>
                       )}
                       {review.isApproved && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onApproveReview(review._id, false)}
-                          disabled={isApproving}
-                          className="h-8 w-8 p-0"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
+                        <div className="relative group/tip">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onApproveReview(review._id, false)}
+                            disabled={isApproving}
+                            className="h-8 w-8 p-0"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                            Disapprove
+                          </span>
+                        </div>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteReview(review)}
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="relative group/tip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteReview(review)}
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                          Delete
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>

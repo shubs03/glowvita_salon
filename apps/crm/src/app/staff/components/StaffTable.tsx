@@ -105,41 +105,59 @@ const StaffTable = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onOpenModal(staff)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onOpenModal(staff, 'earnings')}
-                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        title="View Staff Earnings Ledger"
-                      >
-                        <IndianRupee className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onSendMail(staff._id)}
-                        disabled={isSendingMail}
-                        className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700"
-                        title="Send Credentials Email"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteClick(staff)}
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="relative group/tip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onOpenModal(staff)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                          Edit
+                        </span>
+                      </div>
+                      <div className="relative group/tip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onOpenModal(staff, 'earnings')}
+                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <IndianRupee className="h-4 w-4" />
+                        </Button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                          View Staff Earnings Ledger
+                        </span>
+                      </div>
+                      <div className="relative group/tip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onSendMail(staff._id)}
+                          disabled={isSendingMail}
+                          className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                          Send Credentials Email
+                        </span>
+                      </div>
+                      <div className="relative group/tip">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteClick(staff)}
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
+                          Delete
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>

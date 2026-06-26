@@ -227,7 +227,7 @@ export default function DoctorConsultationsPage() {
                   <Star className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">${totalSpent}</p>
+                  <p className="text-2xl font-bold">₹{totalSpent}</p>
                   <p className="text-sm text-gray-600">Total Spent</p>
                 </div>
               </div>
@@ -352,7 +352,7 @@ export default function DoctorConsultationsPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">${consultation.fee}</p>
+                        <p className="font-semibold">₹{consultation.fee}</p>
                         {consultation.rating && (
                           <div className="flex items-center gap-1 mt-1">
                             {renderStars(consultation.rating)}

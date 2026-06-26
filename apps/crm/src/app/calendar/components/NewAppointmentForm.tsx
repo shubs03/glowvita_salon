@@ -1535,10 +1535,20 @@ export default function NewAppointmentForm({
       };
     });
 
-    const totalDuration = recalculatedServices.reduce((sum, s) => sum + s.duration, 0) || 60;
+    let baseDuration = recalculatedServices.reduce((sum, s) => sum + s.duration, 0);
+    let totalAmount = recalculatedServices.reduce((sum, s) => sum + s.amount, 0);
+
+    if (recalculatedServices.length === 0 && appointmentData.service) {
+      const mainService = services.find(s => s.id === appointmentData.service || s._id === appointmentData.service);
+      if (mainService) {
+        totalAmount = mainService.price || 0;
+        baseDuration = mainService.duration || 60;
+      }
+    }
+
+    const totalDuration = baseDuration || 60;
     const addOnDuration = getAddOnsDuration((appointmentData as any).addOns || []);
     const totalDurationIncludingAddOns = totalDuration + addOnDuration;
-    const totalAmount = recalculatedServices.reduce((sum, s) => sum + s.amount, 0);
 
     const addOnAmount = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
     const { tax, totalAmount: calculatedTotal, taxRate, platformFee } = calculateFinancials(totalAmount, appointmentData.discount || 0, addOnAmount);
@@ -3451,19 +3461,6 @@ export default function NewAppointmentForm({
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-3 pt-4">
-          {isEditing && appointmentData.id && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isLoading}
-              className="mr-auto"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          )}
-
           <Button
             type="button"
             variant="outline"

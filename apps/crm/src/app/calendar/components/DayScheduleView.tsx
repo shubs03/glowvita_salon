@@ -1836,14 +1836,8 @@ export default function DayScheduleView({
         <Dialog open={isDetailViewOpen} onOpenChange={(open) => !open && handleCloseDetailView()}>
           <DialogContent
             className="max-w-3xl"
-            onInteractOutside={(e) => {
-              e.preventDefault();
-              handleCloseDetailView();
-            }}
-            onEscapeKeyDown={(e) => {
-              e.preventDefault();
-              handleCloseDetailView();
-            }}
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
           >
             <AppointmentDetailView
               appointment={{
