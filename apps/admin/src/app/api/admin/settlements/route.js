@@ -454,12 +454,47 @@ export const GET = authMiddlewareAdmin(async (req) => {
 export const POST = authMiddlewareAdmin(async (req) => {
     try {
         const body = await req.json();
-        const { vendorId, amount, type, paymentMethod, transactionId, notes, paymentDate } = body;
+        const { vendorId, amount, type, paymentMethod, transactionId, notes, paymentDate, paymentDetails = {} } = body;
 
         // Validate required fields
         if (!vendorId || !amount || !paymentMethod || !type) {
             return NextResponse.json(
                 { success: false, message: "Missing required fields" },
+                { status: 400 }
+            );
+        }
+
+        const requiredByMethod = {
+            UPI: [
+                ['transactionId', transactionId, 'UTR/Transaction ID'],
+                ['upiId', paymentDetails.upiId, 'UPI ID'],
+            ],
+            Cheque: [
+                ['chequeNumber', paymentDetails.chequeNumber, 'Cheque number'],
+                ['bankName', paymentDetails.bankName, 'Bank name'],
+                ['chequeDate', paymentDetails.chequeDate, 'Cheque date'],
+            ],
+            'Bank Transfer': [
+                ['transactionId', transactionId, 'UTR/Transaction ID'],
+                ['bankName', paymentDetails.bankName, 'Bank name'],
+                ['accountHolderName', paymentDetails.accountHolderName, 'Account holder name'],
+            ],
+        };
+
+        if (!requiredByMethod[paymentMethod]) {
+            return NextResponse.json(
+                { success: false, message: "Payment method must be UPI, Cheque, or Bank Transfer" },
+                { status: 400 }
+            );
+        }
+
+        const missingFields = requiredByMethod[paymentMethod]
+            .filter(([, value]) => !String(value || '').trim())
+            .map(([, , label]) => label);
+
+        if (missingFields.length > 0) {
+            return NextResponse.json(
+                { success: false, message: `Missing required payment details: ${missingFields.join(', ')}` },
                 { status: 400 }
             );
         }
@@ -479,6 +514,13 @@ export const POST = authMiddlewareAdmin(async (req) => {
             type, // "Payment to Vendor" | "Payment to Admin"
             paymentMethod,
             transactionId,
+            paymentDetails: {
+                upiId: paymentDetails.upiId,
+                bankName: paymentDetails.bankName,
+                accountHolderName: paymentDetails.accountHolderName,
+                chequeNumber: paymentDetails.chequeNumber,
+                chequeDate: paymentDetails.chequeDate ? new Date(paymentDetails.chequeDate) : undefined,
+            },
             notes,
             paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
             createdBy: req.user.userId,

@@ -25,6 +25,27 @@ const vendorSettlementPaymentSchema = new mongoose.Schema({
         type: String,
         trim: true,
     },
+    paymentDetails: {
+        upiId: {
+            type: String,
+            trim: true,
+        },
+        bankName: {
+            type: String,
+            trim: true,
+        },
+        accountHolderName: {
+            type: String,
+            trim: true,
+        },
+        chequeNumber: {
+            type: String,
+            trim: true,
+        },
+        chequeDate: {
+            type: Date,
+        },
+    },
     notes: {
         type: String,
         trim: true,

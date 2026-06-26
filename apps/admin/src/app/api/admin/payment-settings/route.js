@@ -47,6 +47,8 @@ export const PUT = authMiddlewareAdmin(
         ifscCode,
         accountHolder,
         branchName,
+        upiPaymentInstructions,
+        bankPaymentInstructions,
         paymentInstructions,
       } = body;
 
@@ -68,6 +70,8 @@ export const PUT = authMiddlewareAdmin(
         ifscCode: ifscCode ? ifscCode.toUpperCase() : null,
         accountHolder: accountHolder || null,
         branchName: branchName || null,
+        upiPaymentInstructions: upiPaymentInstructions || null,
+        bankPaymentInstructions: bankPaymentInstructions || null,
         paymentInstructions: paymentInstructions || null,
         updatedBy: req.user.userId,
       };

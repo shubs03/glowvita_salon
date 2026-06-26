@@ -15,7 +15,7 @@ export const GET = authMiddlewareCrm(
     try {
       const settings = await AdminPaymentSettingsModel.findOne()
         .select(
-          "upiId upiQrCodeUrl upiHolderName bankName accountNumber ifscCode accountHolder branchName paymentInstructions"
+          "upiId upiQrCodeUrl upiHolderName bankName accountNumber ifscCode accountHolder branchName upiPaymentInstructions bankPaymentInstructions paymentInstructions"
         )
         .lean();
 
