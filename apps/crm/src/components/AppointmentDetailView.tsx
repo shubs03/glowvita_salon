@@ -1410,7 +1410,7 @@ export function AppointmentDetailView({
           onClose();
         }
       }}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] h-auto overflow-y-scroll p-0 scrollbar-hidden">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] h-auto overflow-y-scroll p-0 scrollbar-hidden" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <div className="flex justify-between items-start">
               <div>
@@ -2370,26 +2370,9 @@ export function AppointmentDetailView({
                         </div>
                         <div>
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Appointment Status</p>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-lg font-semibold text-foreground capitalize">
-                              {liveAppointment.status.replace(/-/g, ' ')}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={`px-2 py-0.5 text-xs font-medium ${liveAppointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-                                liveAppointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
-                                  liveAppointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-                                    liveAppointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
-                                      liveAppointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-                                        liveAppointment.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-                                          liveAppointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-                                            liveAppointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
-                                              'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
-                                } border-0`}
-                            >
-                              {liveAppointment.status.toUpperCase().replace(/-/g, ' ')}
-                            </Badge>
-                          </div>
+                          <span className="text-lg font-semibold text-foreground capitalize">
+                            {liveAppointment.status.replace(/_/g, ' ').replace(/-/g, ' ')}
+                          </span>
                         </div>
                       </div>
                     </div>

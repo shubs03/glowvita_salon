@@ -36,7 +36,7 @@ export function FAQSection() {
     {
       id: "4",
       question: "How much does a consultation cost?",
-      answer: "Consultation fees vary by doctor and specialty, typically ranging from $50-$200. The exact fee is displayed before booking. We accept insurance from major providers and offer transparent pricing with no hidden fees.",
+      answer: "Consultation fees vary by doctor and specialty, typically ranging from ₹50-₹200. The exact fee is displayed before booking. We accept insurance from major providers and offer transparent pricing with no hidden fees.",
       category: "payment"
     },
     {
