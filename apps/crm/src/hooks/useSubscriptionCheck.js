@@ -10,13 +10,13 @@ export function useSubscriptionCheck() {
             isExpired: false,
             daysRemaining: 0,
             willExpireSoon: false,
+            hasScheduledPlan: false,
             subscription: null
         };
     }
 
     const { subscription } = user;
     const now = new Date();
-    // Reset hours to compare dates only if needed, but for now exact time is better for expiration
     const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
     const status = (subscription.status || '').toLowerCase().trim();
 
@@ -30,11 +30,19 @@ export function useSubscriptionCheck() {
     // Check if the subscription end date has passed
     const isDateExpired = endDate ? endDate.getTime() <= now.getTime() : false;
 
+    // Check if there's a Scheduled plan waiting to activate in the history
+    // A scheduled plan has an endDate in the future but startDate in the future too
+    const history = subscription.history || [];
+    const hasScheduledPlan = history.some((h) => {
+        const hStatus = (h.status || '').toLowerCase().trim();
+        const hEndDate = h.endDate ? new Date(h.endDate) : null;
+        return hStatus === 'scheduled' && hEndDate && hEndDate.getTime() > now.getTime();
+    }) || (status === 'scheduled');
+
     // A subscription is expired if:
-    // 1. Status is in the expired list
-    // OR 
-    // 2. The end date has passed (regardless of status, since server might not have updated yet)
-    const isExpired = isStatusExpired || isDateExpired;
+    // 1. Status is in the expired list OR end date has passed
+    // AND 2. There is NO scheduled plan waiting to activate
+    const isExpired = (isStatusExpired || isDateExpired) && !hasScheduledPlan;
 
     // Calculate days remaining (only if not already expired)
     let daysRemaining = 0;
@@ -46,22 +54,11 @@ export function useSubscriptionCheck() {
     // Will expire soon (within 7 days)
     const willExpireSoon = !isExpired && daysRemaining > 0 && daysRemaining <= 7;
 
-    console.log('Subscription Check:', {
-        status,
-        isStatusActive,
-        isStatusExpired,
-        isDateExpired,
-        isExpired,
-        daysRemaining,
-        willExpireSoon,
-        endDate: endDate?.toISOString(),
-        now: now.toISOString(),
-    });
-
     return {
         isExpired,
         daysRemaining,
         willExpireSoon,
+        hasScheduledPlan,
         subscription
     };
 }

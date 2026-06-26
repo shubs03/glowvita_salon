@@ -53,6 +53,16 @@ const adminPaymentSettingsSchema = new mongoose.Schema(
     },
 
     // Display notes to vendor
+    upiPaymentInstructions: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    bankPaymentInstructions: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     paymentInstructions: {
       type: String,
       trim: true,

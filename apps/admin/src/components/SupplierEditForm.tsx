@@ -159,12 +159,20 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Renewal failed');
 
-      toast.success("Subscription renewed successfully");
+      if (data.success !== false) {
+        const msg = data.schedulingMode === 'Scheduled'
+          ? 'Plan scheduled — will activate after the current subscription ends.'
+          : 'Subscription renewed successfully!';
+        toast.success(msg);
+      } else {
+        throw new Error(data.message || "Failed to renew");
+      }
       setIsRenewModalOpen(false);
       setSelectedRenewalPlan(null);
       refetch();
     } catch (error: any) {
       console.error("Failed to renew subscription:", error);
+      toast.error(error?.message || "Failed to process subscription. Please try again.");
     } finally {
       setIsRenewingManual(false);
     }
@@ -364,21 +372,78 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
             {/* History Section */}
             <div className="space-y-3">
               <h3 className="font-semibold text-md">History</h3>
-              <div className="border rounded-md divide-y">
+              <div className="space-y-4">
                 {supplier.subscription?.history?.length ? (
-                  supplier.subscription.history.map((h: any, i: number) => (
-                    <div key={i} className="p-3 flex justify-between items-center text-sm">
-                      <div>
-                        <div className="font-medium">{h.plan?.name || 'Unknown Plan'}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(h.startDate).toLocaleDateString()} - {new Date(h.endDate).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <Badge variant="outline">{h.status}</Badge>
-                    </div>
-                  ))
+                  <div className="relative space-y-6 pl-8 border-l-2 border-muted-foreground/20 ml-2 mt-4 mb-4">
+                    {[...supplier.subscription.history]
+                      .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                      .map((historyItem: any, index: number) => {
+                        const planId = typeof historyItem.plan === 'object' && historyItem.plan !== null ? (historyItem.plan._id || historyItem.plan.$oid || historyItem.plan.id) : historyItem.plan;
+                        const matchedPlan = plans.find((p: any) => p._id === planId || p.id === planId);
+                        const planName = (typeof historyItem.plan === 'object' && historyItem.plan?.name) ? historyItem.plan.name : (matchedPlan?.name || 'Unknown Plan');
+                        const hPrice = (matchedPlan?.discountedPrice && matchedPlan.discountedPrice > 0) ? matchedPlan.discountedPrice : (matchedPlan?.price || 0);
+
+                        return (
+                          <div key={index} className="relative">
+                            {/* Timeline dot */}
+                            <div className="absolute -left-[2.6rem] top-1.5 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                              <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                            </div>
+
+                            {/* History card */}
+                            <div className="bg-muted/30 rounded-xl p-4 border transition-colors hover:bg-muted/50">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-2 flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-bold text-sm text-foreground">
+                                      {planName}
+                                    </h4>
+                                    <span className="text-sm font-black text-primary">
+                                      ₹{hPrice.toLocaleString('en-IN')}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">From</span>
+                                      <span className="text-xs font-semibold">
+                                        {historyItem.startDate ? new Date(historyItem.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Until</span>
+                                      <span className="text-xs font-semibold">
+                                        {historyItem.endDate ? new Date(historyItem.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div
+                                  className={`
+                                    px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight
+                                    ${historyItem.status === 'Active'
+                                      ? 'bg-green-100 text-green-700 border border-green-200'
+                                      : historyItem.status === 'Scheduled'
+                                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                        : historyItem.status === 'Expired'
+                                          ? 'bg-red-100 text-red-700 border border-red-200'
+                                          : 'bg-muted text-muted-foreground border border-muted-foreground/10'
+                                    }
+                                  `}
+                                >
+                                  {historyItem.status}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 ) : (
-                  <div className="p-4 text-center text-muted-foreground text-sm">No history available</div>
+                  <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-4 border text-center">
+                    No subscription history available
+                  </div>
                 )}
               </div>
             </div>

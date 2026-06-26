@@ -29,7 +29,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [refreshToken] = useRefreshTokenMutation();
 
   // Use the subscription check hook for client-side validation
-  const { isExpired, daysRemaining, willExpireSoon } = useSubscriptionCheck();
+  const { isExpired, daysRemaining, willExpireSoon, hasScheduledPlan } = useSubscriptionCheck();
 
   const isAllowedOnExpired = useMemo(() => {
     return (
@@ -83,20 +83,14 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
 
   // Check subscription status on route change (instant detection)
   useEffect(() => {
-    if (isExpired && isCrmAuthenticated) {
+    if (isExpired && !hasScheduledPlan && isCrmAuthenticated) {
       // Show banner on all pages except those with their own full billing/support UI
       const isSpecialPage = pathname.startsWith('/sales') || pathname.startsWith('/renew-plan');
       setShowBanner(!isSpecialPage);
-
-      // If we're on an expired status and not on an allowed page, subtly suggest going to profile
-      // But don't forcefully redirect to avoid infinite loops with layout.tsx
-      if (!isAllowedOnExpired && !pathname.includes('expired')) {
-        // Just show the banner and blur, let the user decide to click "Renew"
-      }
     } else {
       setShowBanner(false);
     }
-  }, [isExpired, pathname, isCrmAuthenticated, router, forceRefresh, user]);
+  }, [isExpired, hasScheduledPlan, pathname, isCrmAuthenticated, router, forceRefresh, user]);
 
   const subscription = (user as any)?.subscription;
 

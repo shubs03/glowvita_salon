@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Eye, CheckCircle, RefreshCw, AlertCircle, X, Plus, DollarSign, Users, Hourglass, Loader2, ChevronRight, ChevronDown, Settings, Upload, Building2, Smartphone, Copy, CheckCheck } from 'lucide-react';
+import { Eye, CheckCircle, RefreshCw, AlertCircle, X, Plus, Users, Hourglass, Loader2, ChevronRight, ChevronDown, Settings, Upload, Building2, Smartphone, Copy, CheckCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@repo/ui/dialog";
 import { Input } from "@repo/ui/input";
 import { Label } from '@repo/ui/label';
@@ -26,6 +26,8 @@ interface AdminPaymentSettings {
   ifscCode?: string;
   accountHolder?: string;
   branchName?: string;
+  upiPaymentInstructions?: string;
+  bankPaymentInstructions?: string;
   paymentInstructions?: string;
 }
 
@@ -52,7 +54,12 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       const res = await fetch('/api/admin/payment-settings');
       const data = await res.json();
       if (data.success && data.data) {
-        setSettings(data.data);
+        setSettings({
+          ...data.data,
+          upiPaymentInstructions: data.data.upiPaymentInstructions || '',
+          bankPaymentInstructions: data.data.bankPaymentInstructions || '',
+          paymentInstructions: '',
+        });
         setConfirmAccount(data.data.accountNumber || '');
         setQrPreview(data.data.upiQrCodeUrl || null);
       }
@@ -66,41 +73,42 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Show local preview immediately
-    const reader = new FileReader();
-    reader.onload = (ev) => setQrPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
 
-    // Upload to server as base64 (or you can use FormData + your upload endpoint)
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file.');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploadingQr(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'admin-qr');
-      const uploadRes = await fetch('/api/admin/upload', { method: 'POST', body: formData });
-      const uploadData = await uploadRes.json();
-      if (uploadData.success && uploadData.url) {
-        setSettings(prev => ({ ...prev, upiQrCodeUrl: uploadData.url }));
-        setQrPreview(uploadData.url);
-      } else {
-        // fallback: store as dataURL if no upload endpoint
-        const dataUrl = await new Promise<string>((resolve) => {
-          const r = new FileReader();
-          r.onload = (ev) => resolve(ev.target?.result as string);
-          r.readAsDataURL(file);
-        });
-        setSettings(prev => ({ ...prev, upiQrCodeUrl: dataUrl }));
+      const qrFile = await cropQrFromImage(file);
+      const previewUrl = await fileToDataUrl(qrFile);
+      setQrPreview(previewUrl);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', qrFile);
+        formData.append('folder', 'admin-qr');
+        const uploadRes = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadData.success && uploadData.url) {
+          setSettings(prev => ({ ...prev, upiQrCodeUrl: uploadData.url }));
+          setQrPreview(uploadData.url);
+          toast.success('QR code uploaded successfully.');
+        } else {
+          setSettings(prev => ({ ...prev, upiQrCodeUrl: previewUrl }));
+          toast.error(uploadData.message || 'Could not upload QR image.');
+        }
+      } catch {
+        setSettings(prev => ({ ...prev, upiQrCodeUrl: previewUrl }));
+        toast.error('Upload failed. Please try again.');
       }
-    } catch {
-      // fallback: store as dataURL
-      const dataUrl = await new Promise<string>((resolve) => {
-        const r = new FileReader();
-        r.onload = (ev) => resolve(ev.target?.result as string);
-        r.readAsDataURL(file);
-      });
-      setSettings(prev => ({ ...prev, upiQrCodeUrl: dataUrl }));
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not process the image. Please try another file.');
     } finally {
       setIsUploadingQr(false);
+      e.target.value = '';
     }
   };
 
@@ -114,7 +122,7 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       const res = await fetch('/api/admin/payment-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...settings, confirmAccountNumber: confirmAccount }),
+        body: JSON.stringify({ ...settings, paymentInstructions: null, confirmAccountNumber: confirmAccount }),
       });
       const data = await res.json();
       if (data.success) {
@@ -134,6 +142,88 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target?.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const cropQrFromImage = async (file: File) => {
+    const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+
+    if (!BarcodeDetectorCtor || typeof createImageBitmap !== 'function') {
+      return file;
+    }
+
+    try {
+      if (BarcodeDetectorCtor.getSupportedFormats) {
+        const formats = await BarcodeDetectorCtor.getSupportedFormats();
+        if (!formats.includes('qr_code')) {
+          return file;
+        }
+      }
+
+      const imageBitmap = await createImageBitmap(file);
+      try {
+        const detector = new BarcodeDetectorCtor({ formats: ['qr_code'] });
+        const detectedCodes = await detector.detect(imageBitmap);
+        const qrCode = detectedCodes?.[0];
+
+        if (!qrCode) {
+          return file;
+        }
+
+        const points = qrCode.cornerPoints;
+        const bounds = points?.length
+          ? {
+              left: Math.min(...points.map((point: { x: number }) => point.x)),
+              top: Math.min(...points.map((point: { y: number }) => point.y)),
+              right: Math.max(...points.map((point: { x: number }) => point.x)),
+              bottom: Math.max(...points.map((point: { y: number }) => point.y)),
+            }
+          : {
+              left: qrCode.boundingBox.x,
+              top: qrCode.boundingBox.y,
+              right: qrCode.boundingBox.x + qrCode.boundingBox.width,
+              bottom: qrCode.boundingBox.y + qrCode.boundingBox.height,
+            };
+
+        const qrWidth = bounds.right - bounds.left;
+        const qrHeight = bounds.bottom - bounds.top;
+        const padding = Math.max(qrWidth, qrHeight) * 0.12;
+        const sourceX = Math.max(0, Math.floor(bounds.left - padding));
+        const sourceY = Math.max(0, Math.floor(bounds.top - padding));
+        const sourceWidth = Math.min(imageBitmap.width - sourceX, Math.ceil(qrWidth + padding * 2));
+        const sourceHeight = Math.min(imageBitmap.height - sourceY, Math.ceil(qrHeight + padding * 2));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = sourceWidth;
+        canvas.height = sourceHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return file;
+        }
+
+        ctx.drawImage(imageBitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((result) => {
+            if (result) resolve(result);
+            else reject(new Error('Could not prepare QR image. Please try another screenshot.'));
+          }, 'image/png');
+        });
+
+        return new File([blob], `${file.name.replace(/\.[^.]+$/, '') || 'admin'}-qr.png`, { type: 'image/png' });
+      } finally {
+        imageBitmap.close();
+      }
+    } catch {
+      return file;
+    }
   };
 
   const inputCls = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
@@ -247,6 +337,18 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                     onChange={e => setSettings(p => ({ ...p, upiHolderName: e.target.value }))}
                   />
                 </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="upiInstructions">UPI / QR Instructions for Vendors (Optional)</Label>
+                  <textarea
+                    id="upiInstructions"
+                    rows={3}
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. Please add vendor name in the UPI remarks"
+                    value={settings.upiPaymentInstructions || ''}
+                    onChange={e => setSettings(p => ({ ...p, upiPaymentInstructions: e.target.value }))}
+                  />
+                </div>
               </div>
             )}
 
@@ -350,21 +452,20 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                     />
                   </div>
                 </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="bankInstructions">Bank Transfer Instructions for Vendors (Optional)</Label>
+                  <textarea
+                    id="bankInstructions"
+                    rows={3}
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. Share UTR after transfer and use vendor name as narration"
+                    value={settings.bankPaymentInstructions || ''}
+                    onChange={e => setSettings(p => ({ ...p, bankPaymentInstructions: e.target.value }))}
+                  />
+                </div>
               </div>
             )}
-
-            {/* Payment Instructions */}
-            <div className="mt-5 space-y-1.5">
-              <Label htmlFor="instructions">Instructions for Vendors (Optional)</Label>
-              <textarea
-                id="instructions"
-                rows={3}
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="e.g. Please add vendor name in the payment remarks"
-                value={settings.paymentInstructions || ''}
-                onChange={e => setSettings(p => ({ ...p, paymentInstructions: e.target.value }))}
-              />
-            </div>
 
             {/* Actions */}
             <div className="flex justify-end gap-3 mt-6">
@@ -386,8 +487,18 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 interface ReceiveAmountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReceive: (amount: number, method: string, txnId?: string, notes?: string, date?: string) => void;
+  onReceive: (amount: number, method: PaymentMethod, txnId?: string, notes?: string, date?: string, paymentDetails?: PaymentDetails) => void;
   pendingAmount: number;
+}
+
+type PaymentMethod = 'UPI' | 'Cheque' | 'Bank Transfer';
+
+interface PaymentDetails {
+  upiId?: string;
+  bankName?: string;
+  accountHolderName?: string;
+  chequeNumber?: string;
+  chequeDate?: string;
 }
 
 interface Transaction {
@@ -398,6 +509,7 @@ interface Transaction {
   paymentMethod: string;
   notes?: string;
   transactionId?: string;
+  paymentDetails?: PaymentDetails;
   verified?: boolean;
   createdByType?: string;
   vendorId?: any;
@@ -458,8 +570,9 @@ interface PayoutData {
 
 function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, direction }: ReceiveAmountDialogProps & { direction: 'receive' | 'pay' }) {
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Bank Transfer');
   const [transactionId, setTransactionId] = useState('');
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({});
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
@@ -468,8 +581,17 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
     if (open) {
       setAmount(pendingAmount.toString());
       setPaymentDate(new Date().toISOString().split('T')[0]);
+      setTransactionId('');
+      setPaymentDetails({});
+      setNotes('');
+      setError('');
     }
   }, [open, pendingAmount]);
+
+  const setDetail = (key: keyof PaymentDetails, value: string) => {
+    setPaymentDetails(prev => ({ ...prev, [key]: value }));
+    setError('');
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -485,7 +607,33 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
       return;
     }
 
-    onReceive(numAmount, paymentMethod, transactionId, notes, paymentDate);
+    const requirements: Record<PaymentMethod, Array<[keyof PaymentDetails | 'transactionId', string]>> = {
+      UPI: [
+        ['transactionId', 'UTR/Transaction ID'],
+        ['upiId', 'UPI ID'],
+      ],
+      Cheque: [
+        ['chequeNumber', 'Cheque number'],
+        ['bankName', 'Bank name'],
+        ['chequeDate', 'Cheque date'],
+      ],
+      'Bank Transfer': [
+        ['transactionId', 'UTR/Transaction ID'],
+        ['bankName', 'Bank name'],
+        ['accountHolderName', 'Account holder name'],
+      ],
+    };
+
+    const missingFields = requirements[paymentMethod]
+      .filter(([key]) => !String(key === 'transactionId' ? transactionId : paymentDetails[key] || '').trim())
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      setError(`Please enter ${missingFields.join(', ')}`);
+      return;
+    }
+
+    onReceive(numAmount, paymentMethod, transactionId, notes, paymentDate, paymentDetails);
     onOpenChange(false);
   };
 
@@ -520,13 +668,15 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
                 id="method"
                 className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
+                onChange={(e) => {
+                  setPaymentMethod(e.target.value as PaymentMethod);
+                  setTransactionId('');
+                  setPaymentDetails({});
+                  setError('');
+                }}
               >
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="UPI">UPI</option>
-                <option value="Online">Online</option>
-                <option value="Cash">Cash</option>
-                <option value="Agent">Agent</option>
                 <option value="Cheque">Cheque</option>
               </select>
             </div>
@@ -541,17 +691,98 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
                 required
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="txnId" className="text-right">UTR/Ref ID</Label>
-              <Input
-                id="txnId"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                className="col-span-3"
-                placeholder="Transaction ID"
-                required={direction === 'receive'}
-              />
-            </div>
+            {(paymentMethod === 'UPI' || paymentMethod === 'Bank Transfer') && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="txnId" className="text-right">UTR/Txn ID</Label>
+                <Input
+                  id="txnId"
+                  value={transactionId}
+                  onChange={(e) => {
+                    setTransactionId(e.target.value);
+                    setError('');
+                  }}
+                  className="col-span-3"
+                  placeholder="Enter UTR or transaction ID"
+                  required
+                />
+              </div>
+            )}
+            {paymentMethod === 'UPI' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="upiId" className="text-right">UPI ID</Label>
+                <Input
+                  id="upiId"
+                  value={paymentDetails.upiId || ''}
+                  onChange={(e) => setDetail('upiId', e.target.value)}
+                  className="col-span-3"
+                  placeholder="payer@upi"
+                  required
+                />
+              </div>
+            )}
+            {paymentMethod === 'Bank Transfer' && (
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="bankName" className="text-right">Bank Name</Label>
+                  <Input
+                    id="bankName"
+                    value={paymentDetails.bankName || ''}
+                    onChange={(e) => setDetail('bankName', e.target.value)}
+                    className="col-span-3"
+                    placeholder="Sender bank name"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="accountHolderName" className="text-right">Account Name</Label>
+                  <Input
+                    id="accountHolderName"
+                    value={paymentDetails.accountHolderName || ''}
+                    onChange={(e) => setDetail('accountHolderName', e.target.value)}
+                    className="col-span-3"
+                    placeholder="Sender account holder name"
+                    required
+                  />
+                </div>
+              </>
+            )}
+            {paymentMethod === 'Cheque' && (
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="chequeNumber" className="text-right">Cheque No.</Label>
+                  <Input
+                    id="chequeNumber"
+                    value={paymentDetails.chequeNumber || ''}
+                    onChange={(e) => setDetail('chequeNumber', e.target.value)}
+                    className="col-span-3"
+                    placeholder="Enter cheque number"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="chequeBankName" className="text-right">Bank Name</Label>
+                  <Input
+                    id="chequeBankName"
+                    value={paymentDetails.bankName || ''}
+                    onChange={(e) => setDetail('bankName', e.target.value)}
+                    className="col-span-3"
+                    placeholder="Cheque bank name"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="chequeDate" className="text-right">Cheque Date</Label>
+                  <Input
+                    id="chequeDate"
+                    type="date"
+                    value={paymentDetails.chequeDate || ''}
+                    onChange={(e) => setDetail('chequeDate', e.target.value)}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+              </>
+            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="notes" className="text-right">Notes</Label>
               <Input
@@ -713,7 +944,7 @@ export default function PayoutPage() {
   const currentHistoryItems = filteredHistoryData.slice(firstHistoryIndex, lastHistoryIndex);
   const totalHistoryPages = Math.ceil(filteredHistoryData.length / itemsPerPage);
 
-  const handleRecordTransaction = async (amount: number, method: string, txnId?: string, notes?: string, date?: string) => {
+  const handleRecordTransaction = async (amount: number, method: PaymentMethod, txnId?: string, notes?: string, date?: string, paymentDetails?: PaymentDetails) => {
     if (!selectedPayout) return;
 
     const direction = selectedPayout.netSettlement > 0 ? 'payout' : 'receive';
@@ -734,6 +965,7 @@ export default function PayoutPage() {
           type,
           paymentMethod: method,
           transactionId: txnId,
+          paymentDetails,
           notes,
           paymentDate: date || new Date().toISOString(),
         }),
@@ -744,6 +976,8 @@ export default function PayoutPage() {
       if (data.success) {
         toast.success(data.message);
         fetchPayouts();
+      } else {
+        toast.error(data.message || "Failed to record payment");
       }
     } catch (error) {
       console.error("Error recording transaction:", error);
@@ -821,7 +1055,7 @@ export default function PayoutPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Platform Total Volume</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-muted-foreground">₹</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₹{summary.totalAmount.toLocaleString()}</div>
@@ -1093,7 +1327,7 @@ export default function PayoutPage() {
                                                 </span>
                                               </div>
                                               <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                                                <DollarSign className="h-3 w-3" />
+                                                <span className="text-[11px] font-semibold">₹</span>
                                                 <span>Method: {txn.paymentMethod}</span>
                                               </div>
                                             </div>
@@ -1183,7 +1417,7 @@ export default function PayoutPage() {
                                           <span className="font-mono">Ref: {txn.transactionId || '---'}</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-[10px] font-medium text-foreground">
-                                          <DollarSign className="h-3 w-3" />
+                                          <span className="text-[11px] font-semibold">₹</span>
                                           {txn.paymentMethod}
                                         </div>
                                       </div>
