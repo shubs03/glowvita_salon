@@ -21,10 +21,23 @@ export default function SubscriptionExpiredPage() {
     if (isSuccess && profileData) {
       const subscription = profileData.user?.subscription;
       const endDate = subscription?.endDate ? new Date(subscription.endDate) : null;
-      const isExpired = subscription?.status?.toLowerCase() === 'expired' || 
-                      (endDate && endDate.getTime() <= Date.now());
+      const status = (subscription?.status || '').toLowerCase().trim();
+      const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+      const isStatusExpired = expiredStatuses.includes(status);
+      const isDateExpired = endDate ? endDate.getTime() <= Date.now() : false;
+
+      // Check if there is a scheduled plan in history
+      const now = new Date();
+      const history = subscription?.history || [];
+      const hasScheduledPlan = history.some((h: any) => {
+        const hStatus = (h.status || '').toLowerCase().trim();
+        const hEndDate = h.endDate ? new Date(h.endDate) : null;
+        return hStatus === 'scheduled' && hEndDate && hEndDate.getTime() > now.getTime();
+      }) || status === 'scheduled';
+
+      const isExpired = (isStatusExpired || isDateExpired) && !hasScheduledPlan;
       
-      // If subscription is actually active, redirect to dashboard
+      // If subscription is active or has a scheduled plan, redirect to dashboard
       if (!isExpired) {
         router.push('/dashboard');
       } else {

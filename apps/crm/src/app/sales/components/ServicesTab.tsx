@@ -826,9 +826,9 @@ export default function ServicesTab({
         const pdfOptions = {
           margin: 5,
           filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
-          image: { type: 'jpeg', quality: 0.8 },
+          image: { type: 'jpeg', quality: 1.0 },
           html2canvas: {
-            scale: 1.5,
+            scale: 3,
             useCORS: true,
             logging: false // Disable logging to reduce console output
           },

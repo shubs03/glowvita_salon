@@ -903,7 +903,8 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
           'Authorization': `Bearer ${token || ''}`
         },
         body: JSON.stringify({
-          vendorId: formData._id,
+          userId: formData._id,
+          userType: 'vendor',
           planId: selectedRenewalPlan,
         })
       });
@@ -911,7 +912,10 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success("Subscription renewed successfully!");
+        const msg = data.schedulingMode === 'Scheduled'
+          ? 'Plan scheduled — will activate after the current subscription ends.'
+          : 'Subscription renewed successfully!';
+        toast.success(msg);
         setIsRenewModalOpen(false);
         if (onSuccess) onSuccess();
       } else {
@@ -919,6 +923,7 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
       }
     } catch (error: any) {
       console.error("Renewal error:", error);
+      toast.error(error?.message || "Failed to process subscription. Please try again.");
     } finally {
       setIsRenewing(false);
     }
@@ -1027,54 +1032,80 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {(() => {
-            const historyItems = [...(formData.subscription?.history || [])];
-            
-            if (formData.subscription?.plan && formData.subscription?.startDate && formData.subscription?.endDate) {
-              const currentStatus = formData.subscription.status || 'Inactive';
-              const computedStatus = (currentStatus === 'Active' && new Date(formData.subscription.endDate) < new Date()) 
-                ? 'Expired' 
-                : currentStatus;
-                
-              historyItems.push({
-                plan: formData.subscription.plan,
-                startDate: formData.subscription.startDate as string,
-                endDate: formData.subscription.endDate as string,
-                status: computedStatus,
-                archivedAt: new Date().toISOString()
-              });
-            }
+          <div className="space-y-4">
+            {formData.subscription?.history?.length ? (
+              <div className="relative space-y-6 pl-8 border-l-2 border-muted-foreground/20 ml-2 mt-4 mb-4">
+                {[...formData.subscription.history]
+                  .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                  .map((historyItem: any, index: number) => {
+                    const planId = typeof historyItem.plan === 'object' && historyItem.plan !== null ? (historyItem.plan._id || historyItem.plan.$oid || historyItem.plan.id) : historyItem.plan;
+                    const matchedPlan = plans.find((p: any) => p._id === planId || p.id === planId);
+                    const planName = (typeof historyItem.plan === 'object' && historyItem.plan?.name) ? historyItem.plan.name : (matchedPlan?.name || 'Unknown Plan');
+                    const hPrice = (matchedPlan?.discountedPrice && matchedPlan.discountedPrice > 0) ? matchedPlan.discountedPrice : (matchedPlan?.price || 0);
 
-            // Remove duplicates based on start date and sort descending
-            const uniqueHistoryItems = historyItems.filter((item, index, self) =>
-              index === self.findIndex((t) => t.startDate === item.startDate)
-            );
-            const sortedHistory = uniqueHistoryItems.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+                    return (
+                      <div key={index} className="relative">
+                        {/* Timeline dot */}
+                        <div className="absolute -left-[2.6rem] top-1.5 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                        </div>
 
-            return sortedHistory.length > 0 ? (
-              <div className="relative border-l-2 border-muted ml-3 pl-6 space-y-6">
-                {sortedHistory.map((item, idx) => (
-                  <div key={idx} className="relative">
-                    <span className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-muted border-2 border-background" />
-                    <div className="space-y-1">
-                      <p className="font-medium">
-                        {typeof item.plan === 'object' && item.plan ? (item.plan as any).name : 'Plan'}
-                        <span className={`ml-2 text-xs border px-1 rounded ${item.status === 'Expired' || item.status === 'Inactive' ? 'text-red-600 border-red-200 bg-red-50' : 'text-green-600 border-green-200 bg-green-50'}`}>
-                          {item.status}
-                        </span>
-                        {idx === 0 && <span className="ml-2 text-xs font-semibold text-primary">(Latest)</span>}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                        {/* History card */}
+                        <div className="bg-muted/30 rounded-xl p-4 border transition-colors hover:bg-muted/50">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-bold text-sm text-foreground">
+                                  {planName}
+                                </h4>
+                                <span className="text-sm font-black text-primary">
+                                  ₹{hPrice.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">From</span>
+                                  <span className="text-xs font-semibold">
+                                    {historyItem.startDate ? new Date(historyItem.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Until</span>
+                                  <span className="text-xs font-semibold">
+                                    {historyItem.endDate ? new Date(historyItem.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div
+                              className={`
+                                px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight
+                                ${historyItem.status === 'Active'
+                                  ? 'bg-green-100 text-green-700 border border-green-200'
+                                  : historyItem.status === 'Scheduled'
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                    : historyItem.status === 'Expired'
+                                      ? 'bg-red-100 text-red-700 border border-red-200'
+                                      : 'bg-muted text-muted-foreground border border-muted-foreground/10'
+                                }
+                              `}
+                            >
+                              {historyItem.status}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">No subscription history available</p>
-            );
-          })()}
+              <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-4 border text-center">
+                No subscription history available
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

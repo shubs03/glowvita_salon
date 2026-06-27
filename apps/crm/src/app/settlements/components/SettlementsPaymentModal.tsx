@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/dialo
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from '@repo/ui/label';
-import { Plus, Loader2, Building2, Smartphone, Copy, CheckCheck, QrCode, AlertCircle, FileText, Hash, Banknote, Landmark, UserCheck, IndianRupee } from 'lucide-react';
+import { Plus, Loader2, Building2, Smartphone, Copy, CheckCheck, QrCode, AlertCircle, FileText, Hash, Landmark, IndianRupee } from 'lucide-react';
 
 interface AdminPaymentSettings {
   upiId?: string;
@@ -14,6 +14,8 @@ interface AdminPaymentSettings {
   ifscCode?: string;
   accountHolder?: string;
   branchName?: string;
+  upiPaymentInstructions?: string;
+  bankPaymentInstructions?: string;
   paymentInstructions?: string;
 }
 
@@ -25,7 +27,7 @@ interface SettlementsPaymentModalProps {
   isProcessing: boolean;
 }
 
-type PaymentMethodType = 'UPI' | 'Bank Transfer' | 'Cash' | 'Cheque' | 'Agent' | 'Online';
+type PaymentMethodType = 'UPI' | 'Bank Transfer' | 'Cheque';
 
 const SettlementsPaymentModal = ({
   isOpen,
@@ -37,6 +39,8 @@ const SettlementsPaymentModal = ({
   const [amount, setAmount] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [notes, setNotes] = useState('');
+  const [payerName, setPayerName] = useState('');
+  const [chequeCollectionAt, setChequeCollectionAt] = useState('');
   const [error, setError] = useState('');
   const [adminSettings, setAdminSettings] = useState<AdminPaymentSettings | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
@@ -79,6 +83,13 @@ const SettlementsPaymentModal = ({
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const activeInstructions =
+    activeMethod === 'UPI'
+      ? adminSettings?.upiPaymentInstructions
+      : activeMethod === 'Bank Transfer'
+        ? adminSettings?.bankPaymentInstructions
+        : null;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
@@ -93,13 +104,38 @@ const SettlementsPaymentModal = ({
        return;
     }
 
+    if (!transactionId.trim()) {
+      setError(activeMethod === 'Cheque' ? 'Please enter cheque number' : 'Please enter payment reference');
+      return;
+    }
+
+    if (activeMethod === 'Cheque') {
+      if (!payerName.trim()) {
+        setError('Please enter cheque name');
+        return;
+      }
+
+      if (!chequeCollectionAt) {
+        setError('Please enter cheque collection time');
+        return;
+      }
+    }
+
+    const paymentNotes = [
+      activeMethod === 'UPI' && `UPI ID: ${transactionId.trim()}`,
+      activeMethod === 'Bank Transfer' && `Bank detail: ${notes.trim() || 'Not provided'}`,
+      activeMethod === 'Cheque' && `Cheque name: ${payerName.trim()}`,
+      activeMethod === 'Cheque' && `Collection time: ${chequeCollectionAt}`,
+      activeMethod !== 'Bank Transfer' && notes.trim() ? `Remarks: ${notes.trim()}` : null,
+    ].filter(Boolean).join(' | ');
+
     if (selectedPayout) {
       onCollectPayment(
         selectedPayout.id, 
         numAmount, 
         activeMethod,
-        transactionId || undefined,
-        notes || undefined
+        transactionId.trim() || undefined,
+        paymentNotes || undefined
       );
     }
   };
@@ -108,6 +144,8 @@ const SettlementsPaymentModal = ({
     setAmount('');
     setTransactionId('');
     setNotes('');
+    setPayerName('');
+    setChequeCollectionAt('');
     setError('');
     setCopied(null);
   };
@@ -145,7 +183,7 @@ const SettlementsPaymentModal = ({
         <div className="px-6 py-4 space-y-6">
             {/* Selection Section */}
             <div>
-                <Label className="text-xs font-black uppercase text-muted-foreground tracking-tighter mb-4 block">Select Payment Avenue</Label>
+                <Label className="text-xs font-black uppercase text-muted-foreground tracking-tighter mb-4 block">Select Payment Method</Label>
                 {isLoadingSettings ? (
                     <div className="flex items-center justify-center py-10 border-2 border-dashed rounded-2xl bg-muted/20">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
@@ -153,21 +191,25 @@ const SettlementsPaymentModal = ({
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {/* More Options Grid */}
-                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                             {[
-                                { id: 'UPI', label: 'UPI/QR', icon: Smartphone },
-                                { id: 'Bank Transfer', label: 'Bank', icon: Landmark },
-                                { id: 'Cash', label: 'Cash', icon: Banknote },
+                                { id: 'UPI', label: 'UPI', icon: Smartphone },
+                                { id: 'Bank Transfer', label: 'Bank Transfer', icon: Landmark },
                                 { id: 'Cheque', label: 'Cheque', icon: FileText },
-                                { id: 'Agent', label: 'Agent', icon: UserCheck },
                             ].map((method) => {
                                 const Icon = method.icon;
                                 return (
                                     <button
                                         key={method.id}
                                         type="button"
-                                        onClick={() => setActiveMethod(method.id as PaymentMethodType)}
+                                        onClick={() => {
+                                            setActiveMethod(method.id as PaymentMethodType);
+                                            setTransactionId('');
+                                            setNotes('');
+                                            setPayerName('');
+                                            setChequeCollectionAt('');
+                                            setError('');
+                                        }}
                                         className={`flex flex-col items-center justify-center gap-1.5 p-2 px-1 rounded-xl border-2 transition-all group ${
                                             activeMethod === method.id 
                                             ? 'border-primary bg-primary/[0.03] ring-1 ring-primary shadow-sm' 
@@ -256,25 +298,27 @@ const SettlementsPaymentModal = ({
                             ) : (
                                 <div className="text-center space-y-3 py-6">
                                     <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto text-muted-foreground">
-                                        {activeMethod === 'Cash' ? <Banknote className="h-6 w-6" /> : 
-                                         activeMethod === 'Cheque' ? <FileText className="h-6 w-6" /> : 
-                                         activeMethod === 'Agent' ? <UserCheck className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
+                                        {activeMethod === 'Cheque' ? <FileText className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
                                     </div>
                                     <div className="max-w-xs mx-auto">
-                                        <p className="text-sm font-black text-foreground uppercase tracking-tighter">Physical / Manual Payment</p>
+                                        <p className="text-sm font-black text-foreground uppercase tracking-tighter">
+                                            {activeMethod === 'Cheque' ? 'Cheque Collection Details' : 'Admin Details Not Added'}
+                                        </p>
                                         <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
-                                            Hand over the amount via {activeMethod} and record the details (Receipt #, Date, Person name) below to mark it as clear.
+                                            {activeMethod === 'Cheque'
+                                                ? 'Enter cheque name, cheque number, and collection time below.'
+                                                : 'Ask admin to add payment settings before recording this method.'}
                                         </p>
                                     </div>
                                 </div>
                             )}
 
-                            {adminSettings?.paymentInstructions && (
+                            {activeInstructions && (
                                 <div className="mt-4 p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-blue-800 text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-60 flex items-center justify-center gap-1.5">
                                         <AlertCircle className="h-3 w-3" /> Admin Instructions
                                     </p>
-                                    <p className="text-[11px] font-medium italic">{adminSettings.paymentInstructions}</p>
+                                    <p className="text-[11px] font-medium italic">{activeInstructions}</p>
                                 </div>
                             )}
                         </div>
@@ -301,35 +345,111 @@ const SettlementsPaymentModal = ({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {activeMethod === 'UPI' && (
                         <div className="space-y-2">
-                            <Label htmlFor="tx-id" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Reference # / UTR <span className="text-red-500">*</span></Label>
+                            <Label htmlFor="upi-id" className="text-[10px] font-black uppercase text-muted-foreground ml-1">UPI ID / Reference <span className="text-red-500">*</span></Label>
                             <div className="relative">
-                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    id="tx-id"
+                                    id="upi-id"
                                     className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
-                                    placeholder="Enter reference ID"
+                                    placeholder="name@bank or UTR"
                                     value={transactionId}
-                                    onChange={(e) => setTransactionId(e.target.value)}
+                                    onChange={(e) => { setTransactionId(e.target.value); setError(''); }}
                                     required
                                 />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="notes" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Remarks</Label>
-                            <div className="relative">
-                                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    id="notes"
-                                    className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
-                                    placeholder="Person name/Location..."
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                />
+                    )}
+
+                    {activeMethod === 'Bank Transfer' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="bank-ref" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Bank Reference / UTR <span className="text-red-500">*</span></Label>
+                                <div className="relative">
+                                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="bank-ref"
+                                        className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
+                                        placeholder="Enter bank reference"
+                                        value={transactionId}
+                                        onChange={(e) => { setTransactionId(e.target.value); setError(''); }}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bank-detail" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Bank Detail</Label>
+                                <div className="relative">
+                                    <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="bank-detail"
+                                        className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
+                                        placeholder="Bank name / account last 4"
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {activeMethod === 'Cheque' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="cheque-number" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Cheque Number <span className="text-red-500">*</span></Label>
+                                <div className="relative">
+                                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="cheque-number"
+                                        className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
+                                        placeholder="Enter cheque number"
+                                        value={transactionId}
+                                        onChange={(e) => { setTransactionId(e.target.value); setError(''); }}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="cheque-name" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Cheque Name <span className="text-red-500">*</span></Label>
+                                <div className="relative">
+                                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="cheque-name"
+                                        className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
+                                        placeholder="Name on cheque"
+                                        value={payerName}
+                                        onChange={(e) => { setPayerName(e.target.value); setError(''); }}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="cheque-time" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Collection Time <span className="text-red-500">*</span></Label>
+                                <Input
+                                    id="cheque-time"
+                                    type="datetime-local"
+                                    className="h-11 bg-muted/5 border-muted rounded-xl"
+                                    value={chequeCollectionAt}
+                                    onChange={(e) => { setChequeCollectionAt(e.target.value); setError(''); }}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="cheque-remarks" className="text-[10px] font-black uppercase text-muted-foreground ml-1">Remarks</Label>
+                                <div className="relative">
+                                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="cheque-remarks"
+                                        className="pl-9 h-11 bg-muted/5 border-muted rounded-xl"
+                                        placeholder="Optional remarks"
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {error && <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-lg border border-red-100 flex items-center gap-2"><AlertCircle className="h-4 w-4" /> {error}</p>}

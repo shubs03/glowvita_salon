@@ -712,11 +712,14 @@ const ServiceManager = () => {
                             {services.map((item: Service) => (
                                 <TableRow key={item._id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">
-                                            {typeof item.category === 'object' ? (item.category as ServiceCategory).name : 'N/A'}
-                                        </Badge>
-                                    </TableCell>
+                                   <TableCell>
+    <Badge variant="secondary">
+        {item.category &&
+        typeof item.category === "object"
+            ? item.category.name
+            : "N/A"}
+    </Badge>
+</TableCell>
                                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
                                     <TableCell>
                                         {item.serviceImage ? (
