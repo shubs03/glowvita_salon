@@ -1050,10 +1050,10 @@ export const glowvitaApi = createApi({
     }),
 
     updateVendorStatus: builder.mutation({
-      query: ({ id, status }) => ({
+      query: ({ id, status, rejectionReason }) => ({
         url: "/admin/vendor",
         method: "PATCH",
-        body: { id, status },
+        body: { id, status, rejectionReason },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "Vendor", id },
@@ -1148,10 +1148,10 @@ export const glowvitaApi = createApi({
     }),
 
     updateDoctorStatus: builder.mutation({
-      query: ({ id, status }) => ({
+      query: ({ id, status, rejectionReason }) => ({
         url: "/admin/doctors",
         method: "PATCH",
-        body: { id, status },
+        body: { id, status, rejectionReason },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "doctors", id },
@@ -1294,10 +1294,10 @@ export const glowvitaApi = createApi({
     }),
 
     updateSupplierStatus: builder.mutation({
-      query: ({ id, status }) => ({
+      query: ({ id, status, rejectionReason }) => ({
         url: "/admin/suppliers",
         method: "PATCH",
-        body: { id, status },
+        body: { id, status, rejectionReason },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "Supplier", id },

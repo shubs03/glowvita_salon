@@ -166,6 +166,7 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
         setIsEmailVerified(true);
       } else {
         toast.error(data.message);
+        setEmailOtp('');
       }
     } catch (err) {
       toast.error("Failed to verify email OTP");
@@ -204,6 +205,7 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
         setIsPhoneVerified(true);
       } else {
         toast.error("Invalid phone OTP");
+        setPhoneOtp('');
       }
     } catch (err) {
       toast.error("Failed to verify phone OTP");
@@ -778,7 +780,7 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                             placeholder="OTP" 
                             maxLength={6}
                             value={emailOtp} 
-                            onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                            onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             disabled={isOtpLoading}
                             className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
                           />
@@ -833,7 +835,7 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                             placeholder="OTP" 
                             maxLength={6}
                             value={phoneOtp} 
-                            onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                            onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             disabled={isOtpLoading}
                             className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
                           />

@@ -276,6 +276,20 @@ export const PATCH = authMiddlewareAdmin(
           );
         }
 
+        const updateDataForStatus = { status };
+
+        if (status === "Rejected") {
+          if (!rejectionReason || rejectionReason.trim() === "") {
+            return NextResponse.json(
+              { message: "Rejection reason is required when rejecting a doctor" },
+              { status: 400 }
+            );
+          }
+          updateDataForStatus.rejectionReason = rejectionReason.trim();
+        } else if (status === "Approved") {
+          updateDataForStatus.rejectionReason = null;
+        }
+
         // If status is "Approved", check mandatory documents
         if (status === "Approved") {
           const doctor = await DoctorModel.findById(id);
@@ -308,13 +322,24 @@ export const PATCH = authMiddlewareAdmin(
 
         const updatedDoctor = await DoctorModel.findByIdAndUpdate(
           id,
-          { $set: { status } },
+          { $set: updateDataForStatus },
           { new: true }
         ).populate("subscription.plan", "name").select("-password");
 
         if (!updatedDoctor) {
           return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
         }
+
+        (async () => {
+          try {
+            const message = status === "Rejected" && rejectionReason
+              ? `Your account has been rejected. Reason: ${rejectionReason.trim()}`
+              : '';
+            await NotificationService.sendApprovalAlert(id, 'doctor', status, message);
+          } catch (err) {
+            console.error('Doctor Approval Notification Error:', err);
+          }
+        })();
 
         return NextResponse.json({
           message: `Doctor ${status} successfully`,

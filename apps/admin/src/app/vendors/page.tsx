@@ -89,6 +89,7 @@ export default function VendorManagementPage() {
   const [filterOwner, setFilterOwner] = useState('');
   const [filterPhone, setFilterPhone] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const selectedRegion = useAppSelector(selectSelectedRegion);
 
@@ -147,6 +148,7 @@ export default function VendorManagementPage() {
   const handleActionClick = (vendor: Vendor, action: ActionType) => {
     setSelectedVendor(vendor);
     setActionType(action);
+    setRejectionReason('');
     setIsActionModalOpen(true);
   };
 
@@ -154,6 +156,11 @@ export default function VendorManagementPage() {
     if (!selectedVendor || !actionType) return;
 
     try {
+      if (actionType === "disapprove" && !rejectionReason.trim()) {
+        toast.error("Please provide a reason for rejection");
+        return;
+      }
+
       switch (actionType) {
         case "enable":
           await updateVendorStatus({
@@ -176,7 +183,8 @@ export default function VendorManagementPage() {
         case "disapprove":
           await updateVendorStatus({
             id: selectedVendor._id,
-            status: "Disapproved",
+            status: "Rejected",
+            rejectionReason,
           }).unwrap();
           break;
         case "delete":
@@ -248,8 +256,8 @@ export default function VendorManagementPage() {
   const approvedVendors = vendorsArray.filter(
     (v: Vendor) => v?.status === "Approved"
   ).length;
-  const disapprovedVendors = vendorsArray.filter(
-    (v: Vendor) => v?.status === "Disapproved"
+  const rejectedVendors = vendorsArray.filter(
+    (v: Vendor) => v?.status === "Rejected" || v?.status === "Disapproved"
   ).length;
 
   const exportToExcel = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {

@@ -125,6 +125,7 @@ function ClientRegisterForm() {
       } else {
         const data = await res.json();
         toast.error(data.error || 'Invalid OTP');
+        setEmailOtp('');
       }
     } catch (error) {
       toast.error('Network error.');
@@ -163,6 +164,7 @@ function ClientRegisterForm() {
         setIsPhoneVerified(true);
       } else {
         toast.error("Invalid phone OTP");
+        setPhoneOtp('');
       }
     } catch (err) {
       toast.error("Failed to verify phone OTP");

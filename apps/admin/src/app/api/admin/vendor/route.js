@@ -653,6 +653,18 @@ export const PATCH = authMiddlewareAdmin(
         status: status,
       };
 
+      if (status === "Rejected") {
+        if (!rejectionReason || rejectionReason.trim() === "") {
+          return Response.json(
+            { message: "Rejection reason is required when rejecting a vendor" },
+            { status: 400 }
+          );
+        }
+        updateDataForStatus.rejectionReason = rejectionReason.trim();
+      } else if (status === "Approved") {
+        updateDataForStatus.rejectionReason = null;
+      }
+
       // If status is "Approved", check if all uploaded documents are approved
       if (status === "Approved") {
         const vendor = await VendorModel.findById(id);
@@ -731,7 +743,10 @@ export const PATCH = authMiddlewareAdmin(
       // Trigger Notification for Vendor Approval
       (async () => {
         try {
-          await NotificationService.sendApprovalAlert(id, 'vendor', status);
+          const message = status === "Rejected" && rejectionReason
+            ? `Your account has been rejected. Reason: ${rejectionReason.trim()}`
+            : '';
+          await NotificationService.sendApprovalAlert(id, 'vendor', status, message);
         } catch (err) {
           console.error('Vendor Approval Notification Error:', err);
         }
