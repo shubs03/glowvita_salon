@@ -213,13 +213,42 @@ export default function AppointmentsPage() {
     notes: string,
     paymentAt: string
   ) => {
-    if (!selectedAppointment?._id) return;
+    // Helper to robustly extract standard 24-character hex ObjectId from various shapes
+    const getCleanObjectId = (obj: any): string => {
+      if (!obj) return '';
+      if (typeof obj === 'string') return obj.trim();
+      if (obj.$oid && typeof obj.$oid === 'string') return obj.$oid.trim();
+      if (typeof obj.toString === 'function' && obj.toString !== Object.prototype.toString) {
+        const str = obj.toString();
+        if (str && str !== '[object Object]') return str.trim();
+      }
+      if (obj._id) return getCleanObjectId(obj._id);
+      if (obj.id) return getCleanObjectId(obj.id);
+      try {
+        const str = JSON.stringify(obj);
+        const match = str.match(/"\$oid"\s*:\s*"([^"]+)"/);
+        if (match && match[1]) return match[1].trim();
+      } catch (e) {}
+      return '';
+    };
+
+    // Resolve ID from both _id and id (RTK Query may normalize to id)
+    const rawId = (selectedAppointment as any)?._id ?? (selectedAppointment as any)?.id ?? null;
+    const appointmentId = getCleanObjectId(rawId);
+
+    if (!appointmentId) return;
+
+    if (!/^[a-f\d]{24}$/i.test(appointmentId)) {
+      toast.error(`Invalid ID format: ${appointmentId}`);
+      console.error('Invalid appointmentId format in page.tsx:', appointmentId);
+      return;
+    }
 
     const toastId = toast.loading("Processing payment...");
     try {
       // Call backend so it records payment history with paymentDate
       await collectPayment({
-        appointmentId: selectedAppointment._id,
+        appointmentId,
         amount: amount,
         paymentMethod: paymentMethod,
         notes: notes,

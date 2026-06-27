@@ -152,6 +152,7 @@ interface DayScheduleViewProps {
   onCreateAppointment?: (appointment: Omit<Appointment, 'id'>) => void;
   onDateChange?: (date: Date) => void;
   onUpdateAppointmentStatus?: (id: string, status: string, reason?: string) => void;
+  onCollectPayment?: (paymentData: { amount: number; paymentMethod: string; notes?: string }) => void;
 }
 
 
@@ -420,6 +421,7 @@ export default function DayScheduleView({
   onCreateAppointment,
   onDateChange,
   onUpdateAppointmentStatus,
+  onCollectPayment,
   blockedTimes = []
 }: DayScheduleViewProps) {
   // Hooks must be called at the top level
@@ -915,15 +917,22 @@ export default function DayScheduleView({
 
   const handleUpdateStatus = (status: Appointment['status']) => {
     if (selectedAppointment) {
-      onAppointmentClickProp?.({ ...selectedAppointment, status });
+      const id = (selectedAppointment as any)._id || selectedAppointment.id;
+      if (id && onUpdateAppointmentStatus) {
+        // Delegate to the API-backed handler from the parent page
+        onUpdateAppointmentStatus(id, status);
+      }
+      // Also update local state for immediate UI feedback
       setSelectedAppointment({ ...selectedAppointment, status });
     }
   };
 
   const handleCollectPayment = (paymentData: { amount: number; paymentMethod: string; notes?: string }) => {
-    if (selectedAppointment) {
-      console.log('Payment collected:', { ...paymentData, appointmentId: selectedAppointment.id });
-      handleUpdateStatus('completed');
+    if (selectedAppointment && onCollectPayment) {
+      // Delegate to the API-backed handler from the parent page
+      onCollectPayment(paymentData);
+    } else if (selectedAppointment) {
+      console.warn('onCollectPayment prop not provided to DayScheduleView');
     }
   };
 
@@ -1842,9 +1851,9 @@ export default function DayScheduleView({
             <AppointmentDetailView
               appointment={{
                 ...(selectedAppointment as any),
-                // Ensure id field compatibility between types
-                id: selectedAppointment.id || (selectedAppointment as any)._id,
-                _id: selectedAppointment.id || (selectedAppointment as any)._id,
+                // IMPORTANT: always prefer _id (real MongoDB ObjectId) over id (may be synthetic composite for multi-service display)
+                _id: (selectedAppointment as any)._id || selectedAppointment.id,
+                id: (selectedAppointment as any)._id || selectedAppointment.id,
                 date: selectedAppointment.date,
                 serviceName: selectedAppointment.serviceName || selectedAppointment.service,
                 clientName: selectedAppointment.clientName,
@@ -1861,10 +1870,12 @@ export default function DayScheduleView({
               }}
               onClose={handleCloseDetailView}
               onStatusChange={(status, reason) => {
+                // Always use _id (real ObjectId), not the synthetic composite id
+                const realId = (selectedAppointment as any)._id || selectedAppointment.id;
                 if (onUpdateAppointmentStatus) {
-                  onUpdateAppointmentStatus(selectedAppointment.id || (selectedAppointment as any)._id, status, reason);
+                  onUpdateAppointmentStatus(realId, status, reason);
                 } else {
-                  handleUpdateStatus(status as any);
+                  handleUpdateStatus(realId, status as any);
                 }
               }}
               onCollectPayment={handleCollectPayment}
@@ -1875,8 +1886,9 @@ export default function DayScheduleView({
 
                 // If status changed or payment collected, notify parent to refresh
                 if (onUpdateAppointmentStatus && updatedAppointment.status) {
-                  // Pass the potentially new status to trigger refetch in parent
-                  onUpdateAppointmentStatus(updatedAppointment.id || (updatedAppointment as any)._id, updatedAppointment.status);
+                  // Always prefer _id for API calls
+                  const realId = (updatedAppointment as any)._id || updatedAppointment.id;
+                  onUpdateAppointmentStatus(realId, updatedAppointment.status);
                 }
               }}
             />

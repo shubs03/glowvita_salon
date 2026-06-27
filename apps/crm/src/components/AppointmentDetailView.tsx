@@ -1423,6 +1423,23 @@ export function AppointmentDetailView({
                   <span>{appointment.startTime}</span>
                 </div>
               </div>
+              <div className="flex items-center space-x-2">
+                <Badge
+                  variant="outline"
+                  className={`px-2 py-0.5 text-xs font-medium ${liveAppointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                    liveAppointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
+                      liveAppointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                        liveAppointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
+                          liveAppointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                            liveAppointment.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                              liveAppointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                                liveAppointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
+                                  'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
+                  } border-0`}
+                >
+                  {liveAppointment.status.toUpperCase().replace(/-/g, ' ')}
+                </Badge>
+              </div>
             </div>
           </DialogHeader>
 
