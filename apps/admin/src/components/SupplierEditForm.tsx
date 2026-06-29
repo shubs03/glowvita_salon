@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@repo/ui/dialog";
 import { CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
@@ -8,9 +9,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { useUpdateSupplierMutation, useGetSubscriptionPlansQuery, useRenewPlanMutation } from "@repo/store/api";
 import { toast } from "sonner";
-import { Loader2, Upload, MapPin, Calendar, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Loader2, Upload, MapPin, Calendar, CheckCircle, AlertCircle, Clock, Zap, CreditCard, Smartphone, Landmark, RefreshCw } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { Card, CardContent } from "@repo/ui/card";
+
+/* ─── Razorpay script loader (cached) ───────────────────────────────────── */
+let rzpScriptLoaded = false;
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (rzpScriptLoaded || (typeof window !== 'undefined' && (window as any).Razorpay)) {
+      rzpScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => { rzpScriptLoaded = true; resolve(true); };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 // Reusing the unified interface or defining relevant parts
 interface Supplier {
@@ -59,6 +76,8 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
   // const [renewPlan, { isLoading: isRenewing }] = useRenewPlanMutation(); // Using manual fetch for now as per previous pattern
   const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<any>(null);
   const [isRenewingManual, setIsRenewingManual] = useState(false);
+  
+  const token = useSelector((state: any) => state.adminAuth?.token);
 
   useEffect(() => {
     if (supplier) {
@@ -108,51 +127,22 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
   const handleRenewSubscription = async () => {
     if (!selectedRenewalPlan) return;
 
-    setIsRenewingManual(true);
-    try {
-      // Manual fetch as per the established pattern
-      // Ensure we get the token if needed, but assuming calling code handles auth or simple fetch
-      // Wait, we need the token. Let's use the mutation if possible, or manual fetch with token.
-      // Since I don't have direct access to store state here easily without importing logic,
-      // I will trust the established pattern in page.tsx. 
-      // Actually, let's use the manual fetch pattern but we need the token.
-      // For now, let's assume `useRenewPlanMutation` works if configured correctly, 
-      // OR re-implement the manual fetch using local storage or similar if redundancy is needed.
-      // However, `VendorEditForm` (the source) likely didn't have the manual fix inside it?
-      // Wait, the manual fix was in `subscription-management/page.tsx`.
-      // Let's try to use the hook `useRenewPlanMutation` first. If it fails due to port issues, we revert.
+    const planAmount = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+      ? selectedRenewalPlan.discountedPrice
+      : selectedRenewalPlan.price;
 
-      const adminToken = localStorage.getItem("adminToken"); // Fallback if not in store
-      // But better to use the proper mutation or pass token.
-      // Let's stick to the mutation for cleaner component code, assuming environment is correct.
-      // If the user specificially requested the manual fix everywhere, I should use manual fetch.
-      // But I don't see `useSelector` here. I'll add it if needed.
-
-      // Let's use the mutation for now.
-      // await renewPlan({ 
-      //   vendorId: supplier._id, // Backward compat
-      //   userId: supplier._id,
-      //   userType: 'supplier',
-      //   planId: selectedRenewalPlan._id 
-      // }).unwrap();
-
-      // Actually, let's use the manual fetch to be safe and consistent with previous session fixes.
-      // I need `useSelector`.
-
-      // ... skipping manual fetch validation for brevity, assuming standard mutation works for typical use cases
-      // unless user complains. But wait, I should be robust.
-      // Let's use standard fetch with `/api/admin/subscription-renewal`.
-
+    const activateRenewal = async (paymentId?: string, paymentOrderId?: string) => {
       const res = await fetch('/api/admin/subscription-renewal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ...` // relies on cookie or header
+          'Authorization': `Bearer ${token || localStorage.getItem("adminToken") || ''}`
         },
         body: JSON.stringify({
           userId: supplier._id,
           userType: 'supplier',
-          planId: selectedRenewalPlan._id
+          planId: selectedRenewalPlan._id,
+          ...(paymentId && { paymentId, paymentOrderId, paymentMethod: 'online' }),
         })
       });
 
@@ -170,9 +160,113 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
       setIsRenewModalOpen(false);
       setSelectedRenewalPlan(null);
       refetch();
+    };
+
+    // Free / trial plan
+    if (!planAmount || planAmount <= 0) {
+      setIsRenewingManual(true);
+      try {
+        await activateRenewal();
+      } catch (error: any) {
+        console.error("Failed to renew subscription:", error);
+        toast.error(error?.message || "Failed to process subscription. Please try again.");
+      } finally {
+        setIsRenewingManual(false);
+      }
+      return;
+    }
+
+    // Paid plan
+    setIsRenewingManual(true);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
+      }
+
+      const orderRes = await fetch('/api/admin/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || localStorage.getItem("adminToken") || ''}`
+        },
+        body: JSON.stringify({
+          amount: planAmount,
+          currency: 'INR',
+          receipt: `admin_supp_${selectedRenewalPlan._id}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to create payment order');
+      }
+
+      setIsRenewModalOpen(false);
+      onClose(); // Close the outer dialog so Radix UI focus trap doesn't block Razorpay iframe
+
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(planAmount * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita Admin',
+          description: `${selectedRenewalPlan.name} – ${selectedRenewalPlan.duration} ${selectedRenewalPlan.durationType} for ${supplier.shopName}`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          retry: { enabled: true, max_count: 3 },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [{ method: 'upi', vpa: true }, { method: 'upi', qr: true }],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
+          modal: {
+            ondismiss: () => {
+              setIsRenewModalOpen(true);
+              reject(new Error('Payment cancelled by user'));
+            },
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              const verifyRes = await fetch('/api/admin/payments/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token || localStorage.getItem("adminToken") || ''}`
+                },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed.');
+
+              await activateRenewal(response.razorpay_payment_id, response.razorpay_order_id);
+              resolve();
+            } catch (err: any) {
+              setIsRenewModalOpen(true);
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      console.error("Failed to renew subscription:", error);
-      toast.error(error?.message || "Failed to process subscription. Please try again.");
+      if (error?.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled.');
+      } else {
+        console.error('Error renewing subscription:', error);
+        toast.error(error?.message || 'Failed to process subscription. Please try again.');
+        setIsRenewModalOpen(true);
+      }
     } finally {
       setIsRenewingManual(false);
     }
@@ -360,7 +454,11 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <Button onClick={() => setIsRenewModalOpen(true)} className="w-full sm:w-auto">
+                    <Button onClick={() => {
+                      setSelectedRenewalPlan(null);
+                      setIsRenewModalOpen(true);
+                      loadRazorpayScript();
+                    }} className="w-full sm:w-auto">
                       <Clock className="mr-2 h-4 w-4" />
                       Renew Subscription
                     </Button>
@@ -463,23 +561,63 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, s
               {plans.map((plan: any) => (
                 <div
                   key={plan._id}
-                  className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedRenewalPlan?._id === plan._id ? 'border-primary bg-primary/5' : 'hover:bg-accent'}`}
+                  className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedRenewalPlan?._id === plan._id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-accent'}`}
                   onClick={() => setSelectedRenewalPlan(plan)}
                 >
                   <div className="flex justify-between items-center">
                     <span className="font-medium">{plan.name}</span>
-                    <span className="font-bold">₹{plan.price}</span>
+                    <span className="font-bold">₹{plan.discountedPrice || plan.price}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">{plan.duration} days</div>
                 </div>
               ))}
             </div>
+
+            {selectedRenewalPlan && (() => {
+              const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+                ? selectedRenewalPlan.discountedPrice
+                : selectedRenewalPlan.price;
+              return amt > 0 ? (
+                <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground border-t pt-3 mt-2">
+                  <span className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Card</span>
+                  <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> UPI</span>
+                  <span className="flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> Net Banking</span>
+                  <span className="opacity-60 text-[10px]">Secured by Razorpay</span>
+                </div>
+              ) : null;
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRenewModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleRenewSubscription} disabled={!selectedRenewalPlan || isRenewingManual}>
-              {isRenewingManual && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Renewal
+            <Button onClick={handleRenewSubscription} disabled={!selectedRenewalPlan || isRenewingManual} className="min-w-[160px]">
+              {isRenewingManual ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Processing...
+                </span>
+              ) : selectedRenewalPlan ? (() => {
+                const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+                  ? selectedRenewalPlan.discountedPrice
+                  : selectedRenewalPlan.price;
+                
+                const isStatusActive = supplier.subscription?.status === 'Active' && 
+                  (!supplier.subscription?.endDate || new Date(supplier.subscription.endDate) > new Date());
+                
+                if (amt > 0) {
+                  return (
+                    <span className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      {isStatusActive ? `Pay ₹${amt} & Schedule` : `Pay ₹${amt} & Renew`}
+                    </span>
+                  );
+                }
+                return (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    {isStatusActive ? 'Schedule Plan' : 'Renew Now'}
+                  </span>
+                );
+              })() : 'Select a Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>
