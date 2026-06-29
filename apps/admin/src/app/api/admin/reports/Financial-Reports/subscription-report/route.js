@@ -228,24 +228,36 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       // 2. Revenue calculation
       const currentSub = sub.rawSubscription;
+      const plansToCount = [];
       
-      // Add current plan revenue if it's paid and status is Active/Expired
-      if (sub.price > 0 && (sub.planStatus === 'Active' || sub.planStatus === 'Expired')) {
-        totalRevenue += sub.price;
+      if (sub.price > 0) {
+        plansToCount.push({
+          price: sub.price,
+          start: sub.startDate ? new Date(sub.startDate).getTime() : null,
+          end: sub.endDate ? new Date(sub.endDate).getTime() : null
+        });
       }
-
-      // Add historical paid revenue
+      
       if (currentSub.history && currentSub.history.length > 0) {
         currentSub.history.forEach(hItem => {
-          // Rule: Skip Trial plans and duplicate 'Active' records in history
-          if (hItem.status === 'Executed' || hItem.status === 'Expired') {
-            const hPrice = (hItem.plan?.discountedPrice || hItem.plan?.price || 0);
-            if (hPrice > 0) {
-              totalRevenue += hPrice;
-            }
+          const hPrice = (hItem.plan?.discountedPrice || hItem.plan?.price || 0);
+          if (hPrice > 0) {
+            plansToCount.push({
+              price: hPrice,
+              start: hItem.startDate ? new Date(hItem.startDate).getTime() : null,
+              end: hItem.endDate ? new Date(hItem.endDate).getTime() : null
+            });
           }
         });
       }
+      
+      // Deduplicate exact date matches to prevent double-counting active plans
+      const uniquePlans = plansToCount.filter((p, index, self) => {
+        if (!p.start || !p.end) return true; // Keep plans without valid dates
+        return index === self.findIndex(t => t.start === p.start && t.end === p.end);
+      });
+      
+      totalRevenue += uniquePlans.reduce((sum, p) => sum + p.price, 0);
     });
 
     const totalSubscriptions = allSubscriptions.length;

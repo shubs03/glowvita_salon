@@ -145,15 +145,24 @@ export default function SubscriptionManagementPage() {
     const rawStatus = (subscription?.status || 'Pending').toString().trim();
     const normalizedStatus = rawStatus.toLowerCase();
 
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     // Ensure we have a valid end date
     const endDateVal = getDateValue(subscription?.endDate);
     if (endDateVal) {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const expiryDate = getSafeDate(endDateVal);
 
       if (expiryDate && today > expiryDate) {
         return 'Expired';
+      }
+    }
+
+    const startDateVal = getDateValue(subscription?.startDate);
+    if (startDateVal) {
+      const startDate = getSafeDate(startDateVal);
+      if (startDate && startDate > today) {
+        return 'Scheduled';
       }
     }
 
@@ -587,33 +596,71 @@ export default function SubscriptionManagementPage() {
 
   // Active count derived from live data
   const subscriptionsCount = subscribers.filter((s) => s.status !== 'Pending').length;
-  const activeSubscribersCount = subscribers.filter((s) => s.status === 'Active').length;
-  const expiredSubscribersCount = subscribers.filter((s) => s.status === 'Expired').length;
+  
+  const activeSubscribersCount = subscribers.filter((s) => {
+    if (s.status === 'Active') return true;
+    if (s.history && s.history.length > 0) {
+      return s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Active');
+    }
+    return false;
+  }).length;
 
-  // Total Revenue = Current Paid Plan + Historical Expired Plans
-  // Exclusion logic: skip Free Trials (₹0), duplicate 'Active' history, and Failed/Pending payments.
+  const scheduledSubscribersCount = subscribers.filter((s) => {
+    if (s.status === 'Scheduled') return true;
+    if (s.history && s.history.length > 0) {
+      return s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Scheduled');
+    }
+    return false;
+  }).length;
+
+  const expiredSubscribersCount = subscribers.filter((s) => {
+    const hasActive = s.status === 'Active' || (s.history && s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Active'));
+    if (hasActive) return false; // If they have an active plan, they are not an inactive salon
+
+    if (s.status === 'Expired') return true;
+    if (s.history && s.history.length > 0) {
+      return s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Expired');
+    }
+    return false;
+  }).length;
+
+  // Total Revenue = SUM of all PAID subscriptions across history (Active + Scheduled + Expired)
   const totalRevenue = subscribers.reduce((acc, sub) => {
-    // 1. Current plan revenue (only if status is Active or Expired and price > 0)
-    const currentPrice = ((sub.status === 'Active' || sub.status === 'Expired') && (sub.planPrice || 0) > 0) 
-      ? (sub.planPrice || 0) : 0;
+    const plansToCount: any[] = [];
     
-    // 2. Historical revenue from completed past plans
-    const historyRevenue = (sub.history || []).reduce((hAcc, hItem) => {
-      // Rule: Only count history items that are strictly 'Expired' 
-      // (This avoids double-counting the 'Active' duplicate in history)
-      if (hItem.status?.toLowerCase() !== 'expired') return hAcc;
+    if (sub.planPrice && sub.planPrice > 0) {
+      plansToCount.push({ 
+        price: sub.planPrice, 
+        start: getDateValue(sub.startDate) ? new Date(getDateValue(sub.startDate) as Date).getTime() : null, 
+        end: getDateValue(sub.endDate) ? new Date(getDateValue(sub.endDate) as Date).getTime() : null 
+      });
+    }
+    
+    if (sub.history && sub.history.length > 0) {
+      sub.history.forEach(hItem => {
+        const hPlanId = typeof hItem.plan === 'object' ? ((hItem.plan as any).$oid || (hItem.plan as any)._id) : hItem.plan;
+        const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (hItem.plan as any)?.name);
+        const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
+        
+        if (hPrice > 0) {
+          const start = getDateValue(hItem.startDate);
+          const end = getDateValue(hItem.endDate);
+          plansToCount.push({ 
+            price: hPrice, 
+            start: start ? new Date(start).getTime() : null, 
+            end: end ? new Date(end).getTime() : null 
+          });
+        }
+      });
+    }
 
-      const hPlanId = typeof hItem.plan === 'object' ? ((hItem.plan as any).$oid || (hItem.plan as any)._id) : hItem.plan;
-      const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (hItem.plan as any)?.name);
-      const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
-      
-      // Rule: Skip Free Trials (where price is 0)
-      if (hPrice <= 0) return hAcc;
-      
-      return hAcc + hPrice;
-    }, 0);
+    const uniquePlans = plansToCount.filter((p, index, self) => {
+      if (!p.start || !p.end) return true;
+      return index === self.findIndex(t => t.start === p.start && t.end === p.end);
+    });
 
-    return acc + currentPrice + historyRevenue;
+    const subTotal = uniquePlans.reduce((sum, p) => sum + p.price, 0);
+    return acc + subTotal;
   }, 0);
 
   // Pagination logic with safeguards
@@ -746,7 +793,7 @@ export default function SubscriptionManagementPage() {
         <h1 className="text-2xl font-bold font-headline">Subscription Management</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
@@ -779,6 +826,16 @@ export default function SubscriptionManagementPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Scheduled Subs</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{scheduledSubscribersCount}</div>
+            <p className="text-xs text-muted-foreground">Future purchased plans</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive Subscriptions</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -794,7 +851,7 @@ export default function SubscriptionManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground">From active subscriptions</p>
+            <p className="text-xs text-muted-foreground">All-time subscriptions</p>
           </CardContent>
         </Card>
       </div>
@@ -1462,6 +1519,7 @@ export default function SubscriptionManagementPage() {
                         const hPlanId = typeof historyItem.plan === 'object' ? ((historyItem.plan as any)?.$oid || (historyItem.plan as any)?._id) : historyItem.plan;
                         const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (historyItem.plan as any)?.name);
                         const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
+                        const hStatus = getSubStatus({ status: historyItem.status, endDate: historyItem.endDate, startDate: historyItem.startDate });
 
                         return (
                           <div key={index} className="relative">
@@ -1510,15 +1568,17 @@ export default function SubscriptionManagementPage() {
                                 <div
                                   className={`
                                     px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight
-                                    ${historyItem.status === 'Active'
+                                    ${hStatus === 'Active'
                                       ? 'bg-green-100 text-green-700 border border-green-200'
-                                      : historyItem.status === 'Scheduled'
+                                      : hStatus === 'Scheduled'
                                         ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                        : 'bg-muted text-muted-foreground border border-muted-foreground/10'
+                                        : hStatus === 'Expired'
+                                          ? 'bg-red-100 text-red-700 border border-red-200'
+                                          : 'bg-muted text-muted-foreground border border-muted-foreground/10'
                                     }
                                   `}
                                 >
-                                  {historyItem.status}
+                                  {hStatus}
                                 </div>
                               </div>
                             </div>
