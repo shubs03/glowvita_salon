@@ -15,12 +15,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
-import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock, RefreshCw, MapPinIcon, MapPin } from 'lucide-react';
+import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock, RefreshCw, MapPinIcon, MapPin, Zap, CreditCard, Smartphone, Landmark } from 'lucide-react';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
 
 // Google Maps API key
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
+
+/* ─── Razorpay script loader (cached) ───────────────────────────────────── */
+let rzpScriptLoaded = false;
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (rzpScriptLoaded || (typeof window !== 'undefined' && (window as any).Razorpay)) {
+      rzpScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => { rzpScriptLoaded = true; resolve(true); };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 interface SubscriptionPlan {
   _id: string;
@@ -870,9 +886,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   );
 };
 
-const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { formData: Vendor, handleInputChange: any, errors: any, onSuccess?: () => void }) => {
+const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess, onClose }: { formData: Vendor, handleInputChange: any, errors: any, onSuccess?: () => void, onClose?: () => void }) => {
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
-  const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<string | null>(null);
+  const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<any>(null); // store whole plan object
   const [isRenewing, setIsRenewing] = useState(false);
   const { data: plans = [], isLoading: plansLoading } = useGetSubscriptionPlansQuery(undefined);
   // Get token for manual fetch
@@ -885,7 +901,9 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
 
 
   const handleRenewClick = () => {
+    setSelectedRenewalPlan(null);
     setIsRenewModalOpen(true);
+    loadRazorpayScript(); // preload
   };
 
   const submitRenewal = async () => {
@@ -894,8 +912,11 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
       return;
     }
 
-    try {
-      setIsRenewing(true);
+    const planAmount = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+      ? selectedRenewalPlan.discountedPrice
+      : selectedRenewalPlan.price;
+
+    const activateRenewal = async (paymentId?: string, paymentOrderId?: string) => {
       const response = await fetch('/api/admin/subscription-renewal', {
         method: 'POST',
         headers: {
@@ -905,7 +926,8 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
         body: JSON.stringify({
           userId: formData._id,
           userType: 'vendor',
-          planId: selectedRenewalPlan,
+          planId: selectedRenewalPlan._id,
+          ...(paymentId && { paymentId, paymentOrderId, paymentMethod: 'online' }),
         })
       });
 
@@ -921,9 +943,113 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
       } else {
         throw new Error(data.message || "Failed to renew");
       }
+    };
+
+    // Free / trial plan — skip payment gateway
+    if (!planAmount || planAmount <= 0) {
+      try {
+        setIsRenewing(true);
+        await activateRenewal();
+      } catch (error: any) {
+        console.error("Renewal error:", error);
+        toast.error(error?.message || "Failed to process subscription. Please try again.");
+      } finally {
+        setIsRenewing(false);
+      }
+      return;
+    }
+
+    // Paid plan — Razorpay payment gateway
+    setIsRenewing(true);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
+      }
+
+      const orderRes = await fetch('/api/admin/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`
+        },
+        body: JSON.stringify({
+          amount: planAmount,
+          currency: 'INR',
+          receipt: `admin_vend_${selectedRenewalPlan._id}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to create payment order');
+      }
+
+      setIsRenewModalOpen(false);
+      if (onClose) onClose(); // Close outer dialog so Radix UI focus trap doesn't block Razorpay
+
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(planAmount * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita Admin',
+          description: `${selectedRenewalPlan.name} – ${selectedRenewalPlan.duration} ${selectedRenewalPlan.durationType} for ${formData.businessName || formData.firstName}`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          retry: { enabled: true, max_count: 3 },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [{ method: 'upi', vpa: true }, { method: 'upi', qr: true }],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
+          modal: {
+            ondismiss: () => {
+              setIsRenewModalOpen(true);
+              reject(new Error('Payment cancelled by user'));
+            },
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              const verifyRes = await fetch('/api/admin/payments/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token || ''}`
+                },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed.');
+
+              await activateRenewal(response.razorpay_payment_id, response.razorpay_order_id);
+              resolve();
+            } catch (err: any) {
+              setIsRenewModalOpen(true);
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      console.error("Renewal error:", error);
-      toast.error(error?.message || "Failed to process subscription. Please try again.");
+      if (error?.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled.');
+      } else {
+        console.error('Error renewing subscription:', error);
+        toast.error(error?.message || 'Failed to process subscription. Please try again.');
+        setIsRenewModalOpen(true);
+      }
     } finally {
       setIsRenewing(false);
     }
@@ -1125,8 +1251,8 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
                 plans.map((plan: any) => (
                   <div
                     key={plan._id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedRenewalPlan === plan._id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}
-                    onClick={() => setSelectedRenewalPlan(plan._id)}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedRenewalPlan?._id === plan._id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}
+                    onClick={() => setSelectedRenewalPlan(plan)}
                   >
                     <div className="flex justify-between items-center">
                       <span className="font-semibold">{plan.name}</span>
@@ -1139,17 +1265,53 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
                 ))
               )}
             </div>
+
+            {selectedRenewalPlan && (() => {
+              const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+                ? selectedRenewalPlan.discountedPrice
+                : selectedRenewalPlan.price;
+              return amt > 0 ? (
+                <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground border-t pt-3">
+                  <span className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Card</span>
+                  <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> UPI</span>
+                  <span className="flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> Net Banking</span>
+                  <span className="opacity-60 text-[10px]">Secured by Razorpay</span>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRenewModalOpen(false)}>Cancel</Button>
-            <Button type="button" onClick={submitRenewal} disabled={isRenewing || !selectedRenewalPlan}>
+            <Button type="button" onClick={submitRenewal} disabled={isRenewing || !selectedRenewalPlan} className="min-w-[160px]">
               {isRenewing ? (
-                <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Renewing...
-                </>
-              ) : 'Confirm Renewal'}
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Processing...
+                </span>
+              ) : selectedRenewalPlan ? (() => {
+                const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+                  ? selectedRenewalPlan.discountedPrice
+                  : selectedRenewalPlan.price;
+                
+                const isStatusActive = formData.subscription?.status === 'Active' && 
+                  (!formData.subscription?.endDate || new Date(formData.subscription.endDate) > new Date());
+                
+                if (amt > 0) {
+                  return (
+                    <span className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      {isStatusActive ? `Pay ₹${amt} & Schedule` : `Pay ₹${amt} & Renew`}
+                    </span>
+                  );
+                }
+                return (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    {isStatusActive ? 'Schedule Plan' : 'Renew Now'}
+                  </span>
+                );
+              })() : 'Select a Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2031,9 +2193,9 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
             </TabsContent>
             <TabsContent value="subscription">
               {isEditMode ? (
-                <SubscriptionTab formData={vendor} handleInputChange={handleInputChange} errors={errors} onSuccess={onSuccess} />
+                <SubscriptionTab formData={vendor as Vendor} handleInputChange={handleInputChange} errors={errors} onSuccess={onSuccess} onClose={onClose} />
               ) : (
-                <SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} onSuccess={onSuccess} />
+                <SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} onSuccess={onSuccess} onClose={onClose} />
               )}
             </TabsContent>
             <TabsContent value="gallery">

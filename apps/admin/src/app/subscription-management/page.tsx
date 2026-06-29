@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation, useGetRegionsQuery } from '@repo/store/api';
 import { setSelectedRegion, selectSelectedRegion, selectCurrentAdmin } from '@repo/store/slices/adminAuthSlice';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
@@ -13,11 +13,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
-import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw, AlertCircle } from 'lucide-react';
+import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw, AlertCircle, CreditCard, Smartphone, Landmark, Zap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
 import { toast } from 'sonner';
+
+/* ─── Razorpay script loader (cached) ───────────────────────────────────── */
+let rzpScriptLoaded = false;
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (rzpScriptLoaded || (typeof window !== 'undefined' && (window as any).Razorpay)) {
+      rzpScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => { rzpScriptLoaded = true; resolve(true); };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 type Plan = {
   _id: string;
@@ -227,6 +243,7 @@ export default function SubscriptionManagementPage() {
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<Plan | null>(null);
   const [isRenewingManual, setIsRenewingManual] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [renewPlan, { isLoading: isRenewing }] = useRenewPlanMutation(); // Keep for type safety or remove usage if verified
 
   const [planForm, setPlanForm] = useState({
@@ -389,29 +406,33 @@ export default function SubscriptionManagementPage() {
     setSelectedSubscription(sub);
     setSelectedRenewalPlan(null);
     setIsRenewModalOpen(true);
+    // Preload Razorpay script eagerly so it's ready when admin clicks Pay
+    loadRazorpayScript();
   };
 
-  const handleRenewSubscription = async () => {
-    if (!selectedSubscription || !selectedRenewalPlan) {
-      toast.error('Please select a plan to renew');
-      return;
+  // Reset plan selection when renew modal closes
+  useEffect(() => {
+    if (!isRenewModalOpen) {
+      setSelectedRenewalPlan(null);
     }
+  }, [isRenewModalOpen]);
 
-    try {
-      setIsRenewingManual(true);
-      // Use relative path to avoid port issues in dev
+  /* ─── Core activation (called after payment or directly for free plans) ─── */
+  const activateRenewal = useCallback(
+    async (paymentId?: string, paymentOrderId?: string) => {
+      if (!selectedSubscription || !selectedRenewalPlan) return;
+
       const response = await fetch('/api/admin/subscription-renewal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || ''}` // Ensure auth if needed
+          'Authorization': `Bearer ${token || ''}`
         },
         body: JSON.stringify({
-          // vendorId param name is kept for backward compat if needed, but we prefer generic naming
-          // However, the backend reads `vendorId || userId`
           userId: selectedSubscription.subscriberId,
           userType: selectedSubscription.userType,
           planId: selectedRenewalPlan._id,
+          ...(paymentId && { paymentId, paymentOrderId, paymentMethod: 'online' }),
         })
       });
 
@@ -431,11 +452,135 @@ export default function SubscriptionManagementPage() {
       } else {
         throw new Error(data.message || 'Failed to renew subscription');
       }
+    },
+    [selectedSubscription, selectedRenewalPlan, token, refetchVendors, refetchSuppliers, refetchDoctors]
+  );
+
+  const handleRenewSubscription = async () => {
+    if (!selectedSubscription || !selectedRenewalPlan) {
+      toast.error('Please select a plan to renew');
+      return;
+    }
+
+    const planAmount = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+      ? selectedRenewalPlan.discountedPrice
+      : selectedRenewalPlan.price;
+
+    // Free / trial plan — skip payment gateway
+    if (!planAmount || planAmount <= 0) {
+      try {
+        setIsRenewingManual(true);
+        await activateRenewal();
+      } catch (error: any) {
+        console.error('Error renewing subscription:', error);
+        toast.error(error?.message || 'Failed to process subscription. Please try again.');
+      } finally {
+        setIsRenewingManual(false);
+      }
+      return;
+    }
+
+    // Paid plan — Razorpay payment gateway
+    setIsProcessingPayment(true);
+    try {
+      // Step 1 — load Razorpay JS
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
+      }
+
+      // Step 2 — create Razorpay order via admin backend
+      const orderRes = await fetch('/api/admin/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`
+        },
+        body: JSON.stringify({
+          amount: planAmount,
+          currency: 'INR',
+          receipt: `admin_sub_${selectedRenewalPlan._id}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to create payment order');
+      }
+
+      // Step 3 — Close modal to escape focus trap, then open Razorpay checkout
+      setIsRenewModalOpen(false);
+
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(planAmount * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita Admin',
+          description: `${selectedRenewalPlan.name} – ${selectedRenewalPlan.duration} ${selectedRenewalPlan.durationType} for ${selectedSubscription.subscriberName}`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          retry: { enabled: true, max_count: 3 },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true },
+                    { method: 'upi', qr: true }
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
+          modal: {
+            ondismiss: () => {
+              // Re-open renew dialog on cancel
+              setIsRenewModalOpen(true);
+              reject(new Error('Payment cancelled by user'));
+            },
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              // Step 4 — verify signature
+              const verifyRes = await fetch('/api/admin/payments/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token || ''}`
+                },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed.');
+
+              // Step 5 — activate subscription
+              await activateRenewal(response.razorpay_payment_id, response.razorpay_order_id);
+              resolve();
+            } catch (err: any) {
+              setIsRenewModalOpen(true); // Re-open on error
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      console.error('Error renewing subscription:', error);
-      toast.error(error?.message || 'Failed to process subscription. Please try again.');
+      if (error?.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled.');
+      } else {
+        console.error('Error renewing subscription:', error);
+        toast.error(error?.message || 'Failed to process subscription. Please try again.');
+        setIsRenewModalOpen(true);
+      }
     } finally {
-      setIsRenewingManual(false);
+      setIsProcessingPayment(false);
     }
   };
 
@@ -1502,34 +1647,56 @@ export default function SubscriptionManagementPage() {
               </div>
             )}
           </div>
+          {/* Payment method row — shown when a paid plan is selected */}
+          {selectedRenewalPlan && (() => {
+            const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+              ? selectedRenewalPlan.discountedPrice
+              : selectedRenewalPlan.price;
+            return amt > 0 ? (
+              <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground border-t pt-3">
+                <span className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Card</span>
+                <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> UPI</span>
+                <span className="flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> Net Banking</span>
+                <span className="opacity-60 text-[10px]">Secured by Razorpay</span>
+              </div>
+            ) : null;
+          })()}
+
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsRenewModalOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsRenewModalOpen(false)} disabled={isRenewingManual || isProcessingPayment}>
               Cancel
             </Button>
             <Button
               onClick={handleRenewSubscription}
-              disabled={!selectedRenewalPlan || isRenewingManual}
-              className="min-w-[120px]"
+              disabled={!selectedRenewalPlan || isRenewingManual || isProcessingPayment}
+              className="min-w-[160px]"
             >
-              {isRenewingManual ? (
+              {(isRenewingManual || isProcessingPayment) ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Renewing...
+                  Processing…
                 </span>
-              ) : selectedRenewalPlan
-                ? selectedSubscription?.status === 'Active'
-                  ? (
+              ) : selectedRenewalPlan ? (() => {
+                const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+                  ? selectedRenewalPlan.discountedPrice
+                  : selectedRenewalPlan.price;
+                if (amt > 0) {
+                  return (
                     <span className="flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Schedule Plan
+                      <Zap className="h-4 w-4" />
+                      {selectedSubscription?.status === 'Active'
+                        ? `Pay ₹${amt} & Schedule`
+                        : `Pay ₹${amt} & Renew`}
                     </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Renew Now
-                    </span>
-                  )
-                : 'Select a Plan'}
+                  );
+                }
+                return (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    {selectedSubscription?.status === 'Active' ? 'Schedule Plan' : 'Renew Now'}
+                  </span>
+                );
+              })() : 'Select a Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>

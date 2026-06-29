@@ -1,64 +1,108 @@
+import { useState, useEffect, useMemo } from 'react';
 import { useAppSelector } from '@repo/store/hooks';
 import { selectCrmAuth } from '@repo/store/slices/crmAuthSlice';
 
+const getTime = (dateString) => {
+    if (!dateString) return 0;
+    const date = new Date(dateString);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+};
+
 export function useSubscriptionCheck() {
     const { user } = useAppSelector(selectCrmAuth);
+    const [now, setNow] = useState(new Date());
 
-    if (!user || !user.subscription) {
-        // Assume NOT expired while loading or if data is missing to prevent UI flashes
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const result = useMemo(() => {
+        if (!user || !user.subscription) {
+            // Assume NOT expired while loading or if data is missing to prevent UI flashes
+            return {
+                isExpired: false,
+                daysRemaining: 0,
+                willExpireSoon: false,
+                hasScheduledPlan: false,
+                subscription: null
+            };
+        }
+
+        const { subscription } = user;
+        const nowTime = now.getTime();
+
+        const entries = [
+            ...(subscription.history || []),
+            {
+                plan: subscription.plan,
+                startDate: subscription.startDate,
+                endDate: subscription.endDate,
+                status: subscription.status,
+            },
+        ];
+
+        // Deduplicate entries
+        const uniqueEntries = entries.filter((entry, index, allEntries) => {
+            const planId = typeof entry.plan === 'object' ? (entry.plan?._id || entry.plan?.$oid) : entry.plan;
+            const key = `${planId}-${entry.startDate}-${entry.endDate}`;
+            return allEntries.findIndex(item => {
+                const itemPlanId = typeof item.plan === 'object' ? (item.plan?._id || item.plan?.$oid) : item.plan;
+                const itemKey = `${itemPlanId}-${item.startDate}-${item.endDate}`;
+                return itemKey === key;
+            }) === index;
+        });
+
+        uniqueEntries.sort((a, b) => getTime(a.startDate) - getTime(b.startDate));
+
+        let hasActivePlan = false;
+        let activeEntry = null;
+        let scheduledEntry = null;
+
+        const evaluatedEntries = uniqueEntries.map(entry => {
+            const startTime = getTime(entry.startDate);
+            const endTime = getTime(entry.endDate);
+            let displayStatus = "Expired";
+
+            if (endTime > nowTime) {
+                if (!hasActivePlan && startTime <= nowTime) {
+                    displayStatus = "Active";
+                    hasActivePlan = true;
+                    activeEntry = entry;
+                } else {
+                    displayStatus = "Scheduled";
+                    if (!scheduledEntry) scheduledEntry = entry;
+                }
+            }
+
+            return { ...entry, displayStatus };
+        });
+
+        const isExpired = !hasActivePlan;
+        const hasScheduledPlan = !!scheduledEntry;
+
+        // Calculate days remaining based on the active plan (or next scheduled plan if none active)
+        const visiblePlan = activeEntry || scheduledEntry;
+        let daysRemaining = 0;
+        
+        if (visiblePlan && visiblePlan.endDate) {
+            const timeDiff = getTime(visiblePlan.endDate) - nowTime;
+            daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+        }
+
+        // Will expire soon (within 7 days) if there's an active plan but no scheduled plan to take over
+        const willExpireSoon = hasActivePlan && !hasScheduledPlan && daysRemaining > 0 && daysRemaining <= 7;
+
         return {
-            isExpired: false,
-            daysRemaining: 0,
-            willExpireSoon: false,
-            hasScheduledPlan: false,
-            subscription: null
+            isExpired,
+            daysRemaining,
+            willExpireSoon,
+            hasScheduledPlan,
+            subscription,
+            activeEntry,
+            scheduledEntry
         };
-    }
+    }, [user, now]);
 
-    const { subscription } = user;
-    const now = new Date();
-    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
-    const status = (subscription.status || '').toLowerCase().trim();
-
-    // Check if status is explicitly active
-    const isStatusActive = status === 'active';
-
-    // Check if status is explicitly expired/inactive
-    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
-    const isStatusExpired = expiredStatuses.includes(status);
-
-    // Check if the subscription end date has passed
-    const isDateExpired = endDate ? endDate.getTime() <= now.getTime() : false;
-
-    // Check if there's a Scheduled plan waiting to activate in the history
-    // A scheduled plan has an endDate in the future but startDate in the future too
-    const history = subscription.history || [];
-    const hasScheduledPlan = history.some((h) => {
-        const hStatus = (h.status || '').toLowerCase().trim();
-        const hEndDate = h.endDate ? new Date(h.endDate) : null;
-        return hStatus === 'scheduled' && hEndDate && hEndDate.getTime() > now.getTime();
-    }) || (status === 'scheduled');
-
-    // A subscription is expired if:
-    // 1. Status is in the expired list OR end date has passed
-    // AND 2. There is NO scheduled plan waiting to activate
-    const isExpired = (isStatusExpired || isDateExpired) && !hasScheduledPlan;
-
-    // Calculate days remaining (only if not already expired)
-    let daysRemaining = 0;
-    if (endDate && !isExpired) {
-        const timeDiff = endDate.getTime() - now.getTime();
-        daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
-    }
-
-    // Will expire soon (within 7 days)
-    const willExpireSoon = !isExpired && daysRemaining > 0 && daysRemaining <= 7;
-
-    return {
-        isExpired,
-        daysRemaining,
-        willExpireSoon,
-        hasScheduledPlan,
-        subscription
-    };
+    return result;
 }

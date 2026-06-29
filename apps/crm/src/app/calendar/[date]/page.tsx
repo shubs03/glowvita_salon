@@ -321,22 +321,30 @@ export default function DailySchedulePage() {
   };
 
   // Handle appointment status update
-  const handleUpdateStatus = async (status: string, reason: string = '') => {
-    if (!selectedAppointment?._id) return;
+  const handleUpdateStatus = async (id: string, status: string, reason: string = '') => {
+    // Resolve the appointment ID: use passed id, or fall back to selectedAppointment
+    const appointmentId = id || selectedAppointment?._id;
+    if (!appointmentId) {
+      console.error('handleUpdateStatus: no appointment ID available');
+      return;
+    }
 
     try {
       setIsLoading(true);
       await updateAppointmentStatus({
-        id: selectedAppointment._id,
+        id: appointmentId,
         status,
         cancellationReason: status === 'cancelled' ? reason : undefined
-      });
+      }).unwrap();
 
-      toast.success('Appointment status updated successfully');
+      toast.success(`Appointment status updated to ${status}`);
       await refetchAppointments();
       setShowCancelDialog(false);
       setCancelReason('');
-      setSelectedAppointment(null);
+      // Update selectedAppointment status locally for immediate UI feedback
+      if (selectedAppointment) {
+        setSelectedAppointment({ ...selectedAppointment, status: status as any });
+      }
     } catch (error: any) {
       console.error('Error updating appointment status:', error);
       toast.error('Failed to update appointment status', {
@@ -1113,6 +1121,7 @@ export default function DailySchedulePage() {
             onCreateAppointment={handleCreateNewAppointment}
             onDateChange={handleDateChange}
             onUpdateAppointmentStatus={handleUpdateStatus}
+            onCollectPayment={handleCollectPayment}
           />
         </div>
       </div>
@@ -1212,7 +1221,7 @@ export default function DailySchedulePage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => handleUpdateStatus('cancelled', cancelReason)}
+                onClick={() => handleUpdateStatus(selectedAppointment?._id || '', 'cancelled', cancelReason)}
                 disabled={isLoading || !cancelReason.trim()}
               >
                 {isLoading ? (
