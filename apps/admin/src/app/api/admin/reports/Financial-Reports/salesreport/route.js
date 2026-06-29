@@ -279,8 +279,37 @@ export const GET = authMiddlewareAdmin(async (req) => {
       if (!vendorSubscriptionMap.has(key)) {
         vendorSubscriptionMap.set(key, 0);
       }
-      const price = (subscription.price !== undefined && subscription.price !== null) ? subscription.price : 0;
-      vendorSubscriptionMap.set(key, vendorSubscriptionMap.get(key) + price);
+      
+      const plansToCount = [];
+      if (subscription.price > 0) {
+        plansToCount.push({
+          price: subscription.price,
+          start: subscription.startDate ? new Date(subscription.startDate).getTime() : null,
+          end: subscription.endDate ? new Date(subscription.endDate).getTime() : null
+        });
+      }
+      
+      if (subscription.rawSubscription?.history && subscription.rawSubscription.history.length > 0) {
+        subscription.rawSubscription.history.forEach(hItem => {
+          const hPrice = (hItem.plan?.discountedPrice || hItem.plan?.price || 0);
+          if (hPrice > 0) {
+            plansToCount.push({
+              price: hPrice,
+              start: hItem.startDate ? new Date(hItem.startDate).getTime() : null,
+              end: hItem.endDate ? new Date(hItem.endDate).getTime() : null
+            });
+          }
+        });
+      }
+      
+      const uniquePlans = plansToCount.filter((p, index, self) => {
+        if (!p.start || !p.end) return true;
+        return index === self.findIndex(t => t.start === p.start && t.end === p.end);
+      });
+      
+      const vendorSubTotal = uniquePlans.reduce((sum, p) => sum + p.price, 0);
+      
+      vendorSubscriptionMap.set(key, vendorSubscriptionMap.get(key) + vendorSubTotal);
 
       // Store vendor type
       if (!vendorTypeMap.has(key) && subscription.type) {

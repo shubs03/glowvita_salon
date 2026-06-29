@@ -21,8 +21,9 @@ export const SubscriptionReportDialog = ({ isOpen, onClose }: SubscriptionReport
           <DialogDescription>
             Track purchases, renewals, expiries, and overall subscription revenue.
             <div className="mt-2 space-y-1 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
-              <div>Formula: Revenue = SUM(subscription_price) WHERE price &gt; 0</div>
-              <div>Formula: Inactive Plans = Total Plans - Active Plans</div>
+              <div>Formula: Revenue = SUM(price) of ALL paid plans in history (Active + Scheduled + Expired)</div>
+              <div>Active Plans = Currently running subscriptions</div>
+              <div>Scheduled Plans = Future purchased subscriptions</div>
             </div>
           </DialogDescription>
         </DialogHeader>

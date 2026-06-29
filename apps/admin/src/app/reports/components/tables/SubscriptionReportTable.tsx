@@ -78,23 +78,32 @@ export const SubscriptionReportTable = () => {
   };
 
   // Helper to determine real-time subscription status
-  const getDerivedStatus = (status: string, endDate: any) => {
+  const getDerivedStatus = (status: string, endDate: any, startDate?: any) => {
     const rawStatus = (status || 'Pending').toString().trim();
     const normalizedStatus = rawStatus.toLowerCase();
 
+    const now = new Date();
+    const nowTime = now.getTime();
+
     const endDateVal = getDateValue(endDate);
     if (endDateVal) {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const expiryDate = getSafeDate(endDateVal);
-
-      if (expiryDate && today > expiryDate) {
+      const expiryDate = new Date(endDateVal);
+      if (!isNaN(expiryDate.getTime()) && nowTime > expiryDate.getTime()) {
         return 'Expired';
+      }
+    }
+
+    const startDateVal = getDateValue(startDate);
+    if (startDateVal) {
+      const start = new Date(startDateVal);
+      if (!isNaN(start.getTime()) && start.getTime() > nowTime) {
+        return 'Scheduled';
       }
     }
 
     if (normalizedStatus === 'active') return 'Active';
     if (normalizedStatus === 'expired') return 'Expired';
+    if (normalizedStatus === 'scheduled') return 'Scheduled';
     return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
   };
 
@@ -112,7 +121,12 @@ export const SubscriptionReportTable = () => {
     }
 
     if ((Object.keys(apiFilters).length === 0 || allPlanStatuses.length === 0) && subscriptionData.length > 0) {
-      const statuses: string[] = Array.from(new Set<string>(subscriptionData.map((item: SubscriptionData) => item.planStatus))).filter(status => status);
+      const statuses: string[] = Array.from(new Set<string>(subscriptionData.map((item: SubscriptionData) => getDerivedStatus(item.planStatus, item.endDate, item.startDate)))).filter(status => status);
+      
+      if (!statuses.includes('Scheduled')) {
+        statuses.push('Scheduled');
+      }
+      
       setAllPlanStatuses(statuses);
     }
   }, [subscriptionData, apiFilters, allBusinessNames.length, allPlanStatuses.length]);
@@ -121,40 +135,121 @@ export const SubscriptionReportTable = () => {
   const businessNames = allBusinessNames;
   const planStatuses = allPlanStatuses;
 
-  // Use memo to get unique subscriptions per vendor (most recent first)
+  // Use memo to get unique subscriptions per vendor
   const uniqueSubscriptionData = useMemo(() => {
     const vendorMap = new Map<string, SubscriptionData>();
     
     subscriptionData.forEach((sub) => {
-      // Normalize status based on end date (consistent with management page)
-      const normalizedStatus = getDerivedStatus(sub.planStatus, sub.endDate);
+      // Normalize status based on end date and start date
+      const normalizedStatus = getDerivedStatus(sub.planStatus, sub.endDate, sub.startDate);
       const normalizedSub = { ...sub, planStatus: normalizedStatus };
 
       const existing = vendorMap.get(normalizedSub.vendor);
-      // Keep the one with the latest purchase date
-      if (!existing || new Date(normalizedSub.purchaseDate) > new Date(existing.purchaseDate)) {
+      if (!existing) {
         vendorMap.set(normalizedSub.vendor, normalizedSub);
+      } else {
+        const getPriority = (status: string) => {
+          if (status === 'Active') return 3;
+          if (status === 'Scheduled') return 2;
+          return 1;
+        };
+        
+        const newPriority = getPriority(normalizedSub.planStatus);
+        const oldPriority = getPriority(existing.planStatus);
+        
+        if (newPriority > oldPriority) {
+          vendorMap.set(normalizedSub.vendor, normalizedSub);
+        } else if (newPriority === oldPriority) {
+          // If same priority, keep the latest purchase date
+          if (new Date(normalizedSub.purchaseDate) > new Date(existing.purchaseDate)) {
+            vendorMap.set(normalizedSub.vendor, normalizedSub);
+          }
+        }
       }
     });
     
     return Array.from(vendorMap.values());
   }, [subscriptionData]);
 
-  // Recalculate summary counts based on unique vendors
+  // Recalculate summary counts based on unique vendors checking across all their history
   const totalSubscriptions = uniqueSubscriptionData.length;
-  const activePlansCount = uniqueSubscriptionData.filter(s => s.planStatus === 'Active').length;
-  const inactivePlansCount = totalSubscriptions - activePlansCount;
+  const activePlansCount = uniqueSubscriptionData.filter(s => {
+    return s.planStatus === 'Active' || s.rawSubscription?.history?.some((h: any) => getDerivedStatus(h.status, h.endDate, h.startDate) === 'Active');
+  }).length;
+  const scheduledPlansCount = uniqueSubscriptionData.filter(s => {
+    return s.planStatus === 'Scheduled' || s.rawSubscription?.history?.some((h: any) => getDerivedStatus(h.status, h.endDate, h.startDate) === 'Scheduled');
+  }).length;
+  const inactivePlansCount = uniqueSubscriptionData.filter(s => {
+    const hasActive = s.planStatus === 'Active' || s.rawSubscription?.history?.some((h: any) => getDerivedStatus(h.status, h.endDate, h.startDate) === 'Active');
+    if (hasActive) return false;
+    return s.planStatus === 'Expired' || s.rawSubscription?.history?.some((h: any) => getDerivedStatus(h.status, h.endDate, h.startDate) === 'Expired');
+  }).length;
+
+  // Flatten history to show all subscriptions ever purchased
+  const allHistoryData = useMemo(() => {
+    const flattened: SubscriptionData[] = [];
+    
+    subscriptionData.forEach(sub => {
+      // Add the current subscription
+      flattened.push({
+        ...sub,
+        planStatus: getDerivedStatus(sub.planStatus, sub.endDate, sub.startDate)
+      });
+      
+      // Add history items
+      if (sub.rawSubscription && sub.rawSubscription.history) {
+        sub.rawSubscription.history.forEach((hItem: any) => {
+          const hPlanId = typeof hItem.plan === 'object' ? (hItem.plan?.$oid || hItem.plan?._id) : hItem.plan;
+          const hPlanName = typeof hItem.plan === 'object' ? hItem.plan?.name : undefined;
+          const hPlan = allPlans.find(p => p._id === hPlanId || p.name === hPlanName);
+          const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
+          
+          flattened.push({
+            ...sub,
+            subscription: hPlanName || hPlan?.name || hPlanId || 'Unknown Plan',
+            startDate: hItem.startDate,
+            endDate: hItem.endDate,
+            purchaseDate: hItem.purchaseDate || hItem.startDate,
+            planStatus: getDerivedStatus(hItem.status, hItem.endDate, hItem.startDate),
+            price: hPrice,
+          });
+        });
+      }
+    });
+
+    // Deduplicate exact matches (current sub is often duplicated in history)
+    const uniqueFlattened = flattened.filter((entry, index, self) =>
+      index === self.findIndex((t) => (
+        t.vendor === entry.vendor &&
+        t.startDate === entry.startDate &&
+        t.endDate === entry.endDate
+      ))
+    );
+
+    // Sort by purchase date descending
+    return uniqueFlattened.sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+  }, [subscriptionData, allPlans]);
   
-  // Total Revenue = SUM of all PAID subscriptions (excluding Trial ₹0)
-  const calculatedTotalRevenue = subscriptionData
+  // Total Revenue = SUM of all PAID subscriptions across history (Active + Scheduled + Expired)
+  const calculatedTotalRevenue = allHistoryData
     .filter(s => (s.price || 0) > 0)
     .reduce((sum: number, sub) => sum + (sub.price || 0), 0);
+
+  const vendorRevenueMap = useMemo(() => {
+    const map = new Map<string, number>();
+    allHistoryData.forEach((sub) => {
+       if ((sub.price || 0) > 0) {
+         map.set(sub.vendor, (map.get(sub.vendor) || 0) + sub.price);
+       }
+    });
+    return map;
+  }, [allHistoryData]);
 
   // Filter data based on Tab and search term
   const filteredData = useMemo((): SubscriptionData[] => {
     let baseData = activeTab === "active" 
       ? uniqueSubscriptionData.filter(s => s.planStatus === 'Active')
-      : subscriptionData; // Show all for history
+      : allHistoryData; // Show all history instead of just current unique rows
 
     if (!searchTerm) return baseData;
 
@@ -175,6 +270,7 @@ export const SubscriptionReportTable = () => {
   // Use calculated totals for UI consistency
   const displayTotalRevenue = calculatedTotalRevenue;
   const displayActivePlans = activePlansCount;
+  const displayScheduledPlans = scheduledPlansCount;
   const displayInactivePlans = inactivePlansCount;
 
   if (isLoading) {
@@ -243,6 +339,7 @@ export const SubscriptionReportTable = () => {
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead>Price (₹)</TableHead>
+                <TableHead>Total Revenue (₹)</TableHead>
                 <TableHead>Plan Status</TableHead>
                 <TableHead>Payment Mode</TableHead>
               </TableRow>
@@ -260,11 +357,13 @@ export const SubscriptionReportTable = () => {
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                 </TableRow>
               ))}
               {/* Total Price Row Skeleton */}
               <TableRow className="bg-muted">
                 <TableCell colSpan={7}><Skeleton className="h-4 w-full" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                 <TableCell colSpan={2}><Skeleton className="h-4 w-full" /></TableCell>
               </TableRow>
@@ -333,7 +432,7 @@ export const SubscriptionReportTable = () => {
     return (
       <div>
         {/* Summary Cards - show with 0 values when no data */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Subscriptions</CardTitle>
@@ -357,6 +456,16 @@ export const SubscriptionReportTable = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Plans</CardTitle>
+              <UserPlus className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Scheduled Plans</CardTitle>
               <UserPlus className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -453,6 +562,7 @@ export const SubscriptionReportTable = () => {
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead>Price (₹)</TableHead>
+                <TableHead>Total Revenue (₹)</TableHead>
                 <TableHead>Plan Status</TableHead>
                 <TableHead>Payment Mode</TableHead>
                 <TableHead>Actions</TableHead>
@@ -460,7 +570,7 @@ export const SubscriptionReportTable = () => {
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={12} className="text-center text-muted-foreground py-8">
                   No subscription report data available.
                 </TableCell>
               </TableRow>
@@ -555,7 +665,7 @@ export const SubscriptionReportTable = () => {
       />
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Subscriptions</CardTitle>
@@ -594,6 +704,18 @@ export const SubscriptionReportTable = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Scheduled Plans</CardTitle>
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {displayScheduledPlans}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive Plans</CardTitle>
             <UserPlus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -617,6 +739,7 @@ export const SubscriptionReportTable = () => {
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Price (₹)</TableHead>
+              <TableHead>Total Revenue (₹)</TableHead>
               <TableHead>Plan Status</TableHead>
               <TableHead>Payment Mode</TableHead>
               <TableHead>Actions</TableHead>
@@ -633,10 +756,13 @@ export const SubscriptionReportTable = () => {
                 <TableCell>{new Date(subscription.startDate).toLocaleDateString()}</TableCell>
                 <TableCell>{new Date(subscription.endDate).toLocaleDateString()}</TableCell>
                 <TableCell>₹{subscription.price.toFixed(2)}</TableCell>
+                <TableCell>₹{(vendorRevenueMap.get(subscription.vendor) || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${subscription.planStatus === 'Active'
                       ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                      : subscription.planStatus === 'Scheduled'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-red-100 text-red-800'
                     }`}>
                     {subscription.planStatus}
                   </span>
@@ -662,6 +788,7 @@ export const SubscriptionReportTable = () => {
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={7}>TOTAL</TableCell>
                 <TableCell>₹{paginatedData.reduce((sum: number, item: SubscriptionData) => sum + (item.price || 0), 0).toFixed(2)}</TableCell>
+                <TableCell></TableCell>
                 <TableCell colSpan={3}></TableCell>
               </TableRow>
             )}
@@ -798,7 +925,7 @@ export const SubscriptionReportTable = () => {
                       const hPlanId = typeof historyItem.plan === 'object' ? (historyItem.plan?.$oid || historyItem.plan?._id) : historyItem.plan;
                       const hPlan = allPlans.find(p => p._id === hPlanId || p.name === historyItem.plan?.name);
                       const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
-                      const hStatus = getDerivedStatus(historyItem.status, historyItem.endDate);
+                      const hStatus = getDerivedStatus(historyItem.status, historyItem.endDate, historyItem.startDate);
 
                       return (
                         <div key={index} className="relative">

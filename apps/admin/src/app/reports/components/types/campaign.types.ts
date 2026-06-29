@@ -9,6 +9,16 @@ export interface SubscriptionData {
   price: number;
   planStatus: string;
   paymentMode: string;
+  rawSubscription?: {
+    history?: Array<{
+      plan?: any;
+      status: string;
+      startDate?: any;
+      endDate?: any;
+      purchaseDate?: any;
+    }>;
+    [key: string]: any;
+  };
 }
 
 export interface CampaignData {
