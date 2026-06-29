@@ -243,6 +243,46 @@ export async function POST(req) {
       ...(razorpayOrderId && { razorpayOrderId: razorpayOrderId }),
     });
 
+    // ── Seed full tracking timeline at order creation ─────────────────────
+    // Pending is NOW (actual). All future steps are estimates.
+    // The PATCH route will replace each estimated entry with the real time
+    // when the vendor actually advances the status.
+    const now = new Date();
+    const addDays = (base, days) => new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+
+    newOrder.statusHistory = [
+      {
+        status: 'Pending',
+        date: now,
+        notes: 'Your order has been placed successfully.',
+        isEstimated: false,  // actual — happening right now
+      },
+      {
+        status: 'Processing',
+        date: addDays(now, 1),
+        notes: 'Seller will confirm and start processing your order.',
+        isEstimated: true,
+      },
+      {
+        status: 'Packed',
+        date: addDays(now, 2),
+        notes: 'Your order will be packed and ready for pickup.',
+        isEstimated: true,
+      },
+      {
+        status: 'Shipped',
+        date: addDays(now, 4),
+        notes: 'Your order will be handed to the delivery partner.',
+        isEstimated: true,
+      },
+      {
+        status: 'Delivered',
+        date: addDays(now, 7),
+        notes: 'Your order is expected to be delivered.',
+        isEstimated: true,
+      },
+    ];
+
     await newOrder.save();
 
     // Check and credit referral bonus if user was referred (triggers on first order)
@@ -347,6 +387,26 @@ export async function PATCH(req) {
       cancelledBy: 'User',
       updatedAt: new Date()
     });
+
+    // Push to statusHistory: replace estimated Cancelled slot with actual, or push if none exists
+    if (!order.statusHistory) order.statusHistory = [];
+
+    const cancelNote = `Order cancelled by you. Reason: ${cancellationReason}`;
+    const cancelEstIdx = order.statusHistory.findIndex(
+      h => h.status === 'Cancelled' && h.isEstimated === true
+    );
+
+    if (cancelEstIdx !== -1) {
+      order.statusHistory[cancelEstIdx].date        = new Date();
+      order.statusHistory[cancelEstIdx].notes       = cancelNote;
+      order.statusHistory[cancelEstIdx].isEstimated = false;
+    } else {
+      order.statusHistory.push({ status: 'Cancelled', notes: cancelNote, date: new Date(), isEstimated: false });
+    }
+
+    // Remove all remaining estimated future steps — timeline ends at Cancelled
+    order.statusHistory = order.statusHistory.filter(h => !h.isEstimated);
+    order.markModified('statusHistory');
 
     await order.save();
     console.log('Order after save:', order);

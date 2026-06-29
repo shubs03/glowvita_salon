@@ -93,6 +93,14 @@ const ClientOrderSchema = new mongoose.Schema({
     type: String, // 'User', 'Vendor', 'Supplier'
     default: null,
   },
+  // Tracks every status event with timestamp, notes, and whether it's an estimate
+  // isEstimated=true means the date is a prediction; replaced with false when it actually happens
+  statusHistory: [{
+    status: { type: String },
+    date: { type: Date, default: Date.now },
+    notes: { type: String },
+    isEstimated: { type: Boolean, default: false },
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
@@ -105,7 +113,7 @@ const ClientOrderSchema = new mongoose.Schema({
 
 ClientOrderSchema.pre('save', async function (next) {
   try {
-    // 1. Inherit regionId from Vendor if missing
+    // Inherit regionId from Vendor if missing
     if (!this.regionId && this.vendorId) {
       const Vendor = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
       const vendor = await Vendor.findById(this.vendorId).select('regionId');
