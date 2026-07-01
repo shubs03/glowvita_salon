@@ -329,6 +329,20 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
         );
       }
 
+      const updateDataForStatus = { status };
+
+      if (status === "Rejected") {
+        if (!rejectionReason || rejectionReason.trim() === "") {
+          return NextResponse.json(
+            { message: "Rejection reason is required when rejecting a supplier" },
+            { status: 400 }
+          );
+        }
+        updateDataForStatus.rejectionReason = rejectionReason.trim();
+      } else if (status === "Approved") {
+        updateDataForStatus.rejectionReason = null;
+      }
+
       // If status is "Approved", check if all uploaded documents are approved
       if (status === "Approved") {
         const supplier = await SupplierModel.findById(id);
@@ -380,7 +394,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
 
       const updatedSupplier = await SupplierModel.findByIdAndUpdate(
         id,
-        { $set: { status } },
+        { $set: updateDataForStatus },
         { new: true }
       ).select("-password");
 
@@ -391,7 +405,10 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       // Trigger Notification for Supplier Approval
       (async () => {
         try {
-          await NotificationService.sendApprovalAlert(id, 'supplier', status);
+          const message = status === "Rejected" && rejectionReason
+            ? `Your account has been rejected. Reason: ${rejectionReason.trim()}`
+            : '';
+          await NotificationService.sendApprovalAlert(id, 'supplier', status, message);
         } catch (err) {
           console.error('Supplier Approval Notification Error:', err);
         }

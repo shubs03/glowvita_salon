@@ -113,6 +113,11 @@ const vendorSchema = new mongoose.Schema({
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
   },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   password: {
     type: String,
     required: true,

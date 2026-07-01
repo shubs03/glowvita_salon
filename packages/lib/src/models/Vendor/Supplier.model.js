@@ -92,6 +92,11 @@ const supplierSchema = new mongoose.Schema({
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
   },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   regionId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Region",

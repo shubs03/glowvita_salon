@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { useGetProfileQuery, useRefreshTokenMutation } from '@repo/store/api';
+import { useGetProfileQuery, useGetVendorProfileQuery, useRefreshTokenMutation } from '@repo/store/api';
 import { updateUser, selectIsSubscriptionExpired } from '@repo/store/slices/crmAuthSlice';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -47,6 +47,9 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const { data: profileData, isSuccess, isLoading: isProfileLoading, refetch: refetchProfile } = useGetProfileQuery(undefined, {
     skip: !isCrmAuthenticated,
     pollingInterval: 60 * 1000, // Re-fetch from server every 60 seconds
+  });
+  const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
+    skip: !isCrmAuthenticated || !user?._id,
   });
 
   useEffect(() => {
@@ -139,6 +142,9 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, [isExpired, hasScheduledPlan, pathname, isCrmAuthenticated, router, forceRefresh, user]);
 
   const subscription = (user as any)?.subscription;
+  const accountStatus = (user as any)?.status;
+  const accountRejectionReason = (vendorProfile as any)?.rejectionReason || (user as any)?.rejectionReason;
+  const showAccountRejectedBanner = accountStatus === 'Rejected';
 
   useEffect(() => {
     const checkMobile = () => {
@@ -191,6 +197,25 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background relative">
       {/* Subscription Expired Banner - Better UX than modal */}
+      {showAccountRejectedBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-red-700 text-white shadow-2xl border-b-4 border-red-900">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1">
+                <div className="flex-shrink-0 bg-white/20 p-2 rounded-lg">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">Account Rejected</h3>
+                  <p className="text-sm text-white/90">
+                    Reason: {accountRejectionReason || 'Please contact support for more details.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showBanner && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-red-600 via-red-500 to-orange-500 text-white shadow-2xl border-b-4 border-red-700 animate-in slide-in-from-top duration-300">
           <div className="container mx-auto px-4 py-3">
@@ -241,7 +266,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       <div className={cn(
         "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300",
         !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20"),
-        showBanner && "mt-[88px]" // Offset for banner height
+        (showBanner || showAccountRejectedBanner) && "mt-[88px]"
       )}>
         <Header toggleSidebar={toggleSidebar} subscription={subscription} isSubExpired={isExpired && !isAllowedOnExpired} />
 

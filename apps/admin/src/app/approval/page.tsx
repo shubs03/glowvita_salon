@@ -83,6 +83,7 @@ type Vendor = {
   website?: string | null;
   profileImage?: string | null;
   status: 'Approved' | 'Pending' | 'Rejected' | 'Disabled';
+  rejectionReason?: string | null;
   createdAt: string;
   updatedAt: string;
   subscription: {
@@ -172,6 +173,7 @@ type Doctor = {
   experience: string;
   qualification: string;
   status: 'Approved' | 'Pending' | 'Rejected';
+  rejectionReason?: string | null;
   registrationNumber: string;
   state: string;
   city: string;
@@ -210,6 +212,7 @@ interface Supplier {
   businessRegistrationNo?: string;
   supplierType: string;
   status: string;
+  rejectionReason?: string | null;
   documents?: {
     [key: string]: any;
     aadharCard?: string | null;
@@ -421,6 +424,7 @@ export default function VendorApprovalPage() {
     setSelectedItem(item);
     setItemType(type);
     setActionType(action);
+    setRejectionReason('');
     setIsActionModalOpen(true);
   };
 
@@ -441,13 +445,25 @@ export default function VendorApprovalPage() {
     const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || (selectedItem as any).shopName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
 
     try {
+      if (
+        actionType === 'reject' &&
+        !rejectionReason.trim()
+      ) {
+        toast.error('Please provide a reason for rejection.');
+        return;
+      }
+
       if (itemType === 'vendor') {
         const vendor = selectedItem as Vendor;
         if (actionType === 'delete') {
           toast.error('Delete functionality for vendors is not yet implemented.');
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
-          await updateVendorStatus({ id: vendor._id, status: newStatus }).unwrap();
+          await updateVendorStatus({
+            id: vendor._id,
+            status: newStatus,
+            rejectionReason: actionType === 'reject' ? rejectionReason : undefined
+          }).unwrap();
           toast.success(`Vendor "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'supplier') {
@@ -457,7 +473,11 @@ export default function VendorApprovalPage() {
           toast.success(`Supplier "${itemName}" deleted.`);
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
-          await updateSupplierStatus({ id: supplier._id, status: newStatus }).unwrap();
+          await updateSupplierStatus({
+            id: supplier._id,
+            status: newStatus,
+            rejectionReason: actionType === 'reject' ? rejectionReason : undefined
+          }).unwrap();
           toast.success(`Supplier "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'doctor') {
@@ -467,17 +487,16 @@ export default function VendorApprovalPage() {
           toast.success(`Doctor "${itemName}" deleted.`);
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
-          await updateDoctorStatus({ id: doctor._id, status: newStatus }).unwrap();
+          await updateDoctorStatus({
+            id: doctor._id,
+            status: newStatus,
+            rejectionReason: actionType === 'reject' ? rejectionReason : undefined
+          }).unwrap();
           toast.success(`Doctor "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'service') {
         const service = selectedItem as Service;
         const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
-
-        if (actionType === 'reject' && !rejectionReason.trim()) {
-          toast.error('Please provide a reason for rejection.');
-          return;
-        }
 
         await updateServiceStatus({
           serviceId: service._id,
@@ -492,11 +511,6 @@ export default function VendorApprovalPage() {
           toast.error('Delete functionality for products is not yet implemented.');
         } else {
           const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
-
-          if (actionType === 'reject' && !rejectionReason.trim()) {
-            toast.error('Please provide a reason for rejection.');
-            return;
-          }
 
           await updateVendorProductStatus({
             productId: product._id,
@@ -513,11 +527,6 @@ export default function VendorApprovalPage() {
         } else {
           const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
 
-          if (actionType === 'reject' && !rejectionReason.trim()) {
-            toast.error('Please provide a reason for rejection.');
-            return;
-          }
-
           await updateSupplierProductStatus({
             productId: product._id,
             status: newStatus,
@@ -529,11 +538,6 @@ export default function VendorApprovalPage() {
       } else if (itemType === 'wedding-package') {
         const pkg = selectedItem as WeddingPackage;
         const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
-
-        if (actionType === 'reject' && !rejectionReason.trim()) {
-          toast.error('Please provide a reason for rejection.');
-          return;
-        }
 
         await updateWeddingPackageStatus({
           packageId: pkg._id,
@@ -1477,14 +1481,14 @@ export default function VendorApprovalPage() {
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          {actionType === 'reject' && (itemType === 'service' || itemType === 'wedding-package' || itemType === 'vendor-product' || itemType === 'supplier-product') && (
+          {actionType === 'reject' && (
             <div className="py-4 space-y-2">
               <label htmlFor="rejection-reason" className="text-sm font-medium">
                 Rejection Reason <span className="text-red-500">*</span>
               </label>
               <Textarea
                 id="rejection-reason"
-                placeholder="Ex: The description is unclear or price is too high."
+                placeholder="Ex: Documents are unclear, required details are missing, or pricing needs correction."
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 className="min-h-[100px]"
@@ -1498,7 +1502,7 @@ export default function VendorApprovalPage() {
             <Button
               variant={actionType === 'delete' || actionType === 'reject' ? 'destructive' : 'default'}
               onClick={handleConfirmAction}
-              disabled={actionType === 'reject' && (itemType === 'service' || itemType === 'wedding-package' || itemType === 'vendor-product' || itemType === 'supplier-product') && !rejectionReason.trim()}
+              disabled={actionType === 'reject' && !rejectionReason.trim()}
             >
               {buttonText}
             </Button>
