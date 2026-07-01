@@ -103,32 +103,34 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     <div className="relative w-full">
       <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</label>
       <div
-        className={`mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${isOpen ? 'ring-1 ring-primary' : ''}`}
+        className={`mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${isOpen ? 'ring-1 ring-primary' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="flex items-center justify-between h-full">
-          <div className="flex flex-wrap gap-1">
-            {selectedOptions.length > 0 ? (
-              selectedOptions.map(option => (
-                <div key={option} className="flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded">
-                  {option}
-                  <button
-                    type="button"
-                    className="ml-1 text-primary/70 hover:text-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleOption(option);
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))
-            ) : (
-              <span className="text-muted-foreground/70">{placeholder}</span>
-            )}
+        <div className="flex items-center justify-between h-full gap-2">
+          <div className="flex-1 max-h-full overflow-y-auto pr-1 custom-scrollbar">
+            <div className="flex flex-wrap gap-1 py-0.5">
+              {selectedOptions.length > 0 ? (
+                selectedOptions.map(option => (
+                  <div key={option} className="flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded whitespace-nowrap">
+                    {option}
+                    <button
+                      type="button"
+                      className="ml-1 text-primary/70 hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleOption(option);
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <span className="text-muted-foreground/70">{placeholder}</span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {selectedOptions.length > 0 && (
               <button
                 type="button"
@@ -152,11 +154,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
       {isOpen && (
         <div
-          className="absolute z-50 mt-1 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}
+          className="absolute z-50 mt-1 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto custom-scrollbar"
         >
           <div className="p-2">
             <input
@@ -170,11 +168,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             />
           </div>
           <div
-            className="max-h-40 overflow-auto"
-            style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
-            }}
+            className="max-h-40 overflow-auto custom-scrollbar"
           >
             {filteredOptions.length > 0 ? (
               filteredOptions.map(option => (
