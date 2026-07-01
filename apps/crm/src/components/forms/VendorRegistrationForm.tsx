@@ -912,9 +912,9 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                             id={sc}
                             checked={formData.subCategories.includes(sc)}
                             onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)}
-                            className="h-3 w-3 sm:h-4 sm:w-4"
+                            className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0"
                           />
-                          <Label htmlFor={sc} className="text-xs sm:text-sm font-medium cursor-pointer whitespace-nowrap">
+                          <Label htmlFor={sc} className="text-xs sm:text-sm font-medium cursor-pointer leading-tight">
                             {sc.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                           </Label>
                         </div>

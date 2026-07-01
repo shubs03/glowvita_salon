@@ -17,6 +17,27 @@ export async function POST(req) {
       );
     }
 
+    const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+    const DoctorModel = (await import("@repo/lib/models/Vendor/Docters.model")).default;
+    const SupplierModel = (await import("@repo/lib/models/Vendor/Supplier.model")).default;
+    const StaffModel = (await import("@repo/lib/models/Vendor/Staff.model")).default;
+    const UserModel = (await import("@repo/lib/models/user/User.model")).default;
+
+    const [existingVendor, existingDoctor, existingSupplier, existingStaff, existingUser] = await Promise.all([
+      VendorModel.findOne({ email }).lean(),
+      DoctorModel.findOne({ email }).lean(),
+      SupplierModel.findOne({ email }).lean(),
+      StaffModel.findOne({ emailAddress: email }).lean(),
+      UserModel.findOne({ emailAddress: email }).lean()
+    ]);
+
+    if (existingVendor || existingDoctor || existingSupplier || existingStaff || existingUser) {
+      return NextResponse.json(
+        { success: false, message: "Email already registered" },
+        { status: 400 }
+      );
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
