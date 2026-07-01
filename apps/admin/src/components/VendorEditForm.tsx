@@ -117,7 +117,7 @@ export interface Vendor {
   businessEmail?: string;
   businessDescription?: string;
   serviceCategories?: string[];
-  status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved';
+  status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved' | 'Rejected';
 }
 
 

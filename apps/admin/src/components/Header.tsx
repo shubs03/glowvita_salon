@@ -24,6 +24,7 @@ import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import RegionSelector from "./RegionSelector";
 import { NotificationDropdown } from "./NotificationDropdown";
+import NotificationManager from "@/utils/NotificationManager";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
