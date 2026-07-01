@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { useGetProfileQuery, useRefreshTokenMutation } from '@repo/store/api';
+import { useGetProfileQuery, useGetVendorProfileQuery, useRefreshTokenMutation } from '@repo/store/api';
 import { updateUser, selectIsSubscriptionExpired } from '@repo/store/slices/crmAuthSlice';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -45,6 +45,9 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   // Fetch the user's profile on mount only
   const { data: profileData, isSuccess, isLoading: isProfileLoading, refetch: refetchProfile } = useGetProfileQuery(undefined, {
     skip: !isCrmAuthenticated,
+  });
+  const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
+    skip: !isCrmAuthenticated || !user?._id,
   });
 
   useEffect(() => {
@@ -100,7 +103,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
 
   const subscription = (user as any)?.subscription;
   const accountStatus = (user as any)?.status;
-  const accountRejectionReason = (user as any)?.rejectionReason;
+  const accountRejectionReason = (vendorProfile as any)?.rejectionReason || (user as any)?.rejectionReason;
   const showAccountRejectedBanner = accountStatus === 'Rejected';
 
   useEffect(() => {

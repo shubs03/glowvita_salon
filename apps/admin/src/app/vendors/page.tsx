@@ -21,6 +21,7 @@ import {
 import { Pagination } from "@repo/ui/pagination";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from "@repo/ui/input";
+import { Textarea } from "@repo/ui";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import {
   Eye,
@@ -820,6 +821,20 @@ export default function VendorManagementPage() {
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
+          {actionType === "disapprove" && (
+            <div className="mt-4 space-y-2">
+              <label htmlFor="vendor-rejection-reason" className="text-sm font-medium">
+                Rejection reason
+              </label>
+              <Textarea
+                id="vendor-rejection-reason"
+                placeholder="Enter the reason for rejecting this vendor"
+                value={rejectionReason}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button
               variant="secondary"
@@ -836,6 +851,7 @@ export default function VendorManagementPage() {
                   : "default"
               }
               onClick={handleConfirmAction}
+              disabled={actionType === "disapprove" && !rejectionReason.trim()}
             >
               {buttonText}
             </Button>
