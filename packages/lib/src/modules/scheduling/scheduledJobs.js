@@ -68,7 +68,7 @@ const JOB_CONFIG = {
     subscriptionExpiry: {
         schedule: '0 9 * * *',
         enabled: true,
-        reminderDays: [7, 3, 1, 0] // Notify 7, 3, 1 day before and on same day
+        reminderDays: [7, 6, 5, 4, 3, 1, 0] // Notify 7, 3, 1 day before and on same day
     }
 };
 

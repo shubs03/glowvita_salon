@@ -99,12 +99,44 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     }
     order.updatedAt = new Date();
 
-    console.log("Saving order with updated data:", {
-      status: order.status,
-      trackingNumber: order.trackingNumber,
-      courier: order.courier,
-      updatedAt: order.updatedAt
-    });
+    // Record status history: replace the estimated entry for this status with the actual time
+    const statusNotes = {
+      Pending:    'Your order has been placed and is awaiting confirmation.',
+      Processing: 'Seller has confirmed and is now processing your order.',
+      Packed:     'Your order has been packed and is ready for pickup by the delivery partner.',
+      Shipped:    trackingNumber
+                    ? `Your order has been shipped via ${courier || 'courier'} · Tracking: ${trackingNumber}`
+                    : 'Your order has been handed to the delivery partner.',
+      Delivered:  'Your order has been delivered successfully. Enjoy!',
+      Cancelled:  `Order cancelled${cancellationReason ? '. Reason: ' + cancellationReason : '.'}`,
+    };
+
+    if (!order.statusHistory) order.statusHistory = [];
+
+    const actualNote = statusNotes[status] || `Order status updated to ${status}.`;
+    const actualDate = new Date();
+
+    // Find the estimated slot for this status and replace it with the actual data
+    const estimatedIndex = order.statusHistory.findIndex(
+      h => h.status === status && h.isEstimated === true
+    );
+
+    if (estimatedIndex !== -1) {
+      // ✅ Replace estimated entry with actual
+      order.statusHistory[estimatedIndex].date        = actualDate;
+      order.statusHistory[estimatedIndex].notes       = actualNote;
+      order.statusHistory[estimatedIndex].isEstimated = false;
+      order.markModified('statusHistory');
+    } else {
+      // Fallback for orders created before this feature (no pre-seeded estimates)
+      order.statusHistory.push({ status, notes: actualNote, date: actualDate, isEstimated: false });
+    }
+
+    // For Cancelled: remove all remaining estimated future steps so timeline ends cleanly
+    if (status === 'Cancelled') {
+      order.statusHistory = order.statusHistory.filter(h => !h.isEstimated);
+      order.markModified('statusHistory');
+    }
 
     await order.save();
 

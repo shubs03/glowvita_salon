@@ -30,14 +30,14 @@ class NotificationService {
 
                 let serviceAccount;
                 try {
-                    serviceAccount = typeof FIREBASE_SERVICE_ACCOUNT === 'string' 
-                        ? JSON.parse(FIREBASE_SERVICE_ACCOUNT) 
+                    serviceAccount = typeof FIREBASE_SERVICE_ACCOUNT === 'string'
+                        ? JSON.parse(FIREBASE_SERVICE_ACCOUNT)
                         : FIREBASE_SERVICE_ACCOUNT;
                 } catch (parseError) {
                     console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT. Ensure it is a valid JSON string.');
                     return;
                 }
-                
+
                 if (serviceAccount && serviceAccount.project_id) {
                     admin.initializeApp({
                         credential: admin.credential.cert(serviceAccount)
@@ -62,7 +62,7 @@ class NotificationService {
     async sendToUser(userId, userType, payload, priority = 'high') {
         try {
             await _db();
-            
+
             const title = payload.title || 'GlowVita Alert';
             const body = payload.body || payload.message || '';
             const type = payload.type || 'system';
@@ -110,11 +110,11 @@ class NotificationService {
                     console.log(`Push notifications disabled for user: ${userId}`);
                 } else {
                     const messagePayload = {
-                        notification: (userType === 'client' || userType === 'vendor' || userType === 'staff' || userType === 'admin') ? undefined : { 
-                            title, 
-                            body, 
+                        notification: (userType === 'client' || userType === 'vendor' || userType === 'staff' || userType === 'admin') ? undefined : {
+                            title,
+                            body,
                             sound: 'default',
-                            ...(payload.image && { imageUrl: payload.image }) 
+                            ...(payload.image && { imageUrl: payload.image })
                         },
                         android: {
                             priority: 'high',
@@ -125,7 +125,7 @@ class NotificationService {
                                 channelId: 'glowvita_alerts',
                                 icon: 'notification_icon',
                                 color: '#FF0000',
-                                ...(payload.image && { imageUrl: payload.image }) 
+                                ...(payload.image && { imageUrl: payload.image })
                             }
                         },
                         apns: {
@@ -151,10 +151,10 @@ class NotificationService {
                                 ...(payload.data ? Object.keys(payload.data).reduce((acc, k) => ({ ...acc, [k]: String(payload.data[k]) }), {}) : {})
                             }
                         },
-                        data: { 
+                        data: {
                             title: String(title),
                             body: String(body),
-                            type: String(type), 
+                            type: String(type),
                             click_action: 'FLUTTER_NOTIFICATION_CLICK',
                             play_sound: "true",
                             ...(payload.data ? Object.keys(payload.data).reduce((acc, k) => ({ ...acc, [k]: String(payload.data[k]) }), {}) : {})
@@ -220,10 +220,10 @@ class NotificationService {
      */
     async sendAppointmentAlert(userId, recipientRole, appointment, status) {
         const isVendor = recipientRole !== 'client';
-        
+
         const clientCopyMap = {
             'scheduled': {
-                title: 'New Request! 💇‍♀️',
+                title: 'New Appointment! 💇‍♀️',
                 body: `Your booking for ${appointment.serviceName} is being reviewed.`
             },
             'confirmed': {
@@ -260,7 +260,7 @@ class NotificationService {
         };
 
         const copyMap = isVendor ? vendorCopyMap : clientCopyMap;
-        const copy = copyMap[status] || { title: 'Update', body: `Appointment status shifted to ${status}: ${appointment.serviceName}` };
+        const copy = copyMap[status] || { title: 'Update', body: `Appointment  ${status}: ${appointment.serviceName}` };
 
         await this.sendToUser(userId, recipientRole, {
             ...copy,
@@ -278,9 +278,9 @@ class NotificationService {
      */
     async sendConsultationAlert(userId, recipientRole, consultation, status) {
         const isClient = recipientRole === 'client';
-        
+
         const clientTitle = status === 'cancelled' ? 'Consultation Cancelled ❌' : 'Consultation Booked! 🩺';
-        const clientBody = status === 'cancelled' 
+        const clientBody = status === 'cancelled'
             ? `Your consultation with ${consultation.doctorName || 'Doctor'} on ${new Date(consultation.appointmentDate).toLocaleDateString()} at ${consultation.appointmentTime} has been cancelled.`
             : `Your consultation with ${consultation.doctorName || 'Doctor'} is scheduled for ${new Date(consultation.appointmentDate).toLocaleDateString()} at ${consultation.appointmentTime}.`;
 
@@ -306,55 +306,61 @@ class NotificationService {
      */
     async sendOrderAlert(userId, recipientRole, order, status) {
         const isClient = recipientRole === 'client';
-        
+
+        // Build a short product summary from order items
+        const productNames = order.items && order.items.length > 0
+            ? order.items.map(i => i.name || i.productName || 'Product').slice(0, 2).join(', ') + (order.items.length > 2 ? ` +${order.items.length - 2} more` : '')
+            : 'your items';
+        const orderId = order.orderId || order._id;
+
         const clientCopyMap = {
             'placed': {
                 title: 'Order Placed! 📦',
-                body: `Your order #${order.orderId || order._id} has been received and is being processed.`
+                body: `Your order #${orderId} for ${productNames} has been received and is being processed.`
             },
             'confirmed': {
                 title: 'Order Confirmed! ✅',
-                body: `Your order #${order.orderId || order._id} has been confirmed and will be dispatched soon.`
+                body: `Your order #${orderId} for ${productNames} has been confirmed and will be dispatched soon.`
             },
             'shipped': {
                 title: 'Order Dispatched! 🚚',
-                body: `Great news! Your order #${order.orderId || order._id} has been dispatched.`
+                body: `Great news! Your order #${orderId} for ${productNames} has been dispatched.`
             },
             'delivered': {
                 title: 'Order Delivered! 🎉',
-                body: `Your package for order #${order.orderId || order._id} has been delivered and received.`
+                body: `Your package #${orderId} for ${productNames} has been delivered.`
             },
             'cancelled': {
                 title: 'Order Cancelled ❌',
-                body: `Your order #${order.orderId || order._id} has been cancelled.`
+                body: `Your order #${orderId} for ${productNames} has been cancelled.`
             }
         };
 
         const vendorCopyMap = {
             'placed': {
                 title: 'New Order Received! 🛍️',
-                body: `You have a new order #${order.orderId || order._id}. check it in your dashboard.`
+                body: `New order #${orderId} for ${productNames}. Check it in your dashboard.`
             },
             'confirmed': {
                 title: 'Order Confirmed ✅',
-                body: `Order #${order.orderId || order._id} has been confirmed.`
+                body: `Order #${orderId} for ${productNames} has been confirmed.`
             },
             'shipped': {
                 title: 'Order Dispatched! 🚚',
-                body: `Order #${order.orderId || order._id} has been marked as dispatched.`
+                body: `Order #${orderId} for ${productNames} has been dispatched.`
             },
             'delivered': {
                 title: 'Order Delivered 🎉',
-                body: `Order #${order.orderId || order._id} status is now delivered.`
+                body: `Order #${orderId} for ${productNames} has been delivered`
             },
             'cancelled': {
                 title: 'Order Cancelled 🔄',
-                body: `Order #${order.orderId || order._id} was cancelled.`
+                body: `Order #${orderId} for ${productNames} was cancelled.`
             }
         };
 
         const copyMap = isClient ? clientCopyMap : vendorCopyMap;
-        const copy = copyMap[status] || { title: 'Order Update', body: `Status for order #${order._id} updated to ${status}` };
+        const copy = copyMap[status] || { title: 'Order Update', body: `Status for order #${orderId} (${productNames}) updated to ${status}` };
 
         await this.sendToUser(userId, recipientRole, {
             ...copy,
@@ -372,19 +378,19 @@ class NotificationService {
      */
     async sendReferralAlert(userId, recipientRole, data) {
         const { referrerName, rewardAmount, status } = data;
-        
+
         const copyMap = {
             'pending': {
                 title: 'Referral Linked! 🤝',
-                body: `You've been successfully referred by ${referrerName}. complete your first purchase to unlock rewards!`
+                body: `You've been successfully referred by ${referrerName}.`
             },
             'completed': {
                 title: 'Bonus Received! 💸',
-                body: `Congratulations! Your referral bonus of ₹${rewardAmount} has been credited to your account.`
+                body: `Congratulations! Your referral bonus of ₹${rewardAmount} has been credited to your Wallet.`
             },
             'new_referral': {
                 title: 'New Referral! 🌟',
-                body: `Your friend has joined using your code. You'll get ₹${rewardAmount} once they complete their first order.`
+                body: `Your friend has joined using your code. You'll get ₹${rewardAmount} once they complete their first appointment.`
             }
         };
 
@@ -403,7 +409,7 @@ class NotificationService {
      */
     async sendRegistrationAlert(userId, recipientRole, data) {
         const { name, role } = data;
-        
+
         await this.sendToUser(userId, recipientRole, {
             title: 'Welcome to GlowVita! ✨',
             body: `Hello ${name}, your registration as a ${role} has been successful. Welcome aboard!`,
@@ -418,12 +424,12 @@ class NotificationService {
     async sendOfferAlert(userId, recipientRole, offer) {
         await this.sendToUser(userId, recipientRole, {
             title: offer.title || `New Offer: ${offer.code || 'Special'} 🎁`,
-            body: offer.message || offer.description || `Claim your ${offer.value || offer.discountValue}${ (offer.type || offer.discountType) === 'percentage' ? '%' : ' OFF'} now!`,
+            body: offer.message || offer.description || `Claim your ${offer.value || offer.discountValue}${(offer.type || offer.discountType) === 'percentage' ? '%' : ' OFF'} now!`,
             type: 'offer',
-            data: { 
-                type: 'offer', 
+            data: {
+                type: 'offer',
                 offerId: offer._id?.toString(),
-                code: offer.code || offer.offerCode 
+                code: offer.code || offer.offerCode
             }
         });
     }
@@ -436,10 +442,10 @@ class NotificationService {
             title: `Ending Soon: ${offer.code || 'Offer'} ⏳`,
             body: `Don't miss out! Your offer ${offer.code || ''} is about to expire. Use it today!`,
             type: 'offer',
-            data: { 
-                type: 'offer_reminder', 
+            data: {
+                type: 'offer_reminder',
                 offerId: offer._id?.toString(),
-                code: offer.code 
+                code: offer.code
             }
         });
     }
@@ -462,7 +468,7 @@ class NotificationService {
     async sendApprovalAlert(userId, role, status, message = '') {
         const isApproved = status.toLowerCase() === 'approved';
         const title = isApproved ? 'Account Approved! 🎉' : 'Account Update 📋';
-        const body = message || (isApproved 
+        const body = message || (isApproved
             ? `Congratulations! Your account with GlowVita has been approved. You can now access all features.`
             : `There is an update regarding your account status: ${status}.`);
 
@@ -495,26 +501,36 @@ class NotificationService {
      * Send marketplace order notification (Vendor <-> Supplier)
      */
     async sendMarketplaceOrderAlert(userId, role, order, status) {
+        // Build a short product summary from order items
+        const productNames = order.items && order.items.length > 0
+            ? order.items.map(i => i.productName || i.name || 'Product').slice(0, 2).join(', ') + (order.items.length > 2 ? ` +${order.items.length - 2} more` : '')
+            : 'your items';
+        const orderId = order.orderId || order._id;
+
         const copyMap = {
             'placed': {
                 title: 'New Marketplace Order! 📦',
-                body: `A new order #${order.orderId || order._id} has been placed.`
+                body: `A new order #${orderId} for ${productNames} has been placed.`
             },
             'confirmed': {
                 title: 'Marketplace Order Confirmed! ✅',
-                body: `Order #${order.orderId || order._id} has been confirmed.`
+                body: `Order #${orderId} for ${productNames} has been confirmed.`
             },
             'shipped': {
                 title: 'Marketplace Order Dispatched! 🚚',
-                body: `Order #${order.orderId || order._id} is on its way.`
+                body: `Order #${orderId} for ${productNames} is on its way.`
             },
             'delivered': {
                 title: 'Marketplace Order Delivered! 🎉',
-                body: `Order #${order.orderId || order._id} has been successfully delivered.`
+                body: `Order #${orderId} for ${productNames} has been successfully delivered.`
+            },
+            'cancelled': {
+                title: 'Marketplace Order Cancelled 🔄',
+                body: `Order #${orderId} for ${productNames} has been cancelled.`
             }
         };
 
-        const copy = copyMap[status] || { title: 'Marketplace Update', body: `Order #${order.orderId || order._id} status is now ${status}.` };
+        const copy = copyMap[status] || { title: 'Marketplace Update', body: `Order #${orderId} (${productNames}) status is now ${status}.` };
 
         await this.sendToUser(userId, role, {
             ...copy,
@@ -528,7 +544,7 @@ class NotificationService {
      */
     async sendSubscriptionAlert(userId, role, planName, daysLeft) {
         const title = daysLeft <= 0 ? 'Subscription Expired! ⚠️' : 'Subscription Ending Soon! ⏳';
-        const body = daysLeft <= 0 
+        const body = daysLeft <= 0
             ? `Your ${planName} has expired. Please renew to continue using GlowVita services.`
             : `Your ${planName} will expire in ${daysLeft} days. Renew now to avoid interruption.`;
 
@@ -563,7 +579,7 @@ class NotificationService {
         try {
             const admins = await AdminModel.find({ roleName: 'SUPER_ADMIN' }).select('_id');
             const adminIds = admins.map(a => a._id.toString());
-            
+
             if (adminIds.length > 0) {
                 await this.sendMassNotification(adminIds, 'admin', {
                     title: `Admin Alert: ${action} 🔔`,
@@ -582,19 +598,19 @@ class NotificationService {
      */
     async sendMassNotification(userIds, recipientRole, payload) {
         console.log(`Mass Notification: Sending to ${userIds.length} ${recipientRole}s via [${(payload.channels || ['Push']).join(', ')}]`);
-        
+
         // Ensure initialized
         if (!admin.apps.length) this.initialize();
 
         // Limit concurrent sends to avoid overwhelming the server or hitting limits
         const batchSize = 10;
         const results = [];
-        
+
         for (let i = 0; i < userIds.length; i += batchSize) {
             const batch = userIds.slice(i, i + batchSize);
-            console.log(`[NotificationService] Sending batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(userIds.length/batchSize)}`);
-            
-            const batchPromises = batch.map(userId => 
+            console.log(`[NotificationService] Sending batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(userIds.length / batchSize)}`);
+
+            const batchPromises = batch.map(userId =>
                 this.sendToUser(userId, recipientRole, payload)
             );
             const batchResults = await Promise.allSettled(batchPromises);
@@ -605,7 +621,7 @@ class NotificationService {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
-        
+
         console.log(`[NotificationService] Mass send completed. Successes: ${results.filter(r => r.status === 'fulfilled').length}, Failures: ${results.filter(r => r.status === 'rejected').length}`);
         return results;
     }

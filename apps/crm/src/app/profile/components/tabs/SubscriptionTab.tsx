@@ -34,6 +34,8 @@ interface SubscriptionPlan {
   _id: string;
   name: string;
   planType?: 'trial' | 'regular';
+  price?: number;
+  discountedPrice?: number;
 }
 
 interface SubscriptionTabProps {
@@ -150,10 +152,15 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
         }
       }
 
+      const planIdStr = getPlanId(entry.plan);
+      const matchedPlan = planIdStr ? planById.get(planIdStr) : undefined;
+      const planPrice = (matchedPlan?.discountedPrice && matchedPlan.discountedPrice > 0) ? matchedPlan.discountedPrice : (matchedPlan?.price || 0);
+
       return {
         ...entry,
         resolvedPlanName: getPlanName(entry.plan, planById),
         planTypeLabel: getPlanTypeLabel(entry.plan, planById),
+        resolvedPlanPrice: planPrice,
         displayStatus,
       };
     });
@@ -294,6 +301,7 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
         </CardContent>
       </Card>
 
+
       {subscription && (
         <SubscriptionPlansDialog
           open={showPlansModal}
@@ -304,7 +312,7 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
       )}
 
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[1000px] max-h-[80vh] overflow-y-auto">
           <DialogHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <div>
@@ -326,6 +334,7 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
                       <th className="p-3 border-b whitespace-nowrap">Start Date</th>
                       <th className="p-3 border-b whitespace-nowrap">End Date</th>
                       <th className="p-3 border-b">Plan</th>
+                      <th className="p-3 border-b text-right whitespace-nowrap">Price</th>
                       <th className="p-3 border-b whitespace-nowrap">Payment Mode</th>
                       <th className="p-3 border-b text-right">Duration</th>
                       <th className="p-3 border-b text-right">Status</th>
@@ -400,6 +409,9 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
                             <div className="text-xs text-muted-foreground">
                               {entry.planTypeLabel}
                             </div>
+                          </td>
+                          <td className="p-3 border-b text-right">
+                            ₹{(entry.resolvedPlanPrice || 0).toLocaleString('en-IN')}
                           </td>
                           <td className="p-3 border-b">
                             {'Online'}

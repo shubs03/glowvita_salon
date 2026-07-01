@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation, useGetRegionsQuery } from '@repo/store/api';
 import { setSelectedRegion, selectSelectedRegion, selectCurrentAdmin } from '@repo/store/slices/adminAuthSlice';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
@@ -13,11 +13,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
-import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw, AlertCircle } from 'lucide-react';
+import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw, AlertCircle, CreditCard, Smartphone, Landmark, Zap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
 import { toast } from 'sonner';
+
+/* ─── Razorpay script loader (cached) ───────────────────────────────────── */
+let rzpScriptLoaded = false;
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (rzpScriptLoaded || (typeof window !== 'undefined' && (window as any).Razorpay)) {
+      rzpScriptLoaded = true;
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => { rzpScriptLoaded = true; resolve(true); };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 type Plan = {
   _id: string;
@@ -129,15 +145,24 @@ export default function SubscriptionManagementPage() {
     const rawStatus = (subscription?.status || 'Pending').toString().trim();
     const normalizedStatus = rawStatus.toLowerCase();
 
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     // Ensure we have a valid end date
     const endDateVal = getDateValue(subscription?.endDate);
     if (endDateVal) {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const expiryDate = getSafeDate(endDateVal);
 
       if (expiryDate && today > expiryDate) {
         return 'Expired';
+      }
+    }
+
+    const startDateVal = getDateValue(subscription?.startDate);
+    if (startDateVal) {
+      const startDate = getSafeDate(startDateVal);
+      if (startDate && startDate > today) {
+        return 'Scheduled';
       }
     }
 
@@ -227,6 +252,7 @@ export default function SubscriptionManagementPage() {
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<Plan | null>(null);
   const [isRenewingManual, setIsRenewingManual] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [renewPlan, { isLoading: isRenewing }] = useRenewPlanMutation(); // Keep for type safety or remove usage if verified
 
   const [planForm, setPlanForm] = useState({
@@ -389,29 +415,33 @@ export default function SubscriptionManagementPage() {
     setSelectedSubscription(sub);
     setSelectedRenewalPlan(null);
     setIsRenewModalOpen(true);
+    // Preload Razorpay script eagerly so it's ready when admin clicks Pay
+    loadRazorpayScript();
   };
 
-  const handleRenewSubscription = async () => {
-    if (!selectedSubscription || !selectedRenewalPlan) {
-      toast.error('Please select a plan to renew');
-      return;
+  // Reset plan selection when renew modal closes
+  useEffect(() => {
+    if (!isRenewModalOpen) {
+      setSelectedRenewalPlan(null);
     }
+  }, [isRenewModalOpen]);
 
-    try {
-      setIsRenewingManual(true);
-      // Use relative path to avoid port issues in dev
+  /* ─── Core activation (called after payment or directly for free plans) ─── */
+  const activateRenewal = useCallback(
+    async (paymentId?: string, paymentOrderId?: string) => {
+      if (!selectedSubscription || !selectedRenewalPlan) return;
+
       const response = await fetch('/api/admin/subscription-renewal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || ''}` // Ensure auth if needed
+          'Authorization': `Bearer ${token || ''}`
         },
         body: JSON.stringify({
-          // vendorId param name is kept for backward compat if needed, but we prefer generic naming
-          // However, the backend reads `vendorId || userId`
           userId: selectedSubscription.subscriberId,
           userType: selectedSubscription.userType,
           planId: selectedRenewalPlan._id,
+          ...(paymentId && { paymentId, paymentOrderId, paymentMethod: 'online' }),
         })
       });
 
@@ -431,44 +461,206 @@ export default function SubscriptionManagementPage() {
       } else {
         throw new Error(data.message || 'Failed to renew subscription');
       }
+    },
+    [selectedSubscription, selectedRenewalPlan, token, refetchVendors, refetchSuppliers, refetchDoctors]
+  );
+
+  const handleRenewSubscription = async () => {
+    if (!selectedSubscription || !selectedRenewalPlan) {
+      toast.error('Please select a plan to renew');
+      return;
+    }
+
+    const planAmount = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+      ? selectedRenewalPlan.discountedPrice
+      : selectedRenewalPlan.price;
+
+    // Free / trial plan — skip payment gateway
+    if (!planAmount || planAmount <= 0) {
+      try {
+        setIsRenewingManual(true);
+        await activateRenewal();
+      } catch (error: any) {
+        console.error('Error renewing subscription:', error);
+        toast.error(error?.message || 'Failed to process subscription. Please try again.');
+      } finally {
+        setIsRenewingManual(false);
+      }
+      return;
+    }
+
+    // Paid plan — Razorpay payment gateway
+    setIsProcessingPayment(true);
+    try {
+      // Step 1 — load Razorpay JS
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
+      }
+
+      // Step 2 — create Razorpay order via admin backend
+      const orderRes = await fetch('/api/admin/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`
+        },
+        body: JSON.stringify({
+          amount: planAmount,
+          currency: 'INR',
+          receipt: `admin_sub_${selectedRenewalPlan._id}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to create payment order');
+      }
+
+      // Step 3 — Close modal to escape focus trap, then open Razorpay checkout
+      setIsRenewModalOpen(false);
+
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(planAmount * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita Admin',
+          description: `${selectedRenewalPlan.name} – ${selectedRenewalPlan.duration} ${selectedRenewalPlan.durationType} for ${selectedSubscription.subscriberName}`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          retry: { enabled: true, max_count: 3 },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true },
+                    { method: 'upi', qr: true }
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
+          modal: {
+            ondismiss: () => {
+              // Re-open renew dialog on cancel
+              setIsRenewModalOpen(true);
+              reject(new Error('Payment cancelled by user'));
+            },
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              // Step 4 — verify signature
+              const verifyRes = await fetch('/api/admin/payments/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token || ''}`
+                },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed.');
+
+              // Step 5 — activate subscription
+              await activateRenewal(response.razorpay_payment_id, response.razorpay_order_id);
+              resolve();
+            } catch (err: any) {
+              setIsRenewModalOpen(true); // Re-open on error
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      console.error('Error renewing subscription:', error);
-      toast.error(error?.message || 'Failed to process subscription. Please try again.');
+      if (error?.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled.');
+      } else {
+        console.error('Error renewing subscription:', error);
+        toast.error(error?.message || 'Failed to process subscription. Please try again.');
+        setIsRenewModalOpen(true);
+      }
     } finally {
-      setIsRenewingManual(false);
+      setIsProcessingPayment(false);
     }
   };
 
 
   // Active count derived from live data
   const subscriptionsCount = subscribers.filter((s) => s.status !== 'Pending').length;
-  const activeSubscribersCount = subscribers.filter((s) => s.status === 'Active').length;
-  const expiredSubscribersCount = subscribers.filter((s) => s.status === 'Expired').length;
+  
+  const activeSubscribersCount = subscribers.filter((s) => {
+    if (s.status === 'Active') return true;
+    if (s.history && s.history.length > 0) {
+      return s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Active');
+    }
+    return false;
+  }).length;
 
-  // Total Revenue = Current Paid Plan + Historical Expired Plans
-  // Exclusion logic: skip Free Trials (₹0), duplicate 'Active' history, and Failed/Pending payments.
+  const scheduledSubscribersCount = subscribers.filter((s) => {
+    if (s.status === 'Scheduled') return true;
+    if (s.history && s.history.length > 0) {
+      return s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Scheduled');
+    }
+    return false;
+  }).length;
+
+  const expiredSubscribersCount = subscribers.filter((s) => {
+    const hasActive = s.status === 'Active' || (s.history && s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Active'));
+    if (hasActive) return false; // If they have an active plan, they are not an inactive salon
+
+    if (s.status === 'Expired') return true;
+    if (s.history && s.history.length > 0) {
+      return s.history.some(h => getSubStatus({ status: h.status, endDate: h.endDate, startDate: h.startDate }) === 'Expired');
+    }
+    return false;
+  }).length;
+
+  // Total Revenue = SUM of all PAID subscriptions across history (Active + Scheduled + Expired)
   const totalRevenue = subscribers.reduce((acc, sub) => {
-    // 1. Current plan revenue (only if status is Active or Expired and price > 0)
-    const currentPrice = ((sub.status === 'Active' || sub.status === 'Expired') && (sub.planPrice || 0) > 0) 
-      ? (sub.planPrice || 0) : 0;
+    const plansToCount: any[] = [];
     
-    // 2. Historical revenue from completed past plans
-    const historyRevenue = (sub.history || []).reduce((hAcc, hItem) => {
-      // Rule: Only count history items that are strictly 'Expired' 
-      // (This avoids double-counting the 'Active' duplicate in history)
-      if (hItem.status?.toLowerCase() !== 'expired') return hAcc;
+    if (sub.planPrice && sub.planPrice > 0) {
+      plansToCount.push({ 
+        price: sub.planPrice, 
+        start: getDateValue(sub.startDate) ? new Date(getDateValue(sub.startDate) as Date).getTime() : null, 
+        end: getDateValue(sub.endDate) ? new Date(getDateValue(sub.endDate) as Date).getTime() : null 
+      });
+    }
+    
+    if (sub.history && sub.history.length > 0) {
+      sub.history.forEach(hItem => {
+        const hPlanId = typeof hItem.plan === 'object' ? ((hItem.plan as any).$oid || (hItem.plan as any)._id) : hItem.plan;
+        const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (hItem.plan as any)?.name);
+        const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
+        
+        if (hPrice > 0) {
+          const start = getDateValue(hItem.startDate);
+          const end = getDateValue(hItem.endDate);
+          plansToCount.push({ 
+            price: hPrice, 
+            start: start ? new Date(start).getTime() : null, 
+            end: end ? new Date(end).getTime() : null 
+          });
+        }
+      });
+    }
 
-      const hPlanId = typeof hItem.plan === 'object' ? ((hItem.plan as any).$oid || (hItem.plan as any)._id) : hItem.plan;
-      const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (hItem.plan as any)?.name);
-      const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
-      
-      // Rule: Skip Free Trials (where price is 0)
-      if (hPrice <= 0) return hAcc;
-      
-      return hAcc + hPrice;
-    }, 0);
+    const uniquePlans = plansToCount.filter((p, index, self) => {
+      if (!p.start || !p.end) return true;
+      return index === self.findIndex(t => t.start === p.start && t.end === p.end);
+    });
 
-    return acc + currentPrice + historyRevenue;
+    const subTotal = uniquePlans.reduce((sum, p) => sum + p.price, 0);
+    return acc + subTotal;
   }, 0);
 
   // Pagination logic with safeguards
@@ -601,7 +793,7 @@ export default function SubscriptionManagementPage() {
         <h1 className="text-2xl font-bold font-headline">Subscription Management</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
@@ -634,6 +826,16 @@ export default function SubscriptionManagementPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Scheduled Subs</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{scheduledSubscribersCount}</div>
+            <p className="text-xs text-muted-foreground">Future purchased plans</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive Subscriptions</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -649,7 +851,7 @@ export default function SubscriptionManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</div>
-            <p className="text-xs text-muted-foreground">From active subscriptions</p>
+            <p className="text-xs text-muted-foreground">All-time subscriptions</p>
           </CardContent>
         </Card>
       </div>
@@ -1317,6 +1519,7 @@ export default function SubscriptionManagementPage() {
                         const hPlanId = typeof historyItem.plan === 'object' ? ((historyItem.plan as any)?.$oid || (historyItem.plan as any)?._id) : historyItem.plan;
                         const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (historyItem.plan as any)?.name);
                         const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
+                        const hStatus = getSubStatus({ status: historyItem.status, endDate: historyItem.endDate, startDate: historyItem.startDate });
 
                         return (
                           <div key={index} className="relative">
@@ -1365,15 +1568,17 @@ export default function SubscriptionManagementPage() {
                                 <div
                                   className={`
                                     px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight
-                                    ${historyItem.status === 'Active'
+                                    ${hStatus === 'Active'
                                       ? 'bg-green-100 text-green-700 border border-green-200'
-                                      : historyItem.status === 'Scheduled'
+                                      : hStatus === 'Scheduled'
                                         ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                        : 'bg-muted text-muted-foreground border border-muted-foreground/10'
+                                        : hStatus === 'Expired'
+                                          ? 'bg-red-100 text-red-700 border border-red-200'
+                                          : 'bg-muted text-muted-foreground border border-muted-foreground/10'
                                     }
                                   `}
                                 >
-                                  {historyItem.status}
+                                  {hStatus}
                                 </div>
                               </div>
                             </div>
@@ -1502,34 +1707,56 @@ export default function SubscriptionManagementPage() {
               </div>
             )}
           </div>
+          {/* Payment method row — shown when a paid plan is selected */}
+          {selectedRenewalPlan && (() => {
+            const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+              ? selectedRenewalPlan.discountedPrice
+              : selectedRenewalPlan.price;
+            return amt > 0 ? (
+              <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground border-t pt-3">
+                <span className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Card</span>
+                <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> UPI</span>
+                <span className="flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> Net Banking</span>
+                <span className="opacity-60 text-[10px]">Secured by Razorpay</span>
+              </div>
+            ) : null;
+          })()}
+
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsRenewModalOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsRenewModalOpen(false)} disabled={isRenewingManual || isProcessingPayment}>
               Cancel
             </Button>
             <Button
               onClick={handleRenewSubscription}
-              disabled={!selectedRenewalPlan || isRenewingManual}
-              className="min-w-[120px]"
+              disabled={!selectedRenewalPlan || isRenewingManual || isProcessingPayment}
+              className="min-w-[160px]"
             >
-              {isRenewingManual ? (
+              {(isRenewingManual || isProcessingPayment) ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Renewing...
+                  Processing…
                 </span>
-              ) : selectedRenewalPlan
-                ? selectedSubscription?.status === 'Active'
-                  ? (
+              ) : selectedRenewalPlan ? (() => {
+                const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
+                  ? selectedRenewalPlan.discountedPrice
+                  : selectedRenewalPlan.price;
+                if (amt > 0) {
+                  return (
                     <span className="flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Schedule Plan
+                      <Zap className="h-4 w-4" />
+                      {selectedSubscription?.status === 'Active'
+                        ? `Pay ₹${amt} & Schedule`
+                        : `Pay ₹${amt} & Renew`}
                     </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Renew Now
-                    </span>
-                  )
-                : 'Select a Plan'}
+                  );
+                }
+                return (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    {selectedSubscription?.status === 'Active' ? 'Schedule Plan' : 'Renew Now'}
+                  </span>
+                );
+              })() : 'Select a Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>

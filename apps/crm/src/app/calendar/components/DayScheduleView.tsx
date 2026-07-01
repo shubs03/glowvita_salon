@@ -915,12 +915,12 @@ export default function DayScheduleView({
     setSelectedAppointment(null);
   };
 
-  const handleUpdateStatus = (status: Appointment['status']) => {
+  const handleUpdateStatus = (id: string, status: Appointment['status']) => {
     if (selectedAppointment) {
-      const id = (selectedAppointment as any)._id || selectedAppointment.id;
-      if (id && onUpdateAppointmentStatus) {
+      const appointmentId = id || ((selectedAppointment as any)._id || selectedAppointment.id);
+      if (appointmentId && onUpdateAppointmentStatus) {
         // Delegate to the API-backed handler from the parent page
-        onUpdateAppointmentStatus(id, status);
+        onUpdateAppointmentStatus(appointmentId, status);
       }
       // Also update local state for immediate UI feedback
       setSelectedAppointment({ ...selectedAppointment, status });

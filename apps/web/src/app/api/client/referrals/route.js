@@ -161,11 +161,3 @@ export async function GET(req) {
     }, { status: 500 });
   }
 }
-
-// POST: Manual claim is disabled since C2C referral bonuses are credited automatically on appointment completion.
-export async function POST(req) {
-  return NextResponse.json({ 
-    success: false, 
-    message: 'Manual claiming is disabled. Referral bonuses are credited automatically upon appointment completion.' 
-  }, { status: 405 });
-}
