@@ -57,12 +57,19 @@ export const GET = authMiddlewareCrm(async (req) => {
     const query = {
       isAvailableForPurchase: true,
       status: 'Active',
-      // Check both userTypes (plural) and userType (singular) for robustness
-      $or: [
-        { userTypes: { $in: [effectiveUserType] } },
-        { userType: { $in: [effectiveUserType] } }
-      ],
-      ...regionQuery
+      $and: [
+        // Check both userTypes (plural) and userType (singular) for robustness
+        {
+          $or: [
+            { userTypes: { $in: [effectiveUserType] } },
+            { userType: { $in: [effectiveUserType] } }
+          ]
+        },
+        // Region filter
+        userRegion
+          ? { $or: [{ regionId: userRegion }, { regionId: null }] }
+          : { regionId: null }
+      ]
     };
 
     console.log("[CRM Plans] Executing Mongo Query:", JSON.stringify(query));
