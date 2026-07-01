@@ -406,16 +406,16 @@ export default function SalonDetailsPage() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const [now, setNow] = useState(() => new Date());
+
   const {
     data: vendorsResponse,
     isLoading,
     error,
   } = useGetPublicVendorByIdQuery(id, {
     skip: !id,
+    pollingInterval: 60 * 1000, // Auto-refresh from DB every 60s (picks up subscription transitions)
   });
-
-  console.log("SALON_FAVORITES_VERSION : ", SALON_FAVORITES_VERSION);
-  console.log("vendorsResponse : ", vendorsResponse);
 
   const {
     data: servicesData,
@@ -427,6 +427,30 @@ export default function SalonDetailsPage() {
     const vendor = vendorsResponse?.vendor
     return vendor
   }, [vendorsResponse, id]);
+
+  useEffect(() => {
+    // Adaptive tick: every 30s normally, every 1s only when a plan is within 5 min of expiring.
+    // This prevents unnecessary re-renders when subscription transition is hours away.
+    let timer: NodeJS.Timeout;
+
+    const schedule = () => {
+      const currentNow = Date.now();
+      const sub = (vendorData as any)?.subscription;
+      const endTime = sub?.endDate ? new Date(sub.endDate).getTime() : 0;
+      const msUntilExpiry = endTime - currentNow;
+
+      // Use 1s precision only when within 5 minutes of a plan expiry
+      const interval = (msUntilExpiry > 0 && msUntilExpiry <= 5 * 60 * 1000) ? 1000 : 30_000;
+
+      timer = setTimeout(() => {
+        setNow(new Date());
+        schedule(); // reschedule adaptively
+      }, interval);
+    };
+
+    schedule();
+    return () => clearTimeout(timer);
+  }, [vendorData]);
 
   const {
     data: productsData,
@@ -596,55 +620,86 @@ export default function SalonDetailsPage() {
     return defaultSalon;
   }, [vendorData, reviewMetrics]);
 
-  // Check if vendor's subscription is expired
+  // Check if vendor's subscription is expired.
+  // Rules:
+  //   - Show banner ONLY when there is NO active plan AND NO scheduled future plan
+  //   - If the DB status is "scheduled" the vendor has a queued plan → not expired
+  //   - Uses multi-entry history scan (same logic as CRM useSubscriptionCheck)
+  //   - Re-evaluates every second via `now` state so no manual reload is needed
   const isSubscriptionExpired = useMemo(() => {
-    // If no vendor data, don't block - return false
     if (!vendorData) return false;
 
     const subscription = vendorData.subscription;
+    // Public API may not include subscription info — assume active if missing
+    if (!subscription) return false;
 
-    // If no subscription data is returned (public API may not include it),
-    // assume the vendor is active since they're visible on the platform
-    if (!subscription) {
-      console.log('Subscription Check: No subscription data returned - assuming active');
-      return false; // NOT expired - assume active
-    }
+    const nowTime = now.getTime();
 
-    const now = new Date();
-    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
-    const status = (subscription.status || '').toLowerCase().trim();
+    const getEntryTime = (dateStr?: string) => {
+      if (!dateStr) return 0;
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    };
 
-    // If status is explicitly "active", check only the end date
-    const isStatusActive = status === 'active';
+    const getPlanId = (plan: any): string => {
+      if (!plan) return '';
+      if (typeof plan === 'string') return plan;
+      return plan._id || plan.$oid || '';
+    };
 
-    // Check if subscription status indicates it's not active
-    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
-    const isStatusExpired = expiredStatuses.includes(status);
+    // Build unified entry list: history entries + the top-level current subscription slot
+    const allEntries: any[] = [
+      ...(Array.isArray(subscription.history) ? subscription.history : []),
+      {
+        plan: subscription.plan,
+        startDate: subscription.startDate,
+        endDate: subscription.endDate,
+        status: subscription.status,
+      },
+    ];
 
-    // Check if the subscription end date has passed
-    const isDateExpired = endDate ? endDate < now : false;
-
-    console.log('Subscription Check:', {
-      status,
-      isStatusActive,
-      isStatusExpired,
-      isDateExpired,
-      endDate: endDate?.toISOString(),
-      now: now.toISOString(),
+    // Deduplicate by plan+startDate+endDate
+    const uniqueEntries = allEntries.filter((entry, index, arr) => {
+      const key = `${getPlanId(entry.plan)}-${entry.startDate}-${entry.endDate}`;
+      return arr.findIndex(item =>
+        `${getPlanId(item.plan)}-${item.startDate}-${item.endDate}` === key
+      ) === index;
     });
 
-    // If status is active AND date hasn't expired, subscription is valid
-    if (isStatusActive && !isDateExpired) {
-      return false; // NOT expired
+    uniqueEntries.sort((a, b) => getEntryTime(a.startDate) - getEntryTime(b.startDate));
+
+    let hasActivePlan = false;
+    let hasScheduledPlan = false;
+
+    for (const entry of uniqueEntries) {
+      const startTime = getEntryTime(entry.startDate);
+      const endTime = getEntryTime(entry.endDate);
+      const dbStatus = (entry.status || '').toLowerCase().trim();
+
+      if (endTime > nowTime) {
+        // Future-end entry: check if active or scheduled
+        if (!hasActivePlan && startTime <= nowTime) {
+          hasActivePlan = true;
+        } else {
+          // Starts in the future → scheduled
+          hasScheduledPlan = true;
+        }
+      } else if (dbStatus === 'scheduled') {
+        // DB says "Scheduled" even if time math says otherwise
+        // (e.g. public API history absent — fall back to DB status)
+        hasScheduledPlan = true;
+      }
     }
 
-    // If status is in expired list OR date has passed, subscription is expired
-    return isStatusExpired || isDateExpired;
-  }, [vendorData]);
+    // Also check top-level DB status as final safety net
+    // (handles case where public API omits history array entirely)
+    const topStatus = (subscription.status || '').toLowerCase().trim();
+    if (topStatus === 'scheduled') hasScheduledPlan = true;
+    if (topStatus === 'active' && getEntryTime(subscription.endDate) > nowTime) hasActivePlan = true;
 
-
-
-
+    // Show banner only when nothing is active AND nothing is scheduled
+    return !hasActivePlan && !hasScheduledPlan;
+  }, [vendorData, now]);
 
   useEffect(() => {
     if (salon.images.length > 0) {

@@ -29,7 +29,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [refreshToken] = useRefreshTokenMutation();
 
   // Use the subscription check hook for client-side validation
-  const { isExpired, daysRemaining, willExpireSoon, hasScheduledPlan } = useSubscriptionCheck();
+  const { isExpired, daysRemaining, willExpireSoon, hasScheduledPlan, activeEntry } = useSubscriptionCheck();
 
   const isAllowedOnExpired = useMemo(() => {
     return (
@@ -42,9 +42,11 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     );
   }, [pathname]);
 
-  // Fetch the user's profile on mount only
+  // Fetch the user's profile — poll every 60s so subscription transitions (Scheduled→Active)
+  // are picked up from the DB automatically without a manual page reload
   const { data: profileData, isSuccess, isLoading: isProfileLoading, refetch: refetchProfile } = useGetProfileQuery(undefined, {
     skip: !isCrmAuthenticated,
+    pollingInterval: 60 * 1000, // Re-fetch from server every 60 seconds
   });
 
   useEffect(() => {
@@ -52,6 +54,50 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       dispatch(updateUser(profileData.user));
     }
   }, [isSuccess, profileData, dispatch]);
+
+  // Smart timer: schedule a refetch exactly when the active plan expires so the
+  // Scheduled plan becomes Active in the UI without waiting the full 60s poll cycle
+  const smartRefetchTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const activeEntryEndDate = (activeEntry as any)?.endDate as string | undefined;
+
+  useEffect(() => {
+    // Clear any previously scheduled timer
+    if (smartRefetchTimer.current) {
+      clearTimeout(smartRefetchTimer.current);
+      smartRefetchTimer.current = null;
+    }
+
+    if (!activeEntryEndDate || !isCrmAuthenticated) return;
+
+    const msUntilExpiry = new Date(activeEntryEndDate).getTime() - Date.now();
+
+    // Only schedule if expiry is in the future (and within 24h to avoid huge timeouts)
+    if (msUntilExpiry > 0 && msUntilExpiry <= 24 * 60 * 60 * 1000) {
+      smartRefetchTimer.current = setTimeout(async () => {
+        try {
+          // Refetch profile immediately when plan expires — picks up Scheduled→Active transition
+          const result = await refetchProfile();
+          if (result.data?.user) {
+            dispatch(updateUser(result.data.user));
+          }
+          // Also refresh token to get updated subscription in auth claims
+          const tokenResult = await refreshToken({}).unwrap();
+          if (tokenResult.success && tokenResult.user) {
+            dispatch(updateUser(tokenResult.user));
+          }
+        } catch (err) {
+          console.error('Smart subscription refetch failed:', err);
+        }
+      }, msUntilExpiry + 2000); // +2s buffer to allow DB to transition
+    }
+
+    return () => {
+      if (smartRefetchTimer.current) {
+        clearTimeout(smartRefetchTimer.current);
+      }
+    };
+  }, [activeEntryEndDate, isCrmAuthenticated, refetchProfile, refreshToken, dispatch]);
 
   // Token refresh mechanism - runs every 15 minutes
   useEffect(() => {
