@@ -638,6 +638,7 @@ export const POST = authMiddlewareCrm(async (req) => {
               businessName,
               serviceName: appointment.serviceName,
               appointmentId: updatedAppointment?.invoiceNumber || appointment.invoiceNumber || appointment._id.toString(),
+              appointmentDbId: appointment._id.toString(),
               appointmentDate: new Date(appointment.date || appointment.startTime || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
               appointmentTime: updatedAppointment?.startTime || appointment.startTime,
               completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),

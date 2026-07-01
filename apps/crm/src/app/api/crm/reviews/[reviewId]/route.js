@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import _db from "../../../../../../../../packages/lib/src/db.js";
+import { NextResponse } from "next/server";import mongoose from "mongoose";import _db from "../../../../../../../../packages/lib/src/db.js";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
@@ -10,11 +9,29 @@ import { authMiddlewareCrm } from "../../../../../middlewareCrm";
 
 await _db();
 
+const getEffectiveOwnerId = (request) => {
+  const candidateIds = [
+    request?.user?.vendorId,
+    request?.user?.userId,
+    request?.user?.id,
+  ].filter(Boolean);
+
+  return candidateIds[0]?.toString?.() || null;
+};
+
 // PATCH - Approve/Reject a review
 export const PATCH = authMiddlewareCrm(async (request, { params }) => {
   try {
-    const ownerId = request.user.userId;
+    const ownerId = getEffectiveOwnerId(request);
     const { reviewId } = params;
+
+    if (!mongoose.isValidObjectId(reviewId)) {
+      return NextResponse.json({
+        success: false,
+        message: "Invalid reviewId"
+      }, { status: 400 });
+    }
+
     const body = await request.json();
     const { isApproved } = body;
 
@@ -37,18 +54,29 @@ export const PATCH = authMiddlewareCrm(async (request, { params }) => {
 
     // Verify that the requesting user owns the entity being reviewed
     if (review.entityType === 'product') {
-      // For product reviews, check if the product belongs to this vendor/supplier
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
       const product = await ProductModel.findById(review.entityId);
-      if (!product || product.vendorId.toString() !== ownerId) {
+      const isOwner = product && [product.vendorId?.toString(), product.vendor?.toString()].some((id) => id && id === ownerId);
+      if (!isOwner) {
         return NextResponse.json({
           success: false,
           message: "Unauthorized to modify this review"
         }, { status: 403 });
       }
     } else if (review.entityType === 'doctor') {
-      // For doctor reviews, check if the doctor belongs to this vendor
-      // Since there's no direct link, we'll allow vendors to manage all doctor reviews for now
-      // In a more complete implementation, there should be a vendor-doctor relationship
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
       const doctor = await DoctorModel.findById(review.entityId);
       if (!doctor) {
         return NextResponse.json({
@@ -57,12 +85,25 @@ export const PATCH = authMiddlewareCrm(async (request, { params }) => {
         }, { status: 404 });
       }
     } else if (review.entityType === 'service') {
-      // For service reviews, check if the service belongs to this vendor
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
+      if (!ownerId || !mongoose.isValidObjectId(ownerId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid owner identity"
+        }, { status: 401 });
+      }
+
       const vendorServices = await VendorServicesModel.findOne({
-        vendor: ownerId,
+        vendor: new mongoose.Types.ObjectId(ownerId),
         "services._id": review.entityId
       });
-      
+
       if (!vendorServices) {
         return NextResponse.json({
           success: false,
@@ -70,8 +111,16 @@ export const PATCH = authMiddlewareCrm(async (request, { params }) => {
         }, { status: 403 });
       }
     } else if (review.entityType === 'salon') {
-      // For salon reviews, the entityId should match the vendorId
-      if (review.entityId.toString() !== ownerId) {
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
+      const vendor = await VendorModel.findById(review.entityId);
+      const isOwner = !!(vendor && [vendor._id?.toString(), ownerId].some((id) => id && id === ownerId));
+      if (!isOwner) {
         return NextResponse.json({
           success: false,
           message: "Unauthorized to modify this review"
@@ -103,7 +152,7 @@ export const PATCH = authMiddlewareCrm(async (request, { params }) => {
 // DELETE - Delete a review
 export const DELETE = authMiddlewareCrm(async (request, { params }) => {
   try {
-    const ownerId = request.user.userId;
+    const ownerId = getEffectiveOwnerId(request);
     const { reviewId } = params;
 
     // Get the review
@@ -118,18 +167,29 @@ export const DELETE = authMiddlewareCrm(async (request, { params }) => {
 
     // Verify that the requesting user owns the entity being reviewed
     if (review.entityType === 'product') {
-      // For product reviews, check if the product belongs to this vendor/supplier
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
       const product = await ProductModel.findById(review.entityId);
-      if (!product || product.vendorId.toString() !== ownerId) {
+      const isOwner = product && [product.vendorId?.toString(), product.vendor?.toString()].some((id) => id && id === ownerId);
+      if (!isOwner) {
         return NextResponse.json({
           success: false,
           message: "Unauthorized to delete this review"
         }, { status: 403 });
       }
     } else if (review.entityType === 'doctor') {
-      // For doctor reviews, check if the doctor belongs to this vendor
-      // Since there's no direct link, we'll allow vendors to manage all doctor reviews for now
-      // In a more complete implementation, there should be a vendor-doctor relationship
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
       const doctor = await DoctorModel.findById(review.entityId);
       if (!doctor) {
         return NextResponse.json({
@@ -138,12 +198,25 @@ export const DELETE = authMiddlewareCrm(async (request, { params }) => {
         }, { status: 404 });
       }
     } else if (review.entityType === 'service') {
-      // For service reviews, check if the service belongs to this vendor
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
+      if (!ownerId || !mongoose.isValidObjectId(ownerId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid owner identity"
+        }, { status: 401 });
+      }
+
       const vendorServices = await VendorServicesModel.findOne({
-        vendor: ownerId,
+        vendor: new mongoose.Types.ObjectId(ownerId),
         "services._id": review.entityId
       });
-      
+
       if (!vendorServices) {
         return NextResponse.json({
           success: false,
@@ -151,8 +224,16 @@ export const DELETE = authMiddlewareCrm(async (request, { params }) => {
         }, { status: 403 });
       }
     } else if (review.entityType === 'salon') {
-      // For salon reviews, the entityId should match the vendorId
-      if (review.entityId.toString() !== ownerId) {
+      if (!mongoose.isValidObjectId(review.entityId)) {
+        return NextResponse.json({
+          success: false,
+          message: "Invalid review entity reference"
+        }, { status: 400 });
+      }
+
+      const vendor = await VendorModel.findById(review.entityId);
+      const isOwner = !!(vendor && [vendor._id?.toString(), ownerId].some((id) => id && id === ownerId));
+      if (!isOwner) {
         return NextResponse.json({
           success: false,
           message: "Unauthorized to delete this review"

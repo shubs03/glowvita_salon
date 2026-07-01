@@ -46,10 +46,9 @@ export async function GET(req) {
       );
     }
 
-    // Fetch user's approved reviews only
+    // Fetch all reviews submitted by the current user
     const reviews = await Review.find({
-      userId: user._id,
-      isApproved: true  // Only fetch approved reviews
+      userId: user._id
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -95,6 +94,7 @@ export async function GET(req) {
         item: itemName,
         rating: review.rating,
         review: review.comment,
+        status: review.isApproved ? 'approved' : 'pending',
         date: review.createdAt
       };
     }));

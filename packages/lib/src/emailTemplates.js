@@ -53,6 +53,7 @@ export const getCompletionTemplate = ({
     businessName,
     serviceName,
     appointmentId,
+    appointmentDbId,
     appointmentDate,
     appointmentTime,
     completedDate,
@@ -161,7 +162,7 @@ export const getCompletionTemplate = ({
                 </div>
 
                 <div class="btn-container">
-                    <a href="#" class="button">Leave Service Feedback</a>
+                    <a href="${process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000'}/service-review/${appointmentDbId || appointmentId}" class="button">Leave Service Feedback</a>
                 </div>
                 
                

@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface ReviewFormProps {
   entityId: string;
-  entityType: "salon" | "product" | "doctor";
+  entityType: "salon" | "product" | "doctor" | "service";
   onSubmitSuccess?: () => void;
 }
 

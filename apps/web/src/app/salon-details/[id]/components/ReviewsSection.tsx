@@ -11,6 +11,9 @@ interface Review {
   rating: number;
   comment: string;
   createdAt: string;
+  entityType?: "salon" | "service";
+  entityLabel?: string;
+  serviceName?: string;
 }
 
 interface ReviewsSectionProps {
@@ -139,6 +142,11 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                   </div>
                   <StarRating rating={review.rating || 0} />
                 </div>
+                {(review.entityLabel || review.entityType === "service") && (
+                  <p className="text-xs text-primary font-medium mb-2">
+                    {review.entityLabel || (review.serviceName ? `Service review • ${review.serviceName}` : "Service review")}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground italic">
                   "{review.comment || "No review text available"}"
                 </p>
