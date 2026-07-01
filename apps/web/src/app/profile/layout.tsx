@@ -41,6 +41,8 @@ const navItems = [
   { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];
 
+import NotificationManager from '@/utils/NotificationManager';
+
 function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -63,7 +65,12 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     setIsLoggingOut(true);
     try {
       // Call server-side logout to clear the httpOnly cookie (js-cookie cannot do this)
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: NotificationManager.currentToken }),
+        credentials: 'include'
+      });
 
       // Clear all auth-related data from localStorage
       localStorage.removeItem('userAuthState');

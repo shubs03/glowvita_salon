@@ -1,9 +1,24 @@
 
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import _db from '@repo/lib/db';
+import DeviceToken from '@repo/lib/models/DeviceToken.model';
 
-export async function POST() {
+export async function POST(req) {
   try {
+    await _db();
+    let fcmToken;
+    try {
+      const body = await req.json();
+      fcmToken = body.token;
+    } catch (e) {
+      // Body not present or invalid
+    }
+
+    if (fcmToken) {
+      await DeviceToken.deleteOne({ token: fcmToken });
+    }
+
     cookies().set('admin_access_token', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',

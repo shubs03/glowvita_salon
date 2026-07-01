@@ -2,22 +2,12 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyJwt } from '@repo/lib/auth';
 import dbConnect from '@repo/lib/db';
-import User from '@repo/lib/models/user';
+import DeviceToken from '@repo/lib/models/DeviceToken.model';
 
 export async function POST(req) {
     try {
         await dbConnect();
         
-        const token = cookies().get('token')?.value;
-        if (!token) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
-
-        const payload = await verifyJwt(token);
-        if (!payload || !payload.userId) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
-
         const body = await req.json();
         const fcmToken = body.token;
 
@@ -25,10 +15,32 @@ export async function POST(req) {
             return NextResponse.json({ message: "Token is required" }, { status: 400 });
         }
 
-        // Add token to fcmTokens array if not already present
-        await User.findByIdAndUpdate(payload.userId, {
-            $addToSet: { fcmTokens: fcmToken }
-        });
+        let userId = null;
+        let userType = null;
+
+        const token = cookies().get('token')?.value;
+        if (token) {
+            try {
+                const payload = await verifyJwt(token);
+                if (payload && payload.userId) {
+                    userId = payload.userId;
+                    userType = 'client';
+                }
+            } catch (err) {
+                // Ignore invalid JWT tokens, register as guest
+            }
+        }
+
+        // Register or reassign token
+        await DeviceToken.findOneAndUpdate(
+            { token: fcmToken },
+            {
+                userId,
+                userType,
+                isActive: true
+            },
+            { upsert: true, new: true }
+        );
 
         return NextResponse.json({ message: "Token registered successfully" }, { status: 200 });
     } catch (error) {

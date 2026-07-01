@@ -25,7 +25,18 @@ export const useCrmAuth = () => {
     }
   }, [isCrmAuthenticated]);
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      const NotificationManager = (await import('@/utils/NotificationManager')).default;
+      await fetch('/api/crm/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: NotificationManager?.currentToken }),
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     dispatch(clearCrmAuth());
   };
 

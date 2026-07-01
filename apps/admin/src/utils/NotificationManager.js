@@ -163,6 +163,7 @@ class NotificationManager {
 
         if (token) {
           console.log('[NotificationManager] Token obtained. Registering with server...');
+          this.currentToken = token;
           await this.saveTokenToServer(token);
           return token;
         } else {

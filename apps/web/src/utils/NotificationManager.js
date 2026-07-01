@@ -126,6 +126,7 @@ class NotificationManager {
           serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/api/firebase-messaging-sw'),
         });
         if (token) {
+          this.currentToken = token;
           await this.saveTokenToServer(token);
           return token;
         }

@@ -2,20 +2,31 @@ import { NextResponse } from 'next/server';
 import { authMiddlewareAdmin } from '@/middlewareAdmin';
 import dbConnect from '@repo/lib/db';
 import Notification from '@repo/lib/models/Notification.model';
+import mongoose from 'mongoose';
+
+// Helper: cast a string userId to ObjectId if valid, fallback to raw value
+function toObjectId(id) {
+    try {
+        if (id && mongoose.Types.ObjectId.isValid(id.toString())) {
+            return new mongoose.Types.ObjectId(id.toString());
+        }
+    } catch (_) {}
+    return id;
+}
 
 export const GET = authMiddlewareAdmin(async (req) => {
     try {
         await dbConnect();
         
-        const userId = req.user._id;
+        const recipientId = toObjectId(req.user._id);
 
         const notifications = await Notification.find({
-            recipient: userId,
+            recipient: recipientId,
             recipientRole: 'admin'
         }).sort({ createdAt: -1 }).limit(50);
 
         const unreadCount = await Notification.countDocuments({
-            recipient: userId,
+            recipient: recipientId,
             recipientRole: 'admin',
             isRead: false
         });
@@ -31,16 +42,16 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     try {
         await dbConnect();
         const { notificationId, markAll } = await req.json();
-        const userId = req.user._id;
+        const recipientId = toObjectId(req.user._id);
 
         if (markAll) {
             await Notification.updateMany(
-                { recipient: userId, recipientRole: 'admin', isRead: false },
+                { recipient: recipientId, recipientRole: 'admin', isRead: false },
                 { isRead: true }
             );
         } else if (notificationId) {
             await Notification.findOneAndUpdate(
-                { _id: notificationId, recipient: userId },
+                { _id: notificationId, recipient: recipientId },
                 { isRead: true }
             );
         }

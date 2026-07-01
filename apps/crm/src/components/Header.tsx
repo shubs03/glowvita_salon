@@ -26,6 +26,7 @@ import { Cart } from "./cart/Cart";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useGetCartQuery, useGetCrmWalletQuery } from "@repo/store/api";
 import { SearchDialog } from "./SearchDialog";
+import NotificationManager from "@/utils/NotificationManager";
 
 export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSidebar: () => void, subscription: any, isSubExpired: boolean }) {
   const router = useRouter();
@@ -72,6 +73,8 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
       // js-cookie (client-side) CANNOT remove httpOnly cookies — only the server can.
       await fetch('/api/crm/auth/logout', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: NotificationManager.currentToken }),
         credentials: 'include',
       });
 

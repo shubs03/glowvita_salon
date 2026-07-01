@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
 import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
+import NotificationManager from '@/utils/NotificationManager';
 
 function LoginPageContent() {
   const [email, setEmail] = useState('');
@@ -40,6 +41,11 @@ function LoginPageContent() {
 
       if (response.user && response.token) {
         dispatch(setUserAuth({ user: response.user, token: response.token, role: response.role, permissions: response.permissions }));
+
+        // Register/link FCM token to the newly logged-in user session
+        NotificationManager.requestPermission().catch(err => {
+          console.error("FCM registration error on login:", err);
+        });
 
         // Check if there's a redirect URL
         const redirectUrl = searchParams.get('redirect');

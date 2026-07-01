@@ -10,3 +10,4 @@ export * from "./hashing.js";
 export { default as NotificationService } from "./services/NotificationService.js";
 export { default as SmsService } from "./services/SmsService.js";
 export { default as NotificationModel } from "./models/Notification.model.js";
+export { default as DeviceTokenModel } from "./models/DeviceToken.model.js";

@@ -2,21 +2,32 @@ import { NextResponse } from 'next/server';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 import dbConnect from '@repo/lib/db';
 import Notification from '@repo/lib/models/Notification.model';
+import mongoose from 'mongoose';
+
+// Helper: cast a string userId to ObjectId if valid, fallback to raw value
+function toObjectId(id) {
+    try {
+        if (id && mongoose.Types.ObjectId.isValid(id.toString())) {
+            return new mongoose.Types.ObjectId(id.toString());
+        }
+    } catch (_) {}
+    return id;
+}
 
 export const GET = authMiddlewareCrm(async (req) => {
     try {
         await dbConnect();
         
-        const userId = req.user.userId;
+        const recipientId = toObjectId(req.user.userId);
         const role = req.user.role;
 
         const notifications = await Notification.find({
-            recipient: userId,
+            recipient: recipientId,
             recipientRole: role
         }).sort({ createdAt: -1 }).limit(50);
 
         const unreadCount = await Notification.countDocuments({
-            recipient: userId,
+            recipient: recipientId,
             recipientRole: role,
             isRead: false
         });
@@ -32,17 +43,17 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     try {
         await dbConnect();
         const { notificationId, markAll } = await req.json();
-        const userId = req.user.userId;
+        const recipientId = toObjectId(req.user.userId);
         const role = req.user.role;
 
         if (markAll) {
             await Notification.updateMany(
-                { recipient: userId, recipientRole: role, isRead: false },
+                { recipient: recipientId, recipientRole: role, isRead: false },
                 { isRead: true }
             );
         } else if (notificationId) {
             await Notification.findOneAndUpdate(
-                { _id: notificationId, recipient: userId },
+                { _id: notificationId, recipient: recipientId },
                 { isRead: true }
             );
         }

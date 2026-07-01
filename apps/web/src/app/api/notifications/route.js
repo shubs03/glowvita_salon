@@ -3,6 +3,17 @@ import { cookies } from 'next/headers';
 import { verifyJwt } from '@repo/lib/auth';
 import dbConnect from '@repo/lib/db';
 import Notification from '@repo/lib/models/Notification.model';
+import mongoose from 'mongoose';
+
+// Helper: cast a string userId to ObjectId if valid, fallback to raw string
+function toObjectId(id) {
+    try {
+        if (id && mongoose.Types.ObjectId.isValid(id.toString())) {
+            return new mongoose.Types.ObjectId(id.toString());
+        }
+    } catch (_) {}
+    return id;
+}
 
 export async function GET(req) {
     try {
@@ -18,13 +29,15 @@ export async function GET(req) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
+        const recipientId = toObjectId(payload.userId);
+
         const notifications = await Notification.find({
-            recipient: payload.userId,
+            recipient: recipientId,
             recipientRole: 'client'
         }).sort({ createdAt: -1 }).limit(50);
 
         const unreadCount = await Notification.countDocuments({
-            recipient: payload.userId,
+            recipient: recipientId,
             recipientRole: 'client',
             isRead: false
         });
@@ -48,14 +61,16 @@ export async function PATCH(req) {
         const payload = await verifyJwt(token);
         const { notificationId, markAll } = await req.json();
 
+        const recipientId = toObjectId(payload.userId);
+
         if (markAll) {
             await Notification.updateMany(
-                { recipient: payload.userId, recipientRole: 'client', isRead: false },
+                { recipient: recipientId, recipientRole: 'client', isRead: false },
                 { isRead: true }
             );
         } else if (notificationId) {
             await Notification.findOneAndUpdate(
-                { _id: notificationId, recipient: payload.userId },
+                { _id: notificationId, recipient: recipientId },
                 { isRead: true }
             );
         }

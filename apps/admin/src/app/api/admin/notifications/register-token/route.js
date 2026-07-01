@@ -14,10 +14,17 @@ export const POST = authMiddlewareAdmin(async (req) => {
             return NextResponse.json({ success: false, message: 'Token is required' }, { status: 400 });
         }
 
-        // Save token to admin user document
-        await AdminModel.findByIdAndUpdate(userId, {
-            $addToSet: { fcmTokens: token }
-        });
+        // Register or reassign token
+        const DeviceToken = (await import('@repo/lib/models/DeviceToken.model')).default;
+        await DeviceToken.findOneAndUpdate(
+            { token: token },
+            {
+                userId,
+                userType: 'admin',
+                isActive: true
+            },
+            { upsert: true, new: true }
+        );
 
         console.log(`[Admin Notification] Token registered for admin: ${userId}`);
 

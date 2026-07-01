@@ -7,6 +7,7 @@ import SupplierModel from '../models/Vendor/Supplier.model.js';
 import AdminModel from '../models/admin/AdminUser.model.js';
 import StaffModel from '../models/Vendor/Staff.model.js';
 import NotificationModel from '../models/Notification.model.js';
+import DeviceTokenModel from '../models/DeviceToken.model.js';
 import { FIREBASE_SERVICE_ACCOUNT } from '@repo/config/config';
 import { sendEmail } from '../emailService.js';
 import SmsService from './SmsService.js';
@@ -93,18 +94,36 @@ class NotificationService {
                 return;
             }
 
-            const user = await Model.findById(userId).select('fcmTokens notificationPreferences email emailAddress mobileNo phone');
+            const user = await Model.findById(userId).select('notificationPreferences email emailAddress mobileNo phone');
 
             if (!user) {
                 console.warn(`[NotificationService] Recipient not found: ID=${userId}, Role=${userType}. Skipping notification.`);
                 return;
             }
 
+            // Retrieve active tokens from DeviceToken collection
+            const queryIds = [userId];
+            try {
+                const mongoose = (await import('mongoose')).default;
+                if (userId && mongoose.Types.ObjectId.isValid(userId.toString())) {
+                    queryIds.push(new mongoose.Types.ObjectId(userId.toString()));
+                }
+            } catch (e) {
+                console.error("[NotificationService] ObjectId conversion error:", e);
+            }
+
+            const activeDeviceTokens = await DeviceTokenModel.find({
+                userId: { $in: queryIds },
+                userType: userType,
+                isActive: true
+            }).select('token');
+            const fcmTokens = activeDeviceTokens.map(dt => dt.token);
+
             const requestedChannels = payload.channels || ['Push'];
 
             // 1. Handle Push Notification
             if (requestedChannels.includes('Push') || requestedChannels.includes('Notification')) {
-                if (!user.fcmTokens || user.fcmTokens.length === 0) {
+                if (!fcmTokens || fcmTokens.length === 0) {
                     console.log(`[NotificationService] No FCM tokens for ${userType} ${userId}.`);
                 } else if (user.notificationPreferences && !user.notificationPreferences.pushEnabled) {
                     console.log(`Push notifications disabled for user: ${userId}`);
@@ -159,17 +178,17 @@ class NotificationService {
                             play_sound: "true",
                             ...(payload.data ? Object.keys(payload.data).reduce((acc, k) => ({ ...acc, [k]: String(payload.data[k]) }), {}) : {})
                         },
-                        tokens: user.fcmTokens,
+                        tokens: fcmTokens,
                     };
                     try {
                         const response = await admin.messaging().sendEachForMulticast(messagePayload);
                         console.log(`FCM Result: ${response.successCount} success, ${response.failureCount} failure`);
                         if (response.failureCount > 0) {
                             const failedTokens = response.responses
-                                .map((resp, idx) => (!resp.success && (resp.error?.code === 'messaging/invalid-registration-token' || resp.error?.code === 'messaging/registration-token-not-registered') ? user.fcmTokens[idx] : null))
+                                .map((resp, idx) => (!resp.success && (resp.error?.code === 'messaging/invalid-registration-token' || resp.error?.code === 'messaging/registration-token-not-registered') ? fcmTokens[idx] : null))
                                 .filter(Boolean);
                             if (failedTokens.length > 0) {
-                                await Model.findByIdAndUpdate(userId, { $pull: { fcmTokens: { $in: failedTokens } } });
+                                await DeviceTokenModel.deleteMany({ token: { $in: failedTokens } });
                             }
                         }
                     } catch (err) { console.error('FCM Send Error:', err); }

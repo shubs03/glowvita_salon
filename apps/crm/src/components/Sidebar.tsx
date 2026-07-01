@@ -20,6 +20,7 @@ import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
+import NotificationManager from "@/utils/NotificationManager";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, className }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean, isSubExpired: boolean, className?: string }) {
   const pathname = usePathname();
@@ -32,6 +33,17 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      try {
+        await fetch('/api/crm/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: NotificationManager.currentToken }),
+          credentials: 'include',
+        });
+      } catch (e) {
+        console.error('Server logout failed:', e);
+      }
+
       // Remove all possible auth tokens from cookies
       Cookies.remove('crm_access_token', { path: '/' });
       Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });

@@ -32,10 +32,17 @@ export const POST = withSubscriptionCheck(async (req) => {
             return NextResponse.json({ message: "Invalid role for token registration" }, { status: 400 });
         }
 
-        // Add token to fcmTokens array if not already present
-        await Model.findByIdAndUpdate(userId, {
-            $addToSet: { fcmTokens: token }
-        });
+        // Register or reassign token
+        const DeviceToken = (await import('@repo/lib/models/DeviceToken.model')).default;
+        await DeviceToken.findOneAndUpdate(
+            { token: token },
+            {
+                userId,
+                userType: role,
+                isActive: true
+            },
+            { upsert: true, new: true }
+        );
 
         return NextResponse.json({ message: "Token registered successfully" }, { status: 200 });
     } catch (error) {

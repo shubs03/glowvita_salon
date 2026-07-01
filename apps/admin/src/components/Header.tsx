@@ -35,8 +35,12 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Call the server-side logout API to clear HttpOnly cookies
-      await fetch('/api/admin/auth/logout', { method: 'POST' });
+      // Call the server-side logout API to clear HttpOnly cookies and deactivate FCM token
+      await fetch('/api/admin/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: NotificationManager.currentToken }),
+      });
 
       // Fallback: Remove all possible auth tokens from cookies (only works if not HttpOnly)
       Cookies.remove('admin_access_token', { path: '/' });

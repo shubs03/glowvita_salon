@@ -10,6 +10,7 @@
     "./generateTokens": "./src/generateTokens.js",
     "./emailService": "./src/emailService.js",
     "./models/Notification.model": "./src/models/Notification.model.js",
+    "./models/DeviceToken.model": "./src/models/DeviceToken.model.js",
     "./models/user": "./src/models/user/User.model.js",
     "./models/user/User.model": "./src/models/user/User.model.js",
     "./models/user/ClientOrder.model": "./src/models/user/ClientOrder.model.js",

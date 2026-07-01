@@ -10,6 +10,7 @@ import { Eye, EyeOff, Map } from 'lucide-react';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import NotificationManager from '@/utils/NotificationManager';
 
 import Link from 'next/link';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, NEXT_PUBLIC_CRM_URL } from '@repo/config/config';
@@ -49,6 +50,9 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
+      NotificationManager.requestPermission().catch(err => {
+        console.error("FCM registration error on login:", err);
+      });
       router.push('/dashboard');
     } else {
       const data = await res.json();

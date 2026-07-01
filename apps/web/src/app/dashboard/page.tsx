@@ -9,6 +9,8 @@ import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import Cookies from 'js-cookie';
 
+import NotificationManager from '@/utils/NotificationManager';
+
 export default function DashboardPage() {
   const router = useRouter();
   const { data, error, isLoading } = useGetMeQuery({});
@@ -50,7 +52,11 @@ export default function DashboardPage() {
         }
       });
 
-      await fetch('/api/auth/logout');
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: NotificationManager.currentToken })
+      });
       dispatch(clearUserAuth());
       router.push('/login');
     } catch (error) {

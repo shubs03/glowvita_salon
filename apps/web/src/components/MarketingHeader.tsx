@@ -36,12 +36,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@repo/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import Cookies from "js-cookie";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { ThemeToggle } from "./ThemeToggle";
-
+import NotificationManager from "@/utils/NotificationManager";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 interface User {
   firstName?: string;
   lastName?: string;
@@ -138,7 +138,12 @@ export function MarketingHeader({
     setIsLoggingOut(true);
     try {
       // Call server-side logout to clear the httpOnly cookie (js-cookie cannot do this)
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: NotificationManager.currentToken }),
+        credentials: 'include'
+      });
 
       // Clear all auth-related data from localStorage
       localStorage.removeItem("userAuthState");
