@@ -6,9 +6,9 @@ const OfficesLocations = () => {
     {
       city: 'Nashik, Maharashtra',
       label: 'Headquarters',
-      address: 'Corporate Office : Business Plus, A Wing, 5th Floor, Office No. 505, 506, Near Sai Square, Mumbai Naka, Nashik, Maharashtra, India
+      address: `Corporate Office : Business Plus, A Wing, 5th Floor, Office No. 505, 506, Near Sai Square, Mumbai Naka, Nashik, Maharashtra, India
 
-PIN - 422009 PIN - 422009',
+PIN - 422009 PIN - 422009`,
     },
   {
     city: 'Pune, Maharashtra',
