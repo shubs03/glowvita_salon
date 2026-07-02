@@ -5,19 +5,19 @@ const AwardsSection = () => {
   const awards = [
     {
       icon: Award,
-      title: "Best Salon Software 2023",
+      title: "Best Salon Software 2026",
       description:
-        "Winner of the Best Salon Software award in the Tech Innovators Magazine 2023.",
+        "Winner of the Best Salon Software award in the Tech Innovators Magazine 2026.",
     },
     {
       icon: Star,
       title: "Customer's Choice Award",
-      description: "Winner of the Customer's Choice Award in Beauty Tech Reviews 2023.",
+      description: "Winner of the Customer's Choice Award in Beauty Tech Reviews 2026.",
     },
     {
       icon: TrendingUp,
       title: "Fastest Growing Platform",
-      description: "Winner of the Fastest Growing Platform award in Startup Weekly 2023.",
+      description: "Winner of the Fastest Growing Platform award in Startup Weekly 2026.",
     },
   ];
 

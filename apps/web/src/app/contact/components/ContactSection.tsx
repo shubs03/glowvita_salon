@@ -255,8 +255,7 @@ const ContactSection = () => {
           </div>
           <div>
             <p className="text-foreground font-semibold text-sm">
-              Office No. 1, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar,
-              Mumbai Naka, Nashik, Maharashtra, India
+              Corporate Office : Business Plus, A Wing, 5th Floor, Office No. 505, 506, Near Sai Square, Mumbai Naka, Nashik, Maharashtra, India PIN - 422009
             </p>
           </div>
         </div>
