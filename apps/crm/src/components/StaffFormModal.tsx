@@ -783,7 +783,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
         // Bank Details Validation (Optional format check)
         const bank = formData.bankDetails;
-        
+
         // Only validate IFSC if it's provided
         if (bank.ifscCode) {
             const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -815,18 +815,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         }
         delete payload.confirmPassword;
 
-        console.log('Saving staff data:', {
-            availabilityFields: {
-                sundayAvailable: payload.sundayAvailable,
-                mondayAvailable: payload.mondayAvailable,
-            },
-            slotsFields: {
-                sundaySlots: payload.sundaySlots,
-                mondaySlots: payload.mondaySlots,
-            },
-            blockedTimes: payload.blockedTimes,
-            fullPayload: payload
-        });
+
 
         try {
             if (staff) {

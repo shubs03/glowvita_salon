@@ -8,10 +8,8 @@ import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 await _db();
 
 export const POST = authMiddlewareAdmin(async (req) => {
-    console.log("🚀 HIT RENEWAL ENDPOINT"); // Debug log
     try {
         const body = await req.json();
-        console.log("📝 Renewal Payload:", body);
 
         const { vendorId, planId } = body;
 

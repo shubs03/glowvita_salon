@@ -38,12 +38,12 @@ export default function TimetablePage() {
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
   const [slotGap, setSlotGap] = useState<number>(20);
   const [isSavingSlotGap, setIsSavingSlotGap] = useState(false);
-  
+
   // Fetch working hours
   const { data: workingHoursData, isLoading, error, refetch } = useGetCrmDoctorWorkingHoursQuery(undefined, {
     skip: role !== 'doctor'
   });
-  
+
   // Update working hours mutation
   const [updateWorkingHours, { isLoading: isSaving }] = useUpdateCrmDoctorWorkingHoursMutation();
 
@@ -53,12 +53,12 @@ export default function TimetablePage() {
       const transformedSchedule: DaySchedule[] = workingHoursData.workingHoursArray.map((dayData: any) => ({
         day: dayData.day,
         isOpen: dayData.isOpen,
-        slots: dayData.isOpen && dayData.open && dayData.close 
-          ? [{ start: dayData.open, end: dayData.close }] 
+        slots: dayData.isOpen && dayData.open && dayData.close
+          ? [{ start: dayData.open, end: dayData.close }]
           : []
       }));
       setSchedule(transformedSchedule);
-      
+
       // Set slot gap from API data
       if (workingHoursData.slotGap !== undefined) {
         setSlotGap(workingHoursData.slotGap);
@@ -82,7 +82,7 @@ export default function TimetablePage() {
     newSchedule[dayIndex].slots[slotIndex][field] = value;
     setSchedule(newSchedule);
   };
-  
+
   const addSlot = (dayIndex: number) => {
     const newSchedule = [...schedule];
     newSchedule[dayIndex].slots.push({ start: '09:00', end: '17:00' });
@@ -99,17 +99,15 @@ export default function TimetablePage() {
     try {
       // Validate slot gap
       if (slotGap < 0 || slotGap > 60) {
-        toast.error('Invalid Value', { 
-          description: 'Slot gap must be between 0 and 60 minutes.' 
+        toast.error('Invalid Value', {
+          description: 'Slot gap must be between 0 and 60 minutes.'
         });
         return;
       }
 
-      console.log('Saving slotGap:', slotGap);
       setIsSavingSlotGap(true);
 
       const requestBody = { slotGap: slotGap };
-      console.log('Request body:', requestBody);
 
       const response = await fetch('/api/crm/doctor-workinghours', {
         method: 'PATCH',
@@ -119,10 +117,8 @@ export default function TimetablePage() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('Response status:', response.status);
-      
+
       const responseData = await response.json();
-      console.log('Response data:', responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || 'Failed to save slot gap');
@@ -158,9 +154,9 @@ export default function TimetablePage() {
           isOpen: daySchedule.isOpen,
           hours: daySchedule.isOpen && daySchedule.slots.length > 0
             ? daySchedule.slots.map(slot => ({
-                openTime: slot.start,
-                closeTime: slot.end
-              }))
+              openTime: slot.start,
+              closeTime: slot.end
+            }))
             : []
         };
       });
@@ -222,110 +218,110 @@ export default function TimetablePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-            {/* Slot Gap Configuration */}
-            <div className="p-4 bg-muted/50 rounded-lg border border-border">
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <Label htmlFor="slotGap" className="text-base font-medium mb-2 block">
-                    Gap Between Slots (minutes)
-                  </Label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Set the buffer time between consecutive appointment slots
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 max-w-xs">
-                      <Input
-                        id="slotGap"
-                        type="number"
-                        min="0"
-                        max="60"
-                        value={slotGap}
-                        onChange={(e) => setSlotGap(parseInt(e.target.value) || 0)}
-                        className="text-lg"
-                        placeholder="20"
-                      />
-                    </div>
-                    <span className="text-muted-foreground">minutes</span>
-                    <Button 
-                      onClick={handleSaveSlotGap} 
-                      disabled={isSavingSlotGap}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      {isSavingSlotGap ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Gap'
-                      )}
-                    </Button>
+          {/* Slot Gap Configuration */}
+          <div className="p-4 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <Label htmlFor="slotGap" className="text-base font-medium mb-2 block">
+                  Gap Between Slots (minutes)
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Set the buffer time between consecutive appointment slots
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 max-w-xs">
+                    <Input
+                      id="slotGap"
+                      type="number"
+                      min="0"
+                      max="60"
+                      value={slotGap}
+                      onChange={(e) => setSlotGap(parseInt(e.target.value) || 0)}
+                      className="text-lg"
+                      placeholder="20"
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Each consultation is 20 minutes. Total interval: {20 + slotGap} minutes
-                  </p>
+                  <span className="text-muted-foreground">minutes</span>
+                  <Button
+                    onClick={handleSaveSlotGap}
+                    disabled={isSavingSlotGap}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    {isSavingSlotGap ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Gap'
+                    )}
+                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Each consultation is 20 minutes. Total interval: {20 + slotGap} minutes
+                </p>
               </div>
             </div>
+          </div>
 
-            {/* Weekly Schedule */}
-            {schedule.map((daySchedule, dayIndex) => (
-                <div key={daySchedule.day} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Switch 
-                                id={`switch-${daySchedule.day}`} 
-                                checked={daySchedule.isOpen}
-                                onCheckedChange={() => handleToggleDay(dayIndex)}
-                            />
-                            <Label htmlFor={`switch-${daySchedule.day}`} className="text-lg font-medium">
-                                {daySchedule.day}
-                            </Label>
-                        </div>
-                        <span className={`text-sm font-semibold ${daySchedule.isOpen ? 'text-green-600' : 'text-red-600'}`}>
-                            {daySchedule.isOpen ? 'Open' : 'Closed'}
-                        </span>
-                    </div>
-
-                    {daySchedule.isOpen && (
-                        <div className="mt-4 pl-8 space-y-4">
-                            {daySchedule.slots.map((slot, slotIndex) => (
-                                <div key={slotIndex} className="flex items-center gap-4">
-                                    <div className="flex-1 grid grid-cols-2 gap-4">
-                                        <div className="relative">
-                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="time" value={slot.start} onChange={(e) => handleSlotChange(dayIndex, slotIndex, 'start', e.target.value)} className="pl-10" />
-                                        </div>
-                                        <div className="relative">
-                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input type="time" value={slot.end} onChange={(e) => handleSlotChange(dayIndex, slotIndex, 'end', e.target.value)} className="pl-10" />
-                                        </div>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeSlot(dayIndex, slotIndex)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                            <Button variant="outline" size="sm" onClick={() => addSlot(dayIndex)}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Time Slot
-                            </Button>
-                        </div>
-                    )}
+          {/* Weekly Schedule */}
+          {schedule.map((daySchedule, dayIndex) => (
+            <div key={daySchedule.day} className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id={`switch-${daySchedule.day}`}
+                    checked={daySchedule.isOpen}
+                    onCheckedChange={() => handleToggleDay(dayIndex)}
+                  />
+                  <Label htmlFor={`switch-${daySchedule.day}`} className="text-lg font-medium">
+                    {daySchedule.day}
+                  </Label>
                 </div>
-            ))}
+                <span className={`text-sm font-semibold ${daySchedule.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                  {daySchedule.isOpen ? 'Open' : 'Closed'}
+                </span>
+              </div>
+
+              {daySchedule.isOpen && (
+                <div className="mt-4 pl-8 space-y-4">
+                  {daySchedule.slots.map((slot, slotIndex) => (
+                    <div key={slotIndex} className="flex items-center gap-4">
+                      <div className="flex-1 grid grid-cols-2 gap-4">
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input type="time" value={slot.start} onChange={(e) => handleSlotChange(dayIndex, slotIndex, 'start', e.target.value)} className="pl-10" />
+                        </div>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input type="time" value={slot.end} onChange={(e) => handleSlotChange(dayIndex, slotIndex, 'end', e.target.value)} className="pl-10" />
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeSlot(dayIndex, slotIndex)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => addSlot(dayIndex)}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Time Slot
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
         </CardContent>
         <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+          <Button onClick={handleSaveChanges} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
         </CardFooter>
       </Card>
     </div>

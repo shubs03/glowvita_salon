@@ -17,7 +17,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
   const mapRef = useRef<google.maps.Map | null>(null);
   const polygonRef = useRef<google.maps.Polygon | null>(null);
   const listenerRefs = useRef<google.maps.MapsEventListener[]>([]);
-  
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [authError, setAuthError] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -25,7 +25,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showResults, setShowResults] = useState(false);
-  
+
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
@@ -35,9 +35,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
   useEffect(() => {
     if (apiKey) {
       const keyPreview = `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`;
-      console.log("API Key loaded:", keyPreview);
-      console.log("API Key length:", apiKey.length);
-      console.log("Current URL:", window.location.href);
+
     }
   }, [apiKey]);
 
@@ -45,7 +43,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
   useEffect(() => {
     // Aggressively clean the API key: trim, remove quotes, and handle possible whitespace
     const cleanApiKey = apiKey?.toString().trim().replace(/['"“”]/g, '');
-    
+
     if (!cleanApiKey || cleanApiKey === "undefined" || cleanApiKey === "null") {
       console.error("Google Maps API Key is missing or invalid string");
       setAuthError(true);
@@ -57,7 +55,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     const originalError = console.error;
     console.error = (...args) => {
       if (
-        typeof args[0] === 'string' && 
+        typeof args[0] === 'string' &&
         (args[0].includes('IntersectionObserver') || args[0].includes('invalid-key-map-error'))
       ) {
         // Suppress these specific Google Maps internal errors if they are noise
@@ -78,14 +76,13 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
     // Check if already loaded and working
     if ((window as any).google?.maps?.Map) {
-      console.log("Google Maps already available");
       setIsLoaded(true);
       return;
     }
 
     const scriptId = "google-maps-native-script";
     const existingScript = document.getElementById(scriptId) as HTMLScriptElement;
-    
+
     // If script exists but API not ready, we might need to wait or it might be a failed load
     if (existingScript) {
       if ((window as any).google?.maps?.Map) {
@@ -110,14 +107,12 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     loader.src = `https://maps.googleapis.com/maps/api/js?key=${cleanApiKey}&libraries=places,drawing,geometry&v=weekly`;
     loader.async = true;
     loader.defer = true;
-    
+
     loader.onload = () => {
-      console.log("Google Maps script element injected and loaded");
       // Check for the Map object explicitly
       let retryCount = 0;
       const checkAvailability = () => {
         if ((window as any).google?.maps?.Map) {
-          console.log("Google Maps API Ready");
           setIsLoaded(true);
         } else if (retryCount < 10) {
           retryCount++;
@@ -130,14 +125,14 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       };
       checkAvailability();
     };
-    
+
     loader.onerror = (error) => {
       console.error("Failed to load Google Maps script tag:", error);
       setAuthError(true);
       setErrorDetails("Failed to fetch Google Maps script. Check your internet connection or DNS.");
       setIsLoaded(false);
     };
-    
+
     document.head.appendChild(loader);
 
     return () => {
@@ -153,10 +148,10 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     if (mapRef.current) return;
 
     const container = mapContainerRef.current;
-    
+
     const initMap = () => {
       if (!container || mapRef.current) return;
-      
+
       // Double check container has dimensions
       const rect = container.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
@@ -164,11 +159,10 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
         setTimeout(initMap, 100);
         return;
       }
-      
+
       try {
         const center = { lat: 18.5204, lng: 73.8567 }; // Pune default
-        
-        console.log("Creating map instance...");
+
         const map = new google.maps.Map(container, {
           center,
           zoom: 12,
@@ -183,16 +177,14 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
         });
 
         mapRef.current = map;
-        console.log("Map initialized successfully");
 
         // Wait for idle event before proceeding
         google.maps.event.addListenerOnce(map, 'idle', () => {
-          console.log("Map is ready and idle");
-          
+
           geocoderRef.current = new google.maps.Geocoder();
           placesServiceRef.current = new google.maps.places.PlacesService(map);
           autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
-          
+
           // Load initial geometry if present
           if (initialGeometry?.coordinates?.[0]) {
             loadInitialPolygon(map, initialGeometry.coordinates[0]);
@@ -228,11 +220,11 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       lng: coord[0],
       lat: coord[1]
     }));
-    
+
     // Remove closing coordinate if present
-    if (path.length > 0 && 
-        path[0].lat === path[path.length - 1].lat && 
-        path[0].lng === path[path.length - 1].lng) {
+    if (path.length > 0 &&
+      path[0].lat === path[path.length - 1].lat &&
+      path[0].lng === path[path.length - 1].lng) {
       path.pop();
     }
 
@@ -248,7 +240,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     });
 
     polygonRef.current = polygon;
-    
+
     // Re-center map
     if (path.length > 0) {
       const bounds = new google.maps.LatLngBounds();
@@ -262,9 +254,9 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
   const startDrawing = () => {
     if (!mapRef.current) return;
-    
+
     setIsDrawing(true);
-    
+
     // Clear existing polygon
     if (polygonRef.current) {
       polygonRef.current.setMap(null);
@@ -275,15 +267,15 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     const path: google.maps.LatLng[] = [];
     let polygon: google.maps.Polygon | null = null;
     let activePolyline: google.maps.Polyline | null = null;
-    
+
     // Temporary markers for vertices
     const markers: google.maps.Marker[] = [];
 
     const clickListener = map.addListener('click', (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return;
-      
+
       path.push(e.latLng);
-      
+
       // Add marker
       const marker = new google.maps.Marker({
         position: e.latLng,
@@ -315,7 +307,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
           activePolyline.setMap(null);
           activePolyline = null;
         }
-        
+
         polygon = new google.maps.Polygon({
           paths: path,
           fillColor: "#2196F3",
@@ -341,7 +333,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
     const mouseMoveListener = map.addListener('mousemove', (e: google.maps.MapMouseEvent) => {
       if (!e.latLng || path.length === 0) return;
-      
+
       if (activePolyline) {
         activePolyline.setPath([...path, e.latLng]);
       } else if (polygon) {
@@ -351,12 +343,12 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
     const finishDrawing = () => {
       setIsDrawing(false);
-      
+
       // Remove listeners
       google.maps.event.removeListener(clickListener);
       google.maps.event.removeListener(dblClickListener);
       google.maps.event.removeListener(mouseMoveListener);
-      
+
       // Clean up temporary elements
       if (activePolyline) {
         activePolyline.setMap(null);
@@ -366,7 +358,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       if (path.length >= 3 && polygon) {
         // Convert to editable polygon
         polygon.setMap(null);
-        
+
         const finalPolygon = new google.maps.Polygon({
           paths: path,
           fillColor: "#4CAF50",
@@ -419,12 +411,12 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
   const handlePolygonUpdate = (polygon: google.maps.Polygon) => {
     const path = polygon.getPath();
     const coords: number[][] = [];
-    
+
     for (let i = 0; i < path.getLength(); i++) {
       const point = path.getAt(i);
       coords.push([point.lng(), point.lat()]);
     }
-    
+
     if (coords.length < 3) return;
 
     // Close the polygon for GeoJSON
@@ -442,7 +434,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       polygonRef.current.setMap(null);
       polygonRef.current = null;
     }
-    
+
     // Clear listeners
     listenerRefs.current.forEach(listener => {
       try {
@@ -452,7 +444,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       }
     });
     listenerRefs.current = [];
-    
+
     onChange(null);
     setIsDrawing(false);
   };
@@ -468,7 +460,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
   if (authError) {
     const keyPreview = apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}` : "Not found";
-    
+
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-red-50 text-red-600 p-6 rounded-lg border-2 border-red-200">
         <div className="text-6xl mb-4">🔑</div>
@@ -476,7 +468,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
         <p className="text-sm mb-4 text-center max-w-md text-red-700">
           {errorDetails || "Authentication failed - Please check your configuration"}
         </p>
-        
+
         {/* Diagnostic Info */}
         <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-4 w-full max-w-2xl">
           <p className="text-xs font-bold text-yellow-800 mb-2">🔍 Diagnostic Information:</p>
@@ -491,7 +483,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
         <div className="bg-white p-4 rounded-lg border border-red-200 w-full max-w-2xl mb-4">
           <p className="font-bold text-sm mb-3 text-red-800">⚠️ Common Issues & Solutions:</p>
-          
+
           <div className="space-y-3 text-xs text-left">
             <div className="bg-red-50 p-3 rounded">
               <p className="font-bold text-red-700 mb-1">Issue #1: Billing Not Enabled</p>
@@ -565,28 +557,27 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
             </li>
           </ol>
         </div>
-        
+
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={() => {
-              console.log("Reloading page...");
               window.location.reload();
-            }} 
+            }}
             className="text-sm bg-red-600 text-white px-6 py-2.5 rounded-lg hover:bg-red-700 transition-colors font-semibold shadow-md"
           >
             🔄 Reload Page
           </button>
-          <a 
-            href="https://console.cloud.google.com/apis/credentials" 
-            target="_blank" 
+          <a
+            href="https://console.cloud.google.com/apis/credentials"
+            target="_blank"
             rel="noopener noreferrer"
             className="text-sm bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md"
           >
             ⚙️ Open Google Console
           </a>
-          <a 
-            href="https://console.cloud.google.com/billing" 
-            target="_blank" 
+          <a
+            href="https://console.cloud.google.com/billing"
+            target="_blank"
             rel="noopener noreferrer"
             className="text-sm bg-green-600 text-white px-6 py-2.5 rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md"
           >
@@ -603,7 +594,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       setSearchResults([]);
       return;
     }
-    
+
     autocompleteServiceRef.current.getPlacePredictions(
       { input: query, componentRestrictions: { country: 'IN' } },
       (predictions, status) => {
@@ -619,10 +610,10 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
 
   const selectPlace = (place: google.maps.places.AutocompletePrediction) => {
     if (!placesServiceRef.current || !mapRef.current) return;
-    
+
     setSearchQuery(place.description);
     setShowResults(false);
-    
+
     placesServiceRef.current.getDetails(
       { placeId: place.place_id, fields: ['geometry'] },
       (details, status) => {
@@ -675,18 +666,18 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
           </div>
         </div>
       )}
-      
-      <div 
-        ref={mapContainerRef} 
-        className="flex-1 w-full rounded-lg bg-slate-200" 
-        id="native-map-container" 
-        style={{ 
-          width: '100%', 
+
+      <div
+        ref={mapContainerRef}
+        className="flex-1 w-full rounded-lg bg-slate-200"
+        id="native-map-container"
+        style={{
+          width: '100%',
           position: 'relative',
           overflow: 'hidden'
-        }} 
+        }}
       />
-      
+
       {/* Control Buttons */}
       {isLoaded && !authError && (
         <div className="absolute top-3 right-3 flex gap-2 z-[100]">
@@ -699,13 +690,13 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
               ✏️ Draw Boundary
             </button>
           )}
-          
+
           {isDrawing && (
             <div className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold animate-pulse">
               👆 Click to add points • Double-click to finish
             </div>
           )}
-          
+
           {polygonRef.current && !isDrawing && (
             <>
               <button
@@ -726,7 +717,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
           )}
         </div>
       )}
-      
+
       {/* Help Text */}
       {isLoaded && !authError && (
         <div className="absolute bottom-3 left-3 bg-slate-900/90 text-white px-3 py-2 rounded-lg text-xs pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity max-w-xs backdrop-blur-sm border border-white/10 shadow-2xl">

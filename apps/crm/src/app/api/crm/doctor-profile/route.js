@@ -11,8 +11,6 @@ export const GET = withSubscriptionCheck(async (req) => {
   try {
     const doctorId = req.user.userId || req.user._id;
 
-    console.log("Fetching doctor profile for ID:", doctorId);
-    console.log("User from token:", req.user);
 
     if (!doctorId) {
       return NextResponse.json({ message: "Doctor ID is required" }, { status: 400 });
@@ -20,7 +18,6 @@ export const GET = withSubscriptionCheck(async (req) => {
 
     const doctor = await DoctorModel.findById(doctorId).select('-password -__v');
 
-    console.log("Doctor data from DB:", doctor);
 
     if (!doctor) {
       return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
@@ -56,7 +53,6 @@ export const PUT = withSubscriptionCheck(async (req) => {
     }
 
     // Debug: Log doctor ID
-    console.log('Doctor ID:', doctorId);
 
     // Remove _id from body if present to prevent accidental updates
     delete body._id;

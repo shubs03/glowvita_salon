@@ -126,7 +126,6 @@ export default function InvoiceManagementPage() {
   // Debug profile
   useEffect(() => {
     if (currentProfile) {
-      console.log('Current Profile Data:', currentProfile);
     }
   }, [currentProfile]);
 

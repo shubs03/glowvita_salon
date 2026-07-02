@@ -19,9 +19,9 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const { admin, isLoading, isAdminAuthenticated } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  
+
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
-  
+
   // Enable global API error handling
   useApiErrorHandler();
 
@@ -29,7 +29,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      if(mobile) {
+      if (mobile) {
         setSidebarOpen(false);
       } else {
         setSidebarOpen(true);
@@ -39,32 +39,32 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-     
+
   useEffect(() => {
     if (!isLoading && !isAdminAuthenticated) {
-        router.push('/login');
-        return;
+      router.push('/login');
+      return;
     }
 
     if (!isLoading && admin) {
       // Find the most specific (longest) matching sidebar item for the current path
       const matchedItem = [...sidebarNavItems]
         .sort((a, b) => b.href.length - a.href.length)
-        .find(item => 
-          item.href === '/' 
-            ? pathname === '/' 
+        .find(item =>
+          item.href === '/'
+            ? pathname === '/'
             : pathname.startsWith(item.href)
         );
 
       const requiredPermission = matchedItem?.permission;
-             
+
       if (!requiredPermission || pathname === '/') {
         setHasAccess(true);
         return;
       }
-             
+
       const isSuperAdmin = admin.roleName === 'SUPER_ADMIN';
-      const userHasAccess = isSuperAdmin || 
+      const userHasAccess = isSuperAdmin ||
         admin.permissions?.includes(`${requiredPermission}:all`) ||
         admin.permissions?.includes(`${requiredPermission}:view`) ||
         admin.permissions?.includes(`${requiredPermission}:edit`) ||
@@ -86,10 +86,9 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   useEffect(() => {
     if (isAdminAuthenticated) {
       const unsubscribe = NotificationManager.onMessageListener((payload: any) => {
-        console.log('[AdminLayout] FCM Message Received:', payload);
         const title = payload.notification?.title || payload.data?.title || 'System Alert';
         const body = payload.notification?.body || payload.data?.body || 'New update received';
-        
+
         toast(title, {
           description: body,
           icon: <Bell className="h-4 w-4 text-primary" />,
@@ -103,14 +102,14 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
-     
+
   // Show full-screen spinner ONLY while the auth state is still being determined.
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-muted-foreground">Authenticating...</p>
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-muted-foreground">Authenticating...</p>
         </div>
       </div>
     )
@@ -125,18 +124,18 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar} 
+      <Sidebar
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
         isMobile={isMobile}
       />
-             
+
       <div className={cn(
         "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300 ease-in-out",
         !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20")
       )}>
         <Header toggleSidebar={toggleSidebar} />
-                 
+
         <main className="flex-1 overflow-y-auto bg-secondary/50">
           <div className="w-full max-w-none min-h-full">
             {hasAccess === true ? (

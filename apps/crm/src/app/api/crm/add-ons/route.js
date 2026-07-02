@@ -19,8 +19,6 @@ export const GET = authMiddlewareCrm(async (req) => {
 export const POST = authMiddlewareCrm(async (req) => {
     const vendorId = req.user.userId.toString();
     const body = await req.json();
-    console.log("POST /api/crm/add-ons - Incoming body:", JSON.stringify(body, null, 2));
-    console.log("POST /api/crm/add-ons - AddOnModel Schema Paths:", Object.keys(AddOnModel.schema.paths));
     const { name, price, duration, status, services, service } = body;
 
     // Use services array if provided, otherwise single service
@@ -43,7 +41,6 @@ export const POST = authMiddlewareCrm(async (req) => {
             status: status || "active",
         });
 
-        console.log("POST /api/crm/add-ons - Created AddOn:", JSON.stringify(addOn, null, 2));
 
         return Response.json({ message: "Add-on created successfully", addOn }, { status: 201 });
     } catch (error) {
@@ -56,7 +53,6 @@ export const POST = authMiddlewareCrm(async (req) => {
 export const PUT = authMiddlewareCrm(async (req) => {
     const vendorId = req.user.userId.toString();
     const body = await req.json();
-    console.log("PUT /api/crm/add-ons - Incoming body:", JSON.stringify(body, null, 2));
     const { _id, name, price, duration, status, services, service } = body;
 
     if (!_id) {
@@ -88,7 +84,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
             return Response.json({ message: "Add-on not found" }, { status: 404 });
         }
 
-        console.log("PUT /api/crm/add-ons - Updated AddOn:", JSON.stringify(addOn, null, 2));
 
         return Response.json({ message: "Add-on updated successfully", addOn });
     } catch (error) {

@@ -28,7 +28,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const businessName = searchParams.get('businessName'); // Business name filter
 
-    console.log("Consolidated Sales Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, userType, businessName });
 
     // Create internal requests
     // Helper function to convert filterType/filterValue to startDate/endDate
@@ -106,24 +105,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const subscriptionReportData = await subscriptionReportRes.json();
     const smsCampaignsData = await smsCampaignsRes.json();
 
-    // Log the raw data for debugging
-    console.log("Raw selling services data:", sellingServicesData?.data?.services?.length || 0);
-    console.log("Raw sales by products data:", salesByProductsData?.data?.salesByProducts?.length || 0);
-    console.log("Raw subscription report data:", subscriptionReportData?.data?.subscriptions?.length || 0);
-    console.log("Raw SMS campaigns data:", smsCampaignsData?.data?.campaigns?.length || 0);
-
     // Extract data from responses
     const sellingServices = sellingServicesData?.success ? sellingServicesData.data.services : [];
     const salesByProducts = salesByProductsData?.success ? salesByProductsData.data.salesByProducts : [];
     const completedBookingsAggregated = completedBookingsData?.success ? completedBookingsData.data.aggregatedTotals : {};
     const subscriptionReport = subscriptionReportData?.success ? subscriptionReportData.data.subscriptions : [];
     const smsCampaigns = smsCampaignsData?.success ? smsCampaignsData.data.campaigns : [];
-
-    // Log the extracted data counts
-    console.log("Extracted selling services count:", sellingServices.length);
-    console.log("Extracted sales by products count:", salesByProducts.length);
-    console.log("Extracted subscription report count:", subscriptionReport.length);
-    console.log("Extracted SMS campaigns count:", smsCampaigns.length);
 
     // Get cities from any of the responses (they should be similar)
     // Updated to include cities from all data sources
@@ -279,7 +266,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       if (!vendorSubscriptionMap.has(key)) {
         vendorSubscriptionMap.set(key, 0);
       }
-      
+
       const plansToCount = [];
       if (subscription.price > 0) {
         plansToCount.push({
@@ -288,7 +275,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           end: subscription.endDate ? new Date(subscription.endDate).getTime() : null
         });
       }
-      
+
       if (subscription.rawSubscription?.history && subscription.rawSubscription.history.length > 0) {
         subscription.rawSubscription.history.forEach(hItem => {
           const hPrice = (hItem.plan?.discountedPrice || hItem.plan?.price || 0);
@@ -301,14 +288,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
           }
         });
       }
-      
+
       const uniquePlans = plansToCount.filter((p, index, self) => {
         if (!p.start || !p.end) return true;
         return index === self.findIndex(t => t.start === p.start && t.end === p.end);
       });
-      
+
       const vendorSubTotal = uniquePlans.reduce((sum, p) => sum + p.price, 0);
-      
+
       vendorSubscriptionMap.set(key, vendorSubscriptionMap.get(key) + vendorSubTotal);
 
       // Store vendor type
@@ -338,15 +325,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
     });
 
-    // Log sample data for debugging
-    console.log("Sample subscription data:", subscriptionReport.slice(0, 2));
-    console.log("Sample SMS data:", smsCampaigns.slice(0, 2));
-
-    // Log the vendor maps for debugging
-    console.log("Vendor subscription map size:", vendorSubscriptionMap.size);
-    console.log("Vendor SMS map size:", vendorSmsMap.size);
-    console.log("Sample vendor subscription keys:", Array.from(vendorSubscriptionMap.keys()).slice(0, 3));
-    console.log("Sample vendor SMS keys:", Array.from(vendorSmsMap.keys()).slice(0, 3));
 
     // Combine all vendor data
     // First, add all vendors from services and products to the map
@@ -355,11 +333,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...Array.from(vendorSubscriptionMap.keys()),
       ...Array.from(vendorSmsMap.keys())
     ]);
-
-    console.log("All vendor keys count:", allVendorKeys.size);
-    console.log("Existing vendor map keys:", Array.from(vendorMap.keys()));
-    console.log("Subscription map keys:", Array.from(vendorSubscriptionMap.keys()));
-    console.log("SMS map keys:", Array.from(vendorSmsMap.keys()));
 
     // Create entries for all vendors
     allVendorKeys.forEach(key => {
@@ -376,7 +349,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
         // Get vendor type from vendorTypeMap or default to 'Vendor'
         const type = vendorTypeMap.get(key) || 'Vendor';
 
-        console.log(`Creating entry for missing vendor: ${vendor}, city: ${city}, type: ${type}`);
 
         vendorMap.set(key, {
           vendor: vendor,
@@ -395,31 +367,20 @@ export const GET = authMiddlewareAdmin(async (req) => {
     });
 
     // Add subscription amounts to vendors
-    console.log("Adding subscription amounts...");
     vendorSubscriptionMap.forEach((amount, key) => {
       if (vendorMap.has(key)) {
-        console.log(`Adding subscription amount ${amount} to vendor ${key}`);
         vendorMap.get(key).subscriptionAmount = amount;
       } else {
-        console.log(`Warning: Vendor ${key} not found in vendorMap for subscription`);
       }
     });
 
     // Add SMS amounts to vendors
-    console.log("Adding SMS amounts...");
     vendorSmsMap.forEach((amount, key) => {
       if (vendorMap.has(key)) {
-        console.log(`Adding SMS amount ${amount} to vendor ${key}`);
         vendorMap.get(key).smsAmount = amount;
       } else {
-        console.log(`Warning: Vendor ${key} not found in vendorMap for SMS`);
       }
     });
-
-    // Log the final vendor map size
-    console.log("Final vendor map size:", vendorMap.size);
-    console.log("Sample final vendor keys:", Array.from(vendorMap.keys()).slice(0, 3));
-    console.log("Sample vendor data:", Array.from(vendorMap.values()).slice(0, 2));
 
     // Platform fees and service tax are now calculated directly from selling services data
     // No additional distribution from completed bookings is needed to avoid double counting
@@ -461,7 +422,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       "SMS Amount (₹)": `₹${vendor.smsAmount.toFixed(2)}`
     }));
 
-    console.log("Formatted data sample:", formattedData.slice(0, 2));
 
     // Calculate aggregated totals
     const aggregatedTotals = consolidatedData.reduce((totals, vendor) => {
@@ -546,13 +506,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Convert city map to array
     const cityWiseSalesArray = Object.values(cityWiseSales);
 
-    // Log the data for debugging
-    console.log("Consolidated data count:", consolidatedData.length);
-    console.log("Formatted data count:", formattedData.length);
-    console.log("City-wise sales data count:", cityWiseSalesArray.length);
-    console.log("Sample formatted data:", formattedData.slice(0, 2));
-    console.log("Sample city-wise data:", cityWiseSalesArray.slice(0, 2));
-    console.log("Aggregated totals:", aggregatedTotals);
 
     return NextResponse.json({
       success: true,

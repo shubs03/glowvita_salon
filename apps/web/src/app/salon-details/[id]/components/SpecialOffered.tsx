@@ -31,31 +31,34 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
   const offers =
     offersData?.data
       ?.filter((offer: any) => offer.status === "Active")
-      .map((offer: any) => ({
-        code: offer.code,
-        title: offer.type === "percentage" ? `${offer.value}% Special Discount` : `₹${offer.value} Exclusive Off`,
-        originalPrice:
-          offer.type === "percentage"
-            ? "100"
-            : String(offer.value * 2), // Mock 2x for fixed
-        discountedPrice:
-          offer.type === "percentage"
-            ? String(Math.round(100 - (100 * (offer.value / 100))))
-            : String(offer.value), // Actual price after fixed discount
-        discount:
-          offer.type === "percentage" ? `${offer.value}%` : `₹${offer.value}`,
-        description:
-          offer.type === "percentage"
-            ? `Get ${offer.value}% off on select services when you apply this code at checkout.`
-            : `Enjoy a flat ₹${offer.value} discount on your next service booking.`,
-        validity: offer.expires
-          ? `Valid until: ${new Date(offer.expires).toLocaleDateString()}`
-          : "",
-        image:
-          offer.offerImage ||
-          "/images/Offer Placeholder.png",
-        applicableServices: offer.applicableServiceNames || [],
-      })) || [];
+      .map((offer: any) => {
+        console.log("Processing offer in SpecialOffered:", offer);
+        return {
+          code: offer.code,
+          title: offer.type === "percentage" ? `${offer.value}% Special Discount` : `₹${offer.value} Exclusive Off`,
+          originalPrice:
+            offer.type === "percentage"
+              ? "100"
+              : String(offer.value * 2), // Mock 2x for fixed
+          discountedPrice:
+            offer.type === "percentage"
+              ? String(Math.round(100 - (100 * (offer.value / 100))))
+              : String(offer.value), // Actual price after fixed discount
+          discount:
+            offer.type === "percentage" ? `${offer.value}%` : `₹${offer.value}`,
+          description:
+            offer.type === "percentage"
+              ? `Get ${offer.value}% off on select services when you apply this code at checkout.`
+              : `Enjoy a flat ₹${offer.value} discount on your next service booking.`,
+          validity: offer.expires
+            ? `Valid until: ${new Date(offer.expires).toLocaleDateString()}`
+            : "",
+          image:
+            offer.offerImage || offer.image ||
+            "/images/Offer Placeholder.png",
+          applicableServices: offer.applicableServiceNames || [],
+        };
+      }) || [];
 
   // Use fetched offers
   const offersToUse = offers;

@@ -28,7 +28,6 @@ async function verifyJwt(token) {
     const secret = JWT_SECRETS[role];
 
     if (!secret) {
-      console.log("JWT Verification Error: No secret for role", role);
       return null;
     }
 
@@ -36,7 +35,6 @@ async function verifyJwt(token) {
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
-    console.log("JWT Verification Error in withSubscriptionCheck:", error.code);
     return null;
   }
 }

@@ -31,15 +31,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const regionId = searchParams.get('regionId'); // Region filter
 
-    console.log("Vendor Payable to Admin Report - Product Filter parameters:", {
-      filterType,
-      filterValue,
-      startDateParam,
-      endDateParam,
-      city,
-      businessName,
-      userType
-    });
 
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
@@ -87,7 +78,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
 
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
-    console.log("Date filter:", dateFilter);
 
     // Show ALL COD orders that are not cancelled
     const regionQuery = getRegionQuery(req.user, regionId);
@@ -100,7 +90,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // City filter will be applied after lookups
 
-    console.log("Main filter for vendor payable to admin report - product:", mainFilter);
 
     // Build aggregation pipeline
     const pipeline = [
@@ -263,7 +252,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     });
 
-    console.log("Vendor payable to admin report - product results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [

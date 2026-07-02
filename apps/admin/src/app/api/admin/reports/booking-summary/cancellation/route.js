@@ -20,7 +20,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -31,13 +31,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const vendorId = searchParams.get('vendor'); // vendor filter
     const city = searchParams.get('city'); // city filter
     const regionId = searchParams.get('regionId'); // region filter
-    
-    console.log("Cancellation Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType });
-    
+
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -53,7 +52,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -61,7 +60,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -69,7 +68,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -78,10 +77,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { date: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
-    console.log("Date filter:", dateFilter);
-    
+
     // Build mode filter
     const buildModeFilter = (saleType) => {
       if (!saleType || saleType === 'all') {
@@ -89,9 +87,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       return { mode: saleType };
     };
-    
+
     const modeFilter = buildModeFilter(saleType);
-    
+
     // Build vendor filter
     const buildVendorFilter = async (vendorName) => {
       if (!vendorName || vendorName === 'all') {
@@ -104,10 +102,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       return { vendorId: vendor._id };
     };
-    
+
     const vendorFilter = await buildVendorFilter(vendorId);
     const regionQuery = getRegionQuery(req.user, regionId);
-    
+
     // Build city filter
     const buildCityFilter = (city) => {
       if (!city || city === 'all') {
@@ -116,9 +114,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       // We'll filter by city in the aggregation pipeline since it's in the vendor document
       return {};
     };
-    
+
     const cityFilter = buildCityFilter(city);
-    
+
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
@@ -127,23 +125,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...regionQuery,
       status: "cancelled"
     };
-    
-    console.log("Combined filter for Cancellation:", combinedFilter);
-    
+
+
     // Get cancelled appointments with vendor information
     const cancelledAppointments = await AppointmentModel.find(combinedFilter)
-    .populate('vendorId', 'businessName city')
-    .select('vendorId clientName serviceName date startTime endTime status mode createdAt');
-    
-    // Log for debugging vendor information
-    console.log('Cancelled appointments with vendor info:', cancelledAppointments.map(appt => ({
-      id: appt._id,
-      vendorId: appt.vendorId,
-      vendorName: appt.vendorId?.businessName || 'No vendor name',
-      vendorCity: appt.vendorId?.city || 'No city',
-      hasVendorId: !!appt.vendorId
-    })).slice(0, 5)); // Log first 5 for debugging
-    
+      .populate('vendorId', 'businessName city')
+      .select('vendorId clientName serviceName date startTime endTime status mode createdAt');
+
+
+
     // Format data as requested: Vendor, Booking
     const formattedData = cancelledAppointments.map(appointment => ({
       vendor: appointment.vendorId ? appointment.vendorId.businessName : 'Unknown Vendor',
@@ -157,12 +147,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
         createdAt: appointment.createdAt
       }
     }));
-    
+
     // Vendor-specific cancellation counts with city information and booking/payment modes
     // First, get all vendors for city filtering if needed (scoped by region)
     const regionalVendorQuery = buildRegionQueryFromRequest(req);
     const allVendors = await VendorModel.find(regionalVendorQuery, 'businessName city');
-    
+
     // Filter vendors by city if city filter is applied
     let filteredVendorIds = null;
     if (city && city !== 'all') {
@@ -176,7 +166,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         combinedFilter.vendorId = null;
       }
     }
-    
+
     const vendorCancellations = await AppointmentModel.aggregate([
       { $match: combinedFilter },
       {
@@ -208,7 +198,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
       return map;
     }, {});
-    
+
     // Get unique cities and vendors for dropdowns
     const uniqueCities = [...new Set(allVendors.map(v => v.city).filter(Boolean))];
     const uniqueVendors = [...new Set(allVendors.map(v => v.businessName).filter(Boolean))];
@@ -225,7 +215,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Calculate total cancellations across all vendors
     const totalCancellations = formattedVendorCancellations.reduce((sum, vendor) => sum + vendor.totalCancellations, 0);
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -237,11 +227,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
         filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });
-    
+
   } catch (error) {
     console.error("Error fetching cancellation report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching cancellation report",
       error: error.message

@@ -392,7 +392,6 @@ export default function CalendarPage() {
   const handleFormSubmit = useCallback(
     async (appointmentData: Appointment) => {
       try {
-        console.log("📝 Form submission - received data:", appointmentData);
 
         // Prepare the appointment data
         let dataToSubmit = { ...appointmentData };
@@ -401,10 +400,7 @@ export default function CalendarPage() {
         if (!isEditing) {
           // For new appointments, preserve the date from the form data
           // The form should already have the correct date set
-          console.log(
-            "📝 Creating new appointment with date:",
-            dataToSubmit.date
-          );
+
         }
 
         if (isEditing && selectedAppointment) {
@@ -421,12 +417,10 @@ export default function CalendarPage() {
             id: selectedAppointment.id || selectedAppointment._id,
             _id: selectedAppointment._id || selectedAppointment.id,
           };
-          console.log("📝 Updating appointment with data:", updateData);
           await updateAppointment(updateData).unwrap();
           toast.success("Appointment updated successfully");
         } else {
           // For new appointments
-          console.log("📝 Creating appointment with data:", dataToSubmit);
           await createAppointment(dataToSubmit).unwrap();
           toast.success("Appointment created successfully");
         }
@@ -1034,7 +1028,7 @@ export default function CalendarPage() {
 
         {isModalOpen && (
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent 
+            <DialogContent
               className="max-w-4xl max-h-[90vh] overflow-y-auto"
               onInteractOutside={(e) => e.preventDefault()}
               onEscapeKeyDown={(e) => e.preventDefault()}

@@ -15,7 +15,6 @@ const cleanupOldIndexes = async () => {
         const collection = StaffModel.collection;
         const indexes = await collection.indexes();
 
-        console.log('Current indexes:', indexes.map(idx => ({ name: idx.name, key: idx.key })));
 
         // Drop all unique indexes on emailAddress or mobileNo (global or compound)
         const problematicIndexes = indexes.filter(idx =>
@@ -23,14 +22,12 @@ const cleanupOldIndexes = async () => {
         );
 
         for (const index of problematicIndexes) {
-            console.log('Dropping index:', index.name);
             await collection.dropIndex(index.name);
         }
 
         // Create compound unique indexes
         await collection.createIndex({ vendorId: 1, emailAddress: 1 }, { unique: true });
         await collection.createIndex({ vendorId: 1, mobileNo: 1 }, { unique: true });
-        console.log('Created compound unique indexes for vendorId with emailAddress and mobileNo');
     } catch (error) {
         console.error('Index cleanup error:', error.message);
     }
@@ -124,13 +121,7 @@ export const POST = authMiddlewareCrm(async (req) => {
             mobileNo: body.mobileNo?.trim()
         };
 
-        console.log(`Creating staff for owner: ${ownerId} (Type: ${userType})`);
-        console.log('Request payload:', trimmedBody);
-        console.log('Commission Info:', {
-            commission: trimmedBody.commission,
-            commissionRate: trimmedBody.commissionRate,
-            type: typeof trimmedBody.commissionRate
-        });
+
 
         if (!trimmedBody.fullName || !trimmedBody.emailAddress || !trimmedBody.mobileNo || !trimmedBody.position) {
             return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -281,15 +272,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // DEBUG: Check if schema has commissionRate
         const schemaPaths = Object.keys(StaffModel.schema.paths);
         const hasCommissionRate = schemaPaths.includes('commissionRate');
-        console.log(`DEBUG: Schema check - commissionRate exists? ${hasCommissionRate}`);
-        console.log(`DEBUG: Schema paths count: ${schemaPaths.length}`);
 
-        console.log('Update Staff Request:', {
-            id: _id,
-            updateDataKeys: Object.keys(updateData),
-            commission: updateData.commission,
-            commissionRate: updateData.commissionRate
-        });
 
         if (!_id) {
             return NextResponse.json({ message: "Staff ID is required for update" }, { status: 400 });
@@ -328,7 +311,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // Explicitly handle commissionRate to ensure it's a number and saved
         if (updateData.commissionRate !== undefined) {
             updateData.commissionRate = Number(updateData.commissionRate);
-            console.log(`DEBUG: Explicitly setting commissionRate to ${updateData.commissionRate}`);
         }
 
         // Handle commission enabled date change

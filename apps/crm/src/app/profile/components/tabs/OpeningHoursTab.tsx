@@ -165,7 +165,6 @@ export const OpeningHoursTab = ({
   };
 
   const { data: workingHoursData } = useGetWorkingHoursQuery(undefined);
-  console.log("workingHoursData", workingHoursData);
 
   return (
     <Card>

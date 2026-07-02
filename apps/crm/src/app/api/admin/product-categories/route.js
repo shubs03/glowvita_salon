@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 // GET: Fetch product categories from Admin API
 export const GET = async (req, ctx) => {
   try {
-    console.log('CRM: Fetching product categories from Admin API');
-    
+
     // Call Admin API directly (same server, different port)
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
     const response = await fetch(`${adminApiUrl}/api/admin/product-categories`, {
@@ -20,7 +19,6 @@ export const GET = async (req, ctx) => {
     }
 
     const data = await response.json();
-    console.log('CRM: Received product categories from Admin:', data?.data?.length || data?.length || 0, 'items');
 
     // Return data in the format expected by frontend
     // If admin API already returns { data: [...] }, keep it that way
@@ -38,10 +36,10 @@ export const GET = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error fetching product categories:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error fetching product categories', 
-        error: error.message 
+        message: 'Error fetching product categories',
+        error: error.message
       },
       { status: 500 }
     );
@@ -51,7 +49,6 @@ export const GET = async (req, ctx) => {
 // POST: Create new product category via Admin API
 export const POST = async (req, ctx) => {
   try {
-    console.log('CRM: Creating product category via Admin API');
     const body = await req.json();
 
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
@@ -78,10 +75,10 @@ export const POST = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error creating product category:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error creating product category', 
-        error: error.message 
+        message: 'Error creating product category',
+        error: error.message
       },
       { status: 500 }
     );
@@ -91,7 +88,6 @@ export const POST = async (req, ctx) => {
 // PUT: Update product category via Admin API
 export const PUT = async (req, ctx) => {
   try {
-    console.log('CRM: Updating product category via Admin API');
     const body = await req.json();
 
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
@@ -118,10 +114,10 @@ export const PUT = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error updating product category:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error updating product category', 
-        error: error.message 
+        message: 'Error updating product category',
+        error: error.message
       },
       { status: 500 }
     );
@@ -131,7 +127,6 @@ export const PUT = async (req, ctx) => {
 // DELETE: Delete product category via Admin API
 export const DELETE = async (req, ctx) => {
   try {
-    console.log('CRM: Deleting product category via Admin API');
     const body = await req.json();
 
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
@@ -161,10 +156,10 @@ export const DELETE = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error deleting product category:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error deleting product category', 
-        error: error.message 
+        message: 'Error deleting product category',
+        error: error.message
       },
       { status: 500 }
     );

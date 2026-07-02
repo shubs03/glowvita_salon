@@ -18,7 +18,6 @@ const initDb = async () => {
 // GET - Fetch selling services report data
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
-    console.log("Selling Services Report API called");
     await initDb();
 
     // Extract filter parameters from query
@@ -35,7 +34,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const page = parseInt(searchParams.get('page')) || 1; // Pagination
     const regionId = searchParams.get('regionId'); // Region filter
 
-    console.log("Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, limit, page });
 
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
@@ -83,7 +81,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
 
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
-    console.log("Date filter:", dateFilter);
 
     // Build mode filter
     const buildModeFilter = (saleType) => {
@@ -107,7 +104,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
 
     // Add city filter to the pipeline instead of combinedFilter
-    console.log("Combined filter for Selling Services:", combinedFilter);
 
     // Service filter will be applied in the pipeline like city and vendor filters
 
@@ -319,7 +315,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Execute the optimized pipeline
     let servicesUsage = await AppointmentModel.aggregate(servicesUsagePipeline);
 
-    console.log("Aggregation result count:", servicesUsage.length);
 
     // Format data as requested: Service, Vendor, Total Service Amount (₹), Items Sold, Platform Fee, Service Tax
     const formattedData = servicesUsage
@@ -342,7 +337,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       }));
 
-    console.log("Formatted data count:", formattedData.length);
 
     // Get all services without pagination for accurate vendor count
     const allServicesPipeline = [

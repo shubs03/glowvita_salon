@@ -107,13 +107,11 @@ export default function WeddingPackagesPage() {
   // Debugging: Log the data
   useEffect(() => {
     if (servicesData) {
-      console.log('Services data:', servicesData);
     }
     if (servicesError) {
       console.error('Services error:', servicesError);
     }
     if (staffData) {
-      console.log('Staff data:', staffData);
     }
     if (staffError) {
       console.error('Staff error:', staffError);
@@ -125,8 +123,7 @@ export default function WeddingPackagesPage() {
   const packages = packagesData?.weddingPackages || [];
 
   // Log staff for debugging
-  console.log('Parsed staff array:', staff);
-  console.log('Staff count:', staff.length);
+
 
   // Calculate totals when services change
   useEffect(() => {

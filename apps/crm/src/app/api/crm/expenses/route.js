@@ -10,14 +10,12 @@ export const GET = withSubscriptionCheck(async (req) => {
     try {
         const ownerId = req.user.userId;
 
-        console.log(`Fetching expenses for owner: ${ownerId} (Role: ${req.user.role})`);
 
         const expenses = await ExpenseModel.find({
             vendorId: ownerId,
             status: 'Active'
         }).sort({ date: -1 });
 
-        console.log(`Found ${expenses.length} expense(s).`);
 
         return NextResponse.json(expenses, { status: 200 });
     } catch (error) {
@@ -33,8 +31,7 @@ export const POST = withSubscriptionCheck(async (req) => {
         const userType = req.user.role === 'doctor' ? 'Doctor' : req.user.role === 'supplier' ? 'Supplier' : 'Vendor';
         const body = await req.json();
 
-        console.log(`Creating expense for owner: ${ownerId} (Type: ${userType})`);
-        console.log('Request payload:', body);
+
 
         // Validate required fields
         if (!body.expenseType || !body.date || !body.amount || !body.paymentMode) {
@@ -53,12 +50,12 @@ export const POST = withSubscriptionCheck(async (req) => {
         // Fetch owner's region to inherit
         let parentRegionId = null;
         try {
-            const Model = req.user.role === 'doctor' 
+            const Model = req.user.role === 'doctor'
                 ? (await import("@repo/lib/models/Vendor/Docters.model")).default
                 : req.user.role === 'supplier'
                     ? (await import("@repo/lib/models/Vendor/Supplier.model")).default
                     : (await import("@repo/lib/models/Vendor/Vendor.model")).default;
-            
+
             const parent = await Model.findById(ownerId).select('regionId');
             parentRegionId = parent?.regionId;
         } catch (err) {
@@ -74,7 +71,6 @@ export const POST = withSubscriptionCheck(async (req) => {
         });
 
         const savedExpense = await newExpense.save();
-        console.log('Expense created successfully:', savedExpense._id);
 
         return NextResponse.json(savedExpense, { status: 201 });
     } catch (error) {
@@ -92,8 +88,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
         const ownerId = req.user.userId.toString();
         const body = await req.json();
 
-        console.log(`Updating expense for owner: ${ownerId}`);
-        console.log('Request payload:', body);
+
 
         if (!body._id) {
             return NextResponse.json({ message: "Expense ID is required" }, { status: 400 });
@@ -125,7 +120,6 @@ export const PUT = withSubscriptionCheck(async (req) => {
             { new: true, runValidators: true }
         );
 
-        console.log('Expense updated successfully:', updatedExpense._id);
 
         return NextResponse.json(updatedExpense, { status: 200 });
     } catch (error) {
@@ -143,8 +137,7 @@ export const DELETE = withSubscriptionCheck(async (req) => {
         const ownerId = req.user.userId.toString();
         const body = await req.json();
 
-        console.log(`Deleting expense for owner: ${ownerId}`);
-        console.log('Request payload:', body);
+
 
         if (!body.id) {
             return NextResponse.json({ message: "Expense ID is required" }, { status: 400 });
@@ -166,7 +159,6 @@ export const DELETE = withSubscriptionCheck(async (req) => {
         expense.status = 'Deleted';
         await expense.save();
 
-        console.log('Expense deleted successfully:', expense._id);
 
         return NextResponse.json({
             message: "Expense deleted successfully",

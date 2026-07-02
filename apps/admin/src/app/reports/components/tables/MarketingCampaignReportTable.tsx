@@ -33,7 +33,6 @@ export const MarketingCampaignReportTable = () => {
   } = useReport<CampaignData>();
 
   // Use the API hook to fetch marketing campaign report data with filters
-  console.log("Marketing Campaign Report API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetMarketingCampaignReportQuery(apiFilters);
 

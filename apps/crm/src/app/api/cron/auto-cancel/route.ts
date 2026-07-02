@@ -18,8 +18,7 @@ export async function GET(request: Request) {
         //     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         // }
 
-        console.log("[CRON] Running full system maintenance (Auto-cancel, Garbage Collection, Reconciliation)");
-        
+
         const [cancelResult, garbageResult, reconciliationResult] = await Promise.all([
             autoCancelExpiredAppointments({
                 gracePeriodMinutes: 15,
@@ -40,9 +39,9 @@ export async function GET(request: Request) {
         });
     } catch (error: any) {
         console.error("[CRON] Auto-cancellation API failed:", error);
-        return NextResponse.json({ 
-            success: false, 
-            error: error.message || "Internal Server Error" 
+        return NextResponse.json({
+            success: false,
+            error: error.message || "Internal Server Error"
         }, { status: 500 });
     }
 }

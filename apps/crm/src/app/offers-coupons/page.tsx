@@ -137,7 +137,6 @@ export default function OffersCouponsPage() {
   const userRole = auth?.role || "vendor"; // Simplified fallback
   const businessId = auth?.user?._id; // Use user ID as businessId
 
-  console.log("Auth Debug:", { auth, userRole, businessId }); // Debug auth values
 
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
@@ -289,7 +288,7 @@ export default function OffersCouponsPage() {
     const matchesGender = (catName: string, gender: string) => {
       const nameLower = catName.toLowerCase();
       const genderLower = gender.toLowerCase();
-      
+
       const isMen = () => {
         if (nameLower.includes('men') && !nameLower.includes('women')) return true;
         const menKeywords = ['hair cut', 'beard', 'shave'];
@@ -336,8 +335,8 @@ export default function OffersCouponsPage() {
       if (vendorServicesData?.services) {
         matchingCats.forEach((cat: any) => {
           const servicesInCategory = (vendorServicesData.services as any[])
-            .filter((s: any) => 
-              s.category === cat._id || 
+            .filter((s: any) =>
+              s.category === cat._id ||
               (typeof s.category === 'object' && s.category?._id === cat._id)
             )
             .map((s: any) => s._id);
@@ -401,7 +400,7 @@ export default function OffersCouponsPage() {
       const deselectedServiceObj = (vendorServicesData?.services as any[])?.find((s: any) => s._id === serviceId);
       if (deselectedServiceObj && deselectedServiceObj.category) {
         const catId = typeof deselectedServiceObj.category === 'object' ? deselectedServiceObj.category._id?.toString() : deselectedServiceObj.category.toString();
-        
+
         const otherServicesInSameCat = updated.some((sId: string) => {
           const sObj = (vendorServicesData?.services as any[])?.find((s: any) => s._id === sId);
           if (sObj && sObj.category) {
@@ -433,11 +432,11 @@ export default function OffersCouponsPage() {
     // Determine which services belong to this category
     const servicesInCat = vendorServicesData?.services
       ? (vendorServicesData.services as any[])
-          .filter((s: any) => 
-            s.category === categoryId || 
-            (typeof s.category === 'object' && s.category?._id === categoryId)
-          )
-          .map((s: any) => s._id)
+        .filter((s: any) =>
+          s.category === categoryId ||
+          (typeof s.category === 'object' && s.category?._id === categoryId)
+        )
+        .map((s: any) => s._id)
       : [];
 
     let updatedServices = [...selectedServices];
@@ -458,7 +457,7 @@ export default function OffersCouponsPage() {
 
     // Update categories state
     const autoCategories = getAutoCategoriesFromServices(updatedServices);
-    
+
     const updatedCategories = checked
       ? Array.from(new Set([...selectedServiceCategories, categoryId, ...autoCategories]))
       : Array.from(new Set([...selectedServiceCategories.filter((c: string) => c !== categoryId)]));
@@ -1313,8 +1312,8 @@ export default function OffersCouponsPage() {
                           )
                           .map((service: any) => (
                             <div
-                               key={service._id}
-                               className="flex items-center space-x-2 p-1 hover:bg-accent/50 rounded-sm transition-colors"
+                              key={service._id}
+                              className="flex items-center space-x-2 p-1 hover:bg-accent/50 rounded-sm transition-colors"
                             >
                               <Checkbox
                                 id={`service-${service._id}`}
@@ -1334,10 +1333,10 @@ export default function OffersCouponsPage() {
                               </Label>
                             </div>
                           )) || (
-                          <div className="text-sm text-muted-foreground p-4 text-center italic">
-                            No approved services found
-                          </div>
-                        )}
+                            <div className="text-sm text-muted-foreground p-4 text-center italic">
+                              No approved services found
+                            </div>
+                          )}
                       </div>
                     )}
                     <p className="text-sm text-muted-foreground">

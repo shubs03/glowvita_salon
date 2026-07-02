@@ -14,7 +14,6 @@ await _db();
 export const POST = authMiddlewareAdmin(async (req) => {
     try {
         const body = await req.json();
-        console.log("📝 Admin Renewal Payload:", body);
 
         const { vendorId, userId, planId, userType: payloadUserType } = body;
         const targetUserId = vendorId || userId;
@@ -100,7 +99,6 @@ export const POST = authMiddlewareAdmin(async (req) => {
             try {
                 const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
                 const referralResult = await checkAndCreditSubscriptionReferral(user._id.toString(), plan);
-                console.log('[Referral Bonus] Admin subscription-renewal referral result:', referralResult);
             } catch (err) {
                 console.error("[Referral Bonus] Check failed on admin subscription-renewal:", err);
             }

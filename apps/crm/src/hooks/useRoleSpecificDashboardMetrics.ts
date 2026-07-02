@@ -93,11 +93,9 @@ export const useRoleSpecificDashboardMetrics = (
     try {
       // Don't fetch if user is not authenticated
       if (!isCrmAuthenticated || !role) {
-        console.log("User not authenticated or role not available, skipping metrics fetch");
         return;
       }
 
-      console.log("Fetching dashboard metrics for user:", user, "role:", role);
       setLoading(true);
       setError(null);
 
@@ -115,14 +113,12 @@ export const useRoleSpecificDashboardMetrics = (
       }
 
       const response = await fetch(url);
-      console.log("API response status:", response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log("API response data:", result);
 
       if (!result.success) {
         throw new Error(result.message || `Failed to fetch ${role} dashboard metrics`);

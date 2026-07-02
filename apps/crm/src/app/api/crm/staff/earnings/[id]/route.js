@@ -34,7 +34,6 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
 
         // MIGRATION: If no ledger exists OR force recalculate is requested
         if (forceRecalc || (staff.accumulatedEarnings === 0 && (!staff.commissionCount || staff.commissionCount === 0))) {
-            console.log(`[Earnings] Starting ${forceRecalc ? 'forced recalculation' : 'auto-migration'} for staff ${staffId}`);
 
             // Fetch all completed appointments for this staff
             const completedAppointments = await AppointmentModel.find({
@@ -65,7 +64,6 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
                 "items.staffMember.id": new mongoose.Types.ObjectId(staffId)
             }).select('_id').lean();
 
-            console.log(`[Earnings] Found ${completedAppointments.length} appointments and ${completedBillings.length} billings to sync`);
 
             // Reset the staff counters before re-syncing to avoid double-counting
             if (forceRecalc) {
@@ -81,7 +79,6 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
                         lastTransactionDate: new Date()
                     }
                 });
-                console.log(`[Earnings] Reset staff counters for recalculation`);
             }
 
             // Re-sync each appointment and billing using the same logic as real-time
@@ -112,7 +109,6 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
                 staff.commissionCount = updatedStaff.commissionCount;
             }
 
-            console.log(`[Earnings] Recalculation done. New accumulatedEarnings: ${staff.accumulatedEarnings}`);
         }
 
         // 2. Fetch Period-Specific Summary if dates are provided

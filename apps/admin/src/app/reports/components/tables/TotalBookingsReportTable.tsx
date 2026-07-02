@@ -39,7 +39,6 @@ export const TotalBookingsReportTable = () => {
     filterAndPaginateData
   } = useReport<VendorBookingData>(5);
 
-  console.log("Total Bookings API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetTotalBookingsReportQuery(apiFilters);
 

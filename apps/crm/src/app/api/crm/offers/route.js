@@ -117,7 +117,7 @@ export const POST = authMiddlewareCrm(
       if (Array.isArray(applicableServices) && applicableServices.length > 0) {
         services = applicableServices;
       }
-      
+
       if (Array.isArray(applicableServiceCategories) && applicableServiceCategories.length > 0) {
         serviceCategories = applicableServiceCategories;
       }
@@ -164,7 +164,7 @@ export const POST = authMiddlewareCrm(
     if (offerImage && isValidBase64Image(offerImage)) {
       const fileName = `crm-offer-${Date.now()}`;
       imageUrl = await uploadBase64(offerImage, fileName);
-      
+
       if (!imageUrl) {
         return Response.json(
           { message: "Failed to upload image" },
@@ -184,12 +184,12 @@ export const POST = authMiddlewareCrm(
     // Fetch business owner's region to inherit
     let parentRegionId = null;
     try {
-      const Model = businessType === 'vendor' 
+      const Model = businessType === 'vendor'
         ? (await import("@repo/lib/models/Vendor/Vendor.model")).default
         : businessType === 'doctor'
           ? (await import("@repo/lib/models/Vendor/Docters.model")).default
           : (await import("@repo/lib/models/Vendor/Supplier.model")).default;
-      
+
       const parent = await Model.findById(businessId).select('regionId');
       parentRegionId = parent?.regionId;
     } catch (err) {
@@ -248,27 +248,24 @@ export const GET = authMiddlewareCrm(async (req) => {
   try {
     const user = req.user;
 
-    console.log('req.user', req.user);
 
-    console.log("user:", user);
-    
+
     // Determine business type for filtering
     // Staff members belong to vendor business type
     const businessType = user.role === 'staff' ? 'vendor' : user.role;
-    
+
     // For staff, we need to get the vendor ID they belong to
     let businessId = user.userId;
     if (user.role === 'staff' && user.vendorId) {
       businessId = user.vendorId;
     }
-    
+
     // Filter offers by business type and business ID
-    const offers = await CRMOfferModel.find({ 
+    const offers = await CRMOfferModel.find({
       businessType: businessType,
-      businessId: businessId 
+      businessId: businessId
     });
-    console.log('GET /api/crm/offers - Found offers:', offers.length);
-    
+
     const currentDate = new Date();
 
     // Update status for each offer based on current date
@@ -310,9 +307,9 @@ export const GET = authMiddlewareCrm(async (req) => {
     return Response.json(sanitizedOffers);
   } catch (error) {
     console.error('Error:', error);
-    return Response.json({ 
-      message: "Internal server error", 
-      error: error.message 
+    return Response.json({
+      message: "Internal server error",
+      error: error.message
     }, { status: 500 });
   }
 }, ['vendor', 'doctor', 'supplier']);
@@ -342,24 +339,24 @@ export const PUT = authMiddlewareCrm(
           // Upload new image to VPS
           const fileName = `crm-offer-${Date.now()}`;
           const imageUrl = await uploadBase64(updateData.offerImage, fileName);
-          
+
           if (!imageUrl) {
             return Response.json(
               { message: "Failed to upload image" },
               { status: 500 }
             );
           }
-          
+
           // Delete old image from VPS if it exists
           if (offer.offerImage) {
             await deleteFile(offer.offerImage);
           }
-          
+
           updateData.offerImage = imageUrl;
         } else {
           // If image is null/empty, remove it
           updateData.offerImage = null;
-          
+
           // Delete old image from VPS if it exists
           if (offer.offerImage) {
             await deleteFile(offer.offerImage);
@@ -373,7 +370,7 @@ export const PUT = authMiddlewareCrm(
         if (Array.isArray(updateData.applicableServices)) {
           updateData.applicableServices = updateData.applicableServices;
         }
-        
+
         if (Array.isArray(updateData.applicableServiceCategories)) {
           updateData.applicableServiceCategories = updateData.applicableServiceCategories;
         }
@@ -419,7 +416,7 @@ export const PUT = authMiddlewareCrm(
 
       // Handle code update only if a new, non-empty code is provided.
       if (updateData.code && updateData.code.trim()) {
-        const existingOffer = await CRMOfferModel.findOne({ 
+        const existingOffer = await CRMOfferModel.findOne({
           code: updateData.code.toUpperCase().trim(),
           _id: { $ne: id }
         });
@@ -455,17 +452,17 @@ export const PUT = authMiddlewareCrm(
         })();
       }
 
-      return Response.json({ 
+      return Response.json({
         success: true,
         message: "Offer updated successfully",
-        data: updatedOffer 
+        data: updatedOffer
       }, { status: 200 });
     } catch (error) {
       console.error('Error updating offer:', error);
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Failed to update offer", 
-        error: error.message 
+        message: "Failed to update offer",
+        error: error.message
       }, { status: 500 });
     }
   },
@@ -489,22 +486,22 @@ export const DELETE = authMiddlewareCrm(
       if (!deletedOffer) {
         return Response.json({ message: "Offer not found or access denied" }, { status: 404 });
       }
-      
+
       // Delete image from VPS if it exists
       if (deletedOffer.offerImage) {
         await deleteFile(deletedOffer.offerImage);
       }
 
-      return Response.json({ 
+      return Response.json({
         success: true,
-        message: "Offer deleted successfully" 
+        message: "Offer deleted successfully"
       }, { status: 200 });
     } catch (error) {
       console.error('Error deleting offer:', error);
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Failed to delete offer", 
-        error: error.message 
+        message: "Failed to delete offer",
+        error: error.message
       }, { status: 500 });
     }
   },

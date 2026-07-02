@@ -50,14 +50,12 @@ self.addEventListener('push', (event) => {
       };
       event.waitUntil(self.registration.showNotification(title, options));
     } catch (e) {
-      console.log('[CRM SW] Push signal received, triggering backup sound');
       soundChannel.postMessage({ type: 'PLAY_SOUND', from: 'SW_FALLBACK_CRM' });
     }
   }
 });
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[CRM SW] background arrival:', payload);
   const data = payload.data || {};
   const title = data.title || payload.notification?.title || 'GlowVita CRM';
   const body = data.body || payload.notification?.body || '';

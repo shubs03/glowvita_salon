@@ -305,7 +305,6 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
   const preventSubmission = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(`Form submission prevented on step ${step}`);
     return false;
   };
 
@@ -334,7 +333,6 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(`Unexpected form submission blocked on step ${step}`);
     return false;
   };
 
@@ -437,7 +435,6 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
     if (step === 3) {
       await handleActualSubmit();
     } else {
-      console.log(`Final submit blocked - not on step 3, current step: ${step}`);
     }
   };
 
@@ -445,7 +442,6 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
     if (e.key === 'Enter' && step < 3) {
       e.preventDefault();
       e.stopPropagation();
-      console.log(`Input Enter key blocked on step ${step}`);
       return false;
     }
   };
@@ -515,7 +511,7 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                     required
                   />
                   {!isEmailVerified && (
-                    <Button 
+                    <Button
                       type="button"
                       onClick={handleSendEmailOtp}
                       disabled={isOtpLoading || !formData.email || !!email}
@@ -526,20 +522,20 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                   )}
                 </div>
                 {renderError('email')}
-                
+
                 {isEmailOtpSent && !isEmailVerified && (
                   <div className="pt-2 animate-in fade-in slide-in-from-top-2">
                     <div className="flex gap-2">
-                      <Input 
-                        type="text" 
-                        placeholder="OTP" 
+                      <Input
+                        type="text"
+                        placeholder="OTP"
                         maxLength={6}
-                        value={emailOtp} 
+                        value={emailOtp}
                         onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         disabled={isOtpLoading}
                         className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
                       />
-                      <Button 
+                      <Button
                         type="button"
                         onClick={handleVerifyEmailOtp}
                         disabled={isOtpLoading || emailOtp.length < 6}
@@ -572,7 +568,7 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                     required
                   />
                   {!isPhoneVerified && (
-                    <Button 
+                    <Button
                       type="button"
                       onClick={handleSendPhoneOtp}
                       disabled={isOtpLoading || formData.phone.length < 10}
@@ -587,16 +583,16 @@ export function DoctorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                 {isPhoneOtpSent && !isPhoneVerified && (
                   <div className="pt-2 animate-in fade-in slide-in-from-top-2">
                     <div className="flex gap-2">
-                      <Input 
-                        type="text" 
-                        placeholder="OTP" 
+                      <Input
+                        type="text"
+                        placeholder="OTP"
                         maxLength={6}
-                        value={phoneOtp} 
+                        value={phoneOtp}
                         onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         disabled={isOtpLoading}
                         className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
                       />
-                      <Button 
+                      <Button
                         type="button"
                         onClick={handleVerifyPhoneOtp}
                         disabled={isOtpLoading || phoneOtp.length < 6}

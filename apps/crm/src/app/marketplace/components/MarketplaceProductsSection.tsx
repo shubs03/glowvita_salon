@@ -112,8 +112,8 @@ export const MarketplaceProductsSection = ({
                             <Badge variant="outline" className="text-xs">
                               {product.category.name}
                             </Badge>
-                             {product.stock === 0 && (
-                              <Badge 
+                            {product.stock === 0 && (
+                              <Badge
                                 variant="destructive"
                                 className="text-xs bg-red-100 text-red-800 border-red-200"
                               >
@@ -180,7 +180,7 @@ export const MarketplaceProductsSection = ({
             ))}
           </div>
         )}
-        
+
         {filteredProducts.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <div className="mx-auto w-16 h-16 mb-4 bg-muted/20 rounded-xl flex items-center justify-center border border-border">
@@ -192,15 +192,14 @@ export const MarketplaceProductsSection = ({
             </p>
           </div>
         )}
-        
+
         {filteredProducts.length > 20 && (
           <div className="text-center mt-12">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               className="px-10 py-4 rounded-lg border-dashed border-2 border-border hover:border-primary hover:bg-primary/5 transition-all duration-300 bg-background h-14 text-base"
               onClick={() => {
-                console.log('Loading more products...');
               }}
             >
               <Package className="h-5 w-5 mr-3" />

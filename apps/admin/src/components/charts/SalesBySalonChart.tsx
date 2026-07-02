@@ -11,14 +11,13 @@ export function SalesBySalonChart({ filterType, filterValue }: { filterType?: st
     filterType,
     filterValue
   });
-  
+
   // Debugging: log the raw data
   useEffect(() => {
     if (dashboardData) {
-      console.log('Dashboard Data:', dashboardData);
     }
   }, [dashboardData]);
-  
+
   // Format the data for the chart - include all vendors, even those with zero revenue
   const chartData = dashboardData?.salesBySalon?.map((salon: any) => ({
     name: salon.businessName,
@@ -49,10 +48,9 @@ export function SalesBySalonChart({ filterType, filterValue }: { filterType?: st
   // Check if we have vendors - improved check
   const totalVendors = dashboardData?.totalVendors?.current || 0;
   const hasVendors = totalVendors > 0;
-  
+
   // Debugging: log vendor count
-  console.log('Total Vendors:', totalVendors, 'Has Vendors:', hasVendors);
-  
+
   if (!hasVendors) {
     return (
       <div className="flex items-center justify-center h-[350px]">
@@ -121,7 +119,7 @@ export function SalesBySalonChart({ filterType, filterValue }: { filterType?: st
     <ResponsiveContainer width="100%" height={350}>
       <PieChart>
         <Pie
-            data={chartData}
+          data={chartData}
           cx="50%"
           cy="50%"
           labelLine={false}
@@ -135,8 +133,8 @@ export function SalesBySalonChart({ filterType, filterValue }: { filterType?: st
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend 
-          iconType="circle" 
+        <Legend
+          iconType="circle"
           layout="horizontal" // Changed to horizontal layout
           align="center"
           verticalAlign="bottom"

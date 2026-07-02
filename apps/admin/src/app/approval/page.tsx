@@ -298,7 +298,6 @@ export default function VendorApprovalPage() {
 
         // Debug logging
         if (isPending) {
-          console.log(`Supplier ${s.shopName} has pending document: ${docType}`);
         }
 
         return isPending;
@@ -326,7 +325,6 @@ export default function VendorApprovalPage() {
 
         // Debug logging
         if (isPending) {
-          console.log(`Vendor ${v.businessName} has pending document: ${docType}`);
         }
 
         return isPending;
@@ -601,8 +599,6 @@ export default function VendorApprovalPage() {
   const vendorProducts = Array.isArray(vendorProductData?.products) ? vendorProductData.products : [];
   const supplierProducts = Array.isArray(supplierProductData?.products) ? supplierProductData.products : [];
 
-  console.log("Vendor Products Data:", vendorProducts);
-  console.log("Supplier Products Data:", supplierProducts);
 
   const pendingVendorProducts = vendorProducts
     .filter((p: Product) => p.status === 'pending')

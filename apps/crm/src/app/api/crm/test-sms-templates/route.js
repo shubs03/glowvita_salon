@@ -5,19 +5,15 @@ import SmsTemplate from '../../../../../../../packages/lib/src/models/Marketing/
 // GET all SMS templates for CRM - TEST ENDPOINT (NO AUTH)
 export async function GET(req) {
   try {
-    console.log('Received GET /api/crm/test-sms-templates request');
-    
+
     // Connect to database
     await _db();
-    console.log('Database connected');
-    
-    console.log('Fetching SMS templates (Test Mode)...');
+
     const templates = await SmsTemplate.find({})
       .sort({ isPopular: -1, name: 1 })
       .select('-__v');
-    
-    console.log(`Found ${templates.length} templates in database (Test Mode)`);
-    
+
+
     // Transform templates to ensure they have the required fields
     const formattedTemplates = templates.map(template => ({
       _id: template._id,
@@ -31,11 +27,11 @@ export async function GET(req) {
       createdAt: template.createdAt,
       updatedAt: template.updatedAt
     }));
-      
+
     return NextResponse.json({
       success: true,
       data: formattedTemplates
-    }, { 
+    }, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -45,12 +41,12 @@ export async function GET(req) {
   } catch (error) {
     console.error('Error in GET /api/crm/test-sms-templates:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error fetching SMS templates (Test Mode)', 
+        message: 'Error fetching SMS templates (Test Mode)',
         error: error.message
       },
-      { 
+      {
         status: 500,
         headers: {
           'Content-Type': 'application/json'

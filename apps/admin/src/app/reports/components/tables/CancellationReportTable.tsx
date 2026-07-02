@@ -33,12 +33,10 @@ export const CancellationReportTable = () => {
   } = useReport<VendorCancellationStat>();
 
   // Use the API hook to fetch cancellation report data with filters
-  console.log("Cancellation API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetCancellationReportQuery(apiFilters);
 
   // Debug: Log the actual data structure
-  console.log('Cancellation raw data:', data);
 
   // Define data variables after API call
   // The API returns an object with vendorCancellations array

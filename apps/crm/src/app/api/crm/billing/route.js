@@ -34,7 +34,6 @@ export const POST = withSubscriptionCheck(async (req) => {
                     const rate = staff.commissionRate || 0;
                     const amount = (effectiveAmount * rate) / 100;
 
-                    console.log(`Applying commission for staff ${staff.fullName}: Rate ${rate}%, Amount ${amount} on Effective Amount ${effectiveAmount}`);
 
                     return {
                         ...item,
@@ -72,7 +71,6 @@ export const POST = withSubscriptionCheck(async (req) => {
                         { $inc: { stock: -1 * (item.quantity || 1) } },
                         { new: true }
                     );
-                    console.log(`Updated stock for product ${item.name}: New stock ${updatedProduct?.stock}`);
                 }
             }
         } catch (stockError) {

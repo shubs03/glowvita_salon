@@ -16,12 +16,9 @@ const getProducts = async (req) => {
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
-    console.log("Connecting to database...");
     // Ensure database connection is established
     const dbConnection = await _db();
-    console.log("Database connected successfully", dbConnection?.connection?.name);
 
-    console.log("Fetching approved vendor products from database");
 
     // Filter products by fixed origin 'Vendor' only and with status 'approved'
     const products = await ProductModel.find({ origin: 'Vendor', status: 'approved' })
@@ -34,11 +31,9 @@ const getProducts = async (req) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    console.log(`Found ${products.length} approved vendor products`);
 
     // Log sample product data for debugging
     if (products.length > 0) {
-      console.log("Sample product:", JSON.stringify(products[0], null, 2));
     }
 
     const transformedProducts = products.map(product => ({
@@ -156,14 +151,11 @@ export const PUT = authMiddlewareCrm(async (req) => {
   try {
     await _db(); // Ensure database connection
     const body = await req.json();
-    console.log("Vendor products PUT request body:", body);
     // Extract ID and other fields from the body object
     const { id: bodyId, productImage, category, status, ...updateData } = body;
     const id = bodyId || body._id;
-    console.log("Extracted ID:", id);
 
     if (!id) {
-      console.log("ID is missing from request body");
       return NextResponse.json({
         success: false,
         message: "ID is required for update"
@@ -172,13 +164,11 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
     // Validate that ID is a string
     if (typeof id !== 'string') {
-      console.log("ID is not a string:", id);
       return NextResponse.json({ success: false, message: "ID must be a string" }, { status: 400 });
     }
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.log("Invalid product ID format:", id);
       return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
     }
 
@@ -204,7 +194,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
     // Check that the product belongs to the vendor making the request
     const vendorId = req.user._id;
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {
-      console.log("Invalid vendor ID format:", vendorId);
       return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
     }
 
@@ -245,31 +234,25 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     // Ensure database connection
     await _db();
     const body = await req.json();
-    console.log("Vendor products DELETE request body:", body);
     // Extract ID from the body object { id: '...' }
     const id = body.id || body._id;
-    console.log("Extracted ID:", id);
 
     if (!id) {
-      console.log("ID is missing from request body");
       return NextResponse.json({ success: false, message: "ID is required for deletion" }, { status: 400 });
     }
 
     // Validate that ID is a string
     if (typeof id !== 'string') {
-      console.log("ID is not a string:", id);
       return NextResponse.json({ success: false, message: "ID must be a string" }, { status: 400 });
     }
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.log("Invalid product ID format:", id);
       return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
     }
 
     const vendorId = req.user._id;
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {
-      console.log("Invalid vendor ID format:", vendorId);
       return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
     }
 
@@ -277,7 +260,6 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     let deletedProduct;
     try {
       deletedProduct = await ProductModel.findOneAndDelete({ _id: id, vendorId: vendorId, origin: 'Vendor' });
-      console.log("Delete operation result:", deletedProduct);
     } catch (dbError) {
       console.error("Database error during deletion:", dbError);
       console.error("Database error stack:", dbError.stack);

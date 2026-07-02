@@ -84,7 +84,6 @@ const getProducts = async (req) => {
     // Don't return 401 error if userId is missing - return empty products instead
     // This prevents auth errors from triggering logout
     if (!vendorId) {
-      console.log("Warning: User/Vendor ID not found in products API request");
       return NextResponse.json({
         success: true,
         data: []
@@ -581,58 +580,42 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a product
 export const DELETE = authMiddlewareCrm(async (req) => {
   try {
-    console.log("DELETE request received");
     // Ensure database connection
     await _db();
     const body = await req.json();
-    console.log("Request body:", body);
-    console.log("Request body type:", typeof body);
-    console.log("Body keys:", Object.keys(body));
+
 
     // Extract ID from the body object { id: '...' }
     let id = body.id || body._id;
-    console.log("Raw ID extracted:", id, "Type:", typeof id);
 
     // Convert to string if it's not already
     if (id && typeof id === 'object' && id.toString) {
-      console.log("ID is an object, converting with toString()");
       id = id.toString();
     } else if (id) {
-      console.log("Converting ID to string with String()");
       id = String(id);
     }
 
-    console.log("Extracted ID after conversion:", id, "Type:", typeof id, "Length:", id?.length);
 
     if (!id) {
-      console.log("ID is missing from request body");
       return NextResponse.json({ success: false, message: "ID is required for deletion" }, { status: 400 });
     }
 
-    console.log("Product ID to delete:", id);
 
     // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
-    console.log("Full user object:", JSON.stringify(req.user, null, 2));
     const vendorId = req.user._id || req.user.userId;
-    console.log("Vendor ID from request:", vendorId);
 
     if (!vendorId) {
-      console.log("Unable to determine vendor ID from authentication");
       return NextResponse.json(
         { success: false, message: "Unable to determine vendor ID from authentication" },
         { status: 400 }
       );
     }
 
-    console.log("Attempting to delete product with ID:", id, "for vendor:", vendorId);
 
     // Validate ObjectId format - trim whitespace first
     const trimmedId = id?.trim();
-    console.log("Trimmed ID:", trimmedId, "Original length:", id?.length, "Trimmed length:", trimmedId?.length);
 
     if (!trimmedId || !mongoose.Types.ObjectId.isValid(trimmedId)) {
-      console.log("Invalid product ID format:", trimmedId, "Type:", typeof trimmedId, "Length:", trimmedId?.length);
-      console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(trimmedId));
       return NextResponse.json({
         success: false,
         message: "Invalid product ID format. Please try again.",
@@ -649,14 +632,12 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     id = trimmedId;
 
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {
-      console.log("Invalid vendor ID format:", vendorId);
       return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
     }
 
     let deletedProduct;
     try {
       deletedProduct = await ProductModel.findOneAndDelete({ _id: id, vendorId: vendorId });
-      console.log("Delete operation result:", deletedProduct);
     } catch (dbError) {
       console.error("Database error during deletion:", dbError);
       console.error("Database error stack:", dbError.stack);
@@ -664,7 +645,6 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     }
 
     if (!deletedProduct) {
-      console.log("Product not found or user doesn't have permission to delete it");
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to delete it" }, { status: 404 });
     }
 

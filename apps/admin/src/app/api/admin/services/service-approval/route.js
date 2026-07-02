@@ -97,7 +97,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 export const PATCH = authMiddlewareAdmin(async (req) => {
   const body = await req.json();
   const { serviceId, status, rejectionReason } = body;
-  console.log("Service Approval PATCH - Payload:", { serviceId, status, rejectionReason });
 
   if (!serviceId || !status) {
     return Response.json(
@@ -136,10 +135,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     }
 
     const updatedService = updatedVendorService.services.find(s => s._id.toString() === serviceId);
-    console.log("Service Approval PATCH - Update Result Service:", {
-      status: updatedService?.status,
-      rejectionReason: updatedService?.rejectionReason
-    });
+
 
     // Trigger Notification for Service Approval
     (async () => {
@@ -165,7 +161,6 @@ export const PUT = authMiddlewareAdmin(async (req) => {
   const body = await req.json();
   const { serviceId, onlineBooking } = body;
 
-  console.log("PUT /service-approval - Update onlineBooking:", { serviceId, onlineBooking });
 
   if (!serviceId || typeof onlineBooking !== 'boolean') {
     return Response.json(
@@ -189,7 +184,6 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       return Response.json({ message: "Service not found" }, { status: 404 });
     }
 
-    console.log(`Updated service ${serviceId} onlineBooking to ${onlineBooking}`);
 
     return Response.json({
       message: "Service online booking status updated successfully",

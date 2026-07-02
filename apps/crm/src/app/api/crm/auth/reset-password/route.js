@@ -77,7 +77,6 @@ export async function POST(request) {
 
     await Model.findByIdAndUpdate(user._id, updateData);
 
-    console.log('Password updated and token cleared for user:', user.email);
 
     return NextResponse.json({
       success: true,

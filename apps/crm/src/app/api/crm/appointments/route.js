@@ -12,8 +12,6 @@ import { checkAndCreditReferralBonus } from "../../../../../../../packages/lib/s
 
 // Helper function to send appointment emails and notifications
 const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus, fallbackClientId = null) => {
-    console.log(`[Notification Debug] Processing appointment ${appointment._id}`);
-    console.log(`[Notification Debug] Status change: ${oldStatus} -> ${newStatus}`);
 
     if (newStatus === oldStatus) return;
 
@@ -22,7 +20,7 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
         const businessName = vendor?.businessName || 'GlowVita Salon';
         const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
         const businessPhone = vendor?.phone || '';
-        
+
         // Resolve Client Info
         let clientEmail = appointment.client?.email || appointment.clientEmail;
         let clientName = appointment.client?.fullName || appointment.clientName;
@@ -46,98 +44,97 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
         if (clientEmail) {
             try {
                 if (newStatus === 'confirmed') {
-                const emailHtml = getConfirmationTemplate({
-                    clientName,
-                    businessName,
-                    serviceName: appointment.serviceName,
-                    date: appointment.date,
-                    startTime: appointment.startTime,
-                    location: appointment.homeServiceLocation?.address || businessName
-                });
+                    const emailHtml = getConfirmationTemplate({
+                        clientName,
+                        businessName,
+                        serviceName: appointment.serviceName,
+                        date: appointment.date,
+                        startTime: appointment.startTime,
+                        location: appointment.homeServiceLocation?.address || businessName
+                    });
 
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Appointment Confirmed - ${businessName}`,
-                    html: emailHtml
-                });
-                console.log(`Confirmation email sent to ${clientEmail}`);
-            } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
-                // Send completion template
-                const completionHtml = getCompletionTemplate({
-                    clientName,
-                    businessName,
-                    serviceName: appointment.serviceName,
-                    appointmentId: appointment.invoiceNumber || appointment._id.toString(),
-                    appointmentDbId: appointment._id.toString(),
-                    appointmentDate: new Date(appointment.date || appointment.startTime || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
-                    appointmentTime: appointment.startTime,
-                    completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
-                    completedTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
-                    orderTotal: appointment.totalAmount,
-                    location: appointment.homeServiceLocation?.address || businessName,
-                    businessAddress,
-                    businessPhone
-                });
+                    await sendEmail({
+                        to: clientEmail,
+                        subject: `Appointment Confirmed - ${businessName}`,
+                        html: emailHtml
+                    });
+                } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
+                    // Send completion template
+                    const completionHtml = getCompletionTemplate({
+                        clientName,
+                        businessName,
+                        serviceName: appointment.serviceName,
+                        appointmentId: appointment.invoiceNumber || appointment._id.toString(),
+                        appointmentDbId: appointment._id.toString(),
+                        appointmentDate: new Date(appointment.date || appointment.startTime || new Date()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                        appointmentTime: appointment.startTime,
+                        completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                        completedTime: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                        orderTotal: appointment.totalAmount,
+                        location: appointment.homeServiceLocation?.address || businessName,
+                        businessAddress,
+                        businessPhone
+                    });
 
-                // Fetch formal invoice
-                let invoiceHtml;
-                let formalInvoice;
-                try {
-                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                    formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+                    // Fetch formal invoice
+                    let invoiceHtml;
+                    let formalInvoice;
+                    try {
+                        const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                        formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
 
-                    if (formalInvoice) {
-                        invoiceHtml = getInvoiceTemplate({
-                            clientName,
-                            clientPhone,
-                            businessName,
-                            businessAddress,
-                            businessPhone,
-                            date: new Date(formalInvoice.createdAt).toLocaleDateString(),
-                            items: formalInvoice.items,
-                            subtotal: formalInvoice.subtotal,
-                            tax: formalInvoice.taxAmount,
-                            taxRate: formalInvoice.taxRate,
-                            platformFee: formalInvoice.platformFee,
-                            discount: formalInvoice.discountAmount,
-                            couponCode: appointment.payment?.offer?.code || "",
-                            totalAmount: formalInvoice.totalAmount,
-                            paymentStatus: formalInvoice.paymentStatus,
-                            invoiceNumber: formalInvoice.invoiceNumber,
-                            paymentMethod: formalInvoice.paymentMethod
-                        });
-                    } else {
-                        // Fallback
-                        invoiceHtml = getInvoiceTemplate({
-                            clientName,
-                            clientPhone,
-                            businessName,
-                            businessAddress,
-                            businessPhone,
-                            date: new Date(appointment.date).toLocaleDateString(),
-                            items: [{
-                                name: appointment.serviceName,
-                                price: appointment.amount,
-                                quantity: 1,
-                                totalPrice: appointment.amount
-                            }],
-                            subtotal: appointment.amount,
-                            tax: appointment.serviceTax || appointment.tax || 0,
-                            taxRate: 0,
-                            platformFee: appointment.platformFee || 0,
-                            discount: appointment.discountAmount || appointment.discount || 0,
-                            totalAmount: appointment.totalAmount,
-                            paymentStatus: appointment.paymentStatus,
-                            invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
-                            paymentMethod: appointment.paymentMethod
-                        });
+                        if (formalInvoice) {
+                            invoiceHtml = getInvoiceTemplate({
+                                clientName,
+                                clientPhone,
+                                businessName,
+                                businessAddress,
+                                businessPhone,
+                                date: new Date(formalInvoice.createdAt).toLocaleDateString(),
+                                items: formalInvoice.items,
+                                subtotal: formalInvoice.subtotal,
+                                tax: formalInvoice.taxAmount,
+                                taxRate: formalInvoice.taxRate,
+                                platformFee: formalInvoice.platformFee,
+                                discount: formalInvoice.discountAmount,
+                                couponCode: appointment.payment?.offer?.code || "",
+                                totalAmount: formalInvoice.totalAmount,
+                                paymentStatus: formalInvoice.paymentStatus,
+                                invoiceNumber: formalInvoice.invoiceNumber,
+                                paymentMethod: formalInvoice.paymentMethod
+                            });
+                        } else {
+                            // Fallback
+                            invoiceHtml = getInvoiceTemplate({
+                                clientName,
+                                clientPhone,
+                                businessName,
+                                businessAddress,
+                                businessPhone,
+                                date: new Date(appointment.date).toLocaleDateString(),
+                                items: [{
+                                    name: appointment.serviceName,
+                                    price: appointment.amount,
+                                    quantity: 1,
+                                    totalPrice: appointment.amount
+                                }],
+                                subtotal: appointment.amount,
+                                tax: appointment.serviceTax || appointment.tax || 0,
+                                taxRate: 0,
+                                platformFee: appointment.platformFee || 0,
+                                discount: appointment.discountAmount || appointment.discount || 0,
+                                totalAmount: appointment.totalAmount,
+                                paymentStatus: appointment.paymentStatus,
+                                invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
+                                paymentMethod: appointment.paymentMethod
+                            });
+                        }
+                    } catch (tplError) {
+                        console.error('Error fetching invoice for email:', tplError);
                     }
-                } catch (tplError) {
-                    console.error('Error fetching invoice for email:', tplError);
-                }
-                // Generate PDF Buffer
-                let pdfBuffer;
-                if (invoiceHtml) {
+                    // Generate PDF Buffer
+                    let pdfBuffer;
+                    if (invoiceHtml) {
                         try {
                             const pdf = (await import('html-pdf')).default;
                             pdfBuffer = await new Promise((resolve, reject) => {
@@ -175,7 +172,7 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
         if (clientId && clientId.toString().length === 24) {
             await NotificationService.sendAppointmentAlert(clientId, 'client', appointment, newStatus);
         }
-        
+
         // Notify Vendor as well
         if (vendorId) {
             await NotificationService.sendAppointmentAlert(vendorId, 'vendor', appointment, newStatus);
@@ -225,14 +222,12 @@ const extractAppointmentId = (url, params) => {
 // Handle both GET /api/crm/appointments and GET /api/crm/appointments/[id]
 export const GET = withSubscriptionCheck(async (req, { params }) => {
     try {
-        console.log('GET request - params:', params);
-        console.log('GET request - req.user:', req.user);
+
         const vendorId = req.user.vendorId || req.user.userId;
         const { searchParams } = new URL(req.url);
         const id = extractAppointmentId(req.url, params);
 
-        console.log('GET request - extracted ID:', id);
-        console.log('GET request - params:', params);
+
 
         // If ID is provided, return single appointment
         if (id) {
@@ -348,7 +343,6 @@ export const POST = withSubscriptionCheck(async (req) => {
         const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
 
-        console.log('POST request - creating appointment:', body);
 
         // Required fields validation
         const requiredFields = [
@@ -440,14 +434,14 @@ export const POST = withSubscriptionCheck(async (req) => {
         const addOnsAmount = serviceItems.reduce((sum, item) => {
             return sum + (item.addOns?.reduce((addonSum, addon) => addonSum + (Number(addon.price) || 0), 0) || 0);
         }, 0);
-        
+
         const discountAmount = Number(body.discount || body.discountAmount) || 0;
         const taxAmount = Number(body.serviceTax || body.tax) || 0;
         const platformFee = Number(body.platformFee) || 0;
-        
+
         // If totalAmount is provided in body, use it, otherwise calculate it
-        const totalAmount = body.totalAmount !== undefined 
-            ? Number(body.totalAmount) 
+        const totalAmount = body.totalAmount !== undefined
+            ? Number(body.totalAmount)
             : Math.max(0, baseAmount + addOnsAmount - discountAmount + taxAmount + platformFee);
 
         // Set default values
@@ -505,7 +499,6 @@ export const POST = withSubscriptionCheck(async (req) => {
                     const AdminOfferModel = (await import('../../../../../../../packages/lib/src/models/admin/AdminOffers.model.js')).default;
                     await AdminOfferModel.incrementRedemption(appointmentData.couponCode, discountToTrack);
                 }
-                console.log(`Incremented redemption count and discount for offline booking coupon: ${appointmentData.couponCode}`);
             } catch (offerErr) {
                 console.error(`Error incrementing offline coupon redemption for ${appointmentData.couponCode}:`, offerErr);
             }
@@ -595,7 +588,7 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             const tax = updateData.serviceTax !== undefined ? Number(updateData.serviceTax) : (updateData.tax !== undefined ? Number(updateData.tax) : (existingAppointment.serviceTax || existingAppointment.tax || 0));
             const addOns = updateData.addOnsAmount !== undefined ? Number(updateData.addOnsAmount) : (existingAppointment.addOnsAmount || 0);
             const platformFee = updateData.platformFee !== undefined ? Number(updateData.platformFee) : (existingAppointment.platformFee || 0);
-            
+
             updateData.totalAmount = Math.max(0, amount + addOns - discount + tax + platformFee);
         }
 
@@ -683,15 +676,14 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         if (updateData.couponCode && updateData.couponCode !== existingAppointment.couponCode) {
             try {
                 const CRMOfferModel = (await import('../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model')).default;
-                const discountToTrack = updateData.discountAmount !== undefined ? updateData.discountAmount : 
-                                       (updateData.discount !== undefined ? updateData.discount : 
-                                       (existingAppointment.discountAmount || existingAppointment.discount || 0));
+                const discountToTrack = updateData.discountAmount !== undefined ? updateData.discountAmount :
+                    (updateData.discount !== undefined ? updateData.discount :
+                        (existingAppointment.discountAmount || existingAppointment.discount || 0));
                 const crmResult = await CRMOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
                 if (!crmResult) {
                     const AdminOfferModel = (await import('../../../../../../../packages/lib/src/models/admin/AdminOffers.model.js')).default;
                     await AdminOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
                 }
-                console.log(`Incremented redemption count and discount for updated coupon: ${updateData.couponCode}`);
             } catch (offerErr) {
                 console.error(`Error incrementing updated coupon redemption for ${updateData.couponCode}:`, offerErr);
             }
@@ -744,13 +736,10 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
 // DELETE an appointment
 export const DELETE = withSubscriptionCheck(async (req, { params }) => {
     try {
-        console.log('=== DELETE REQUEST START ===');
         const vendorId = req.user.vendorId || req.user.userId;
         const appointmentId = extractAppointmentId(req.url, params);
 
-        console.log('DELETE Request URL:', req.url);
-        console.log('DELETE Request params:', params);
-        console.log('Extracted appointment ID:', appointmentId);
+
 
         if (!appointmentId) {
             console.error('No appointment ID found for deletion');
@@ -799,8 +788,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
         const body = await req.json();
         const appointmentId = extractAppointmentId(req.url, params) || body._id;
 
-        console.log('PATCH Request - ID:', appointmentId);
-        console.log('PATCH Request - body:', body);
+
 
         if (!appointmentId || !body.status) {
             return NextResponse.json(
@@ -880,10 +868,6 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             });
         } else {
             // Logic for completing an appointment and calculating staff commission
-            console.log(`[CRM PATCH] ===== PATCH HANDLER REACHED =====`);
-            console.log(`[CRM PATCH] Appointment ID: ${appointmentId}`);
-            console.log(`[CRM PATCH] New status: ${body.status}`);
-            console.log(`[CRM PATCH] existingAppointment.client (raw):`, existingAppointment.client?.toString());
 
             const updateFields = { status: body.status };
 
@@ -906,13 +890,11 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
 
             // CENTRALIZED INVOICE GENERATION LOGIC
             if (body.status === 'completed' || body.status === 'completed without payment') {
-                console.log(`[CRM PATCH] Status is completion status — running referral + invoice logic`);
                 try {
                     const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
                     const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
                     if (invoice) {
                         updatedAppointment.invoiceNumber = invoice.invoiceNumber;
-                        console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
                     }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
@@ -923,16 +905,12 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 try {
                     const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
                     const syncResult = await syncStaffCommission(appointmentId);
-                    console.log(`[PATCH] Staff commission sync result for ${appointmentId}:`, syncResult);
                 } catch (commError) {
                     console.error("[PATCH] Error syncing staff commission:", commError);
                 }
 
                 // ===== REFERRAL BONUS CHECK =====
                 // Use existingAppointment.client (raw ObjectId BEFORE any populate) for user ID resolution
-                console.log(`[CRM Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
-                console.log(`[CRM Referral] Appointment ID: ${appointmentId}`);
-                console.log(`[CRM Referral] existingAppointment.client:`, existingAppointment.client?.toString());
 
                 // ROBUST USER ID RESOLUTION:
                 // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
@@ -942,7 +920,6 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 // Always use existingAppointment.client — it is the raw ObjectId before populate
                 const rawClientValue = existingAppointment.client?.toString();
 
-                console.log(`[CRM Referral] rawClientValue: ${rawClientValue}`);
                 if (rawClientValue) {
                     try {
                         // Step 1: Check if rawClientValue is a valid User ID directly
@@ -950,7 +927,6 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                         const userDoc = await UserModelRef.findById(rawClientValue).select('_id').lean();
                         if (userDoc) {
                             targetUserId = rawClientValue;
-                            console.log(`[CRM Referral] client field resolved directly to User ID: ${targetUserId}`);
                         }
                     } catch (userErr) {
                         console.warn(`[CRM Referral] client field not a direct User ID, trying Client model:`, userErr.message);
@@ -963,28 +939,22 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                             const clientDoc = await ClientModelRef.findById(rawClientValue).select('userId').lean();
                             if (clientDoc && clientDoc.userId) {
                                 targetUserId = clientDoc.userId.toString();
-                                console.log(`[CRM Referral] Resolved via Client model → User ID: ${targetUserId}`);
                             } else {
-                                console.log(`[CRM Referral] Client record found but not linked to any User account`);
                             }
                         } catch (clientErr) {
                             console.error(`[CRM Referral] Error fetching Client record:`, clientErr);
                         }
                     }
                 } else {
-                    console.log(`[CRM Referral] No client value on appointment, cannot resolve User ID`);
                 }
 
                 if (targetUserId) {
                     try {
-                        console.log(`[CRM Referral] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
+
                         const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
-                        console.log(`[CRM Referral] ===== REFERRAL BONUS RESULT =====`);
-                        console.log(`[CRM Referral] Success: ${referralResult.success}`);
-                        console.log(`[CRM Referral] Message: ${referralResult.message}`);
+
 
                         if (referralResult.success) {
-                            console.log(`[CRM Referral] ✅ Referral bonus credited successfully!`);
                         } else {
                             console.warn(`[CRM Referral] ⚠️ Referral bonus not credited: ${referralResult.message}`);
                         }
@@ -993,7 +963,6 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                         console.error('[CRM Referral] ❌ ERROR crediting referral bonus:', referralError);
                     }
                 } else {
-                    console.log(`[CRM Referral] ❌ No valid User ID found for referral bonus check`);
                 }
             }
 

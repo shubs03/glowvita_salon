@@ -84,11 +84,9 @@ async function processCampaignSMS(campaign, vendorId, userRole) {
   await vendorOrSupplier.save();
 
   // 4. Actually dispatch SMS via Fast2SMS (or mock in dev)
-  console.log(`[Campaign SMS] Sending "${campaign.name}" to ${phones.length} recipients...`);
   const smsResult = await SmsService.sendBulkSms(phones, campaign.content);
-  console.log(`[Campaign SMS] Gateway result:`, smsResult);
 
-  const sent   = smsResult.sent   ?? (smsResult.success ? totalSmsRequired : 0);
+  const sent = smsResult.sent ?? (smsResult.success ? totalSmsRequired : 0);
   const failed = smsResult.failed ?? (smsResult.success ? 0 : totalSmsRequired);
 
   // If SMS gateway failed (non-mock), refund the balance
@@ -103,12 +101,12 @@ async function processCampaignSMS(campaign, vendorId, userRole) {
   campaign.status = 'Completed';
   campaign.metrics = {
     messagesSent: sent,
-    delivered:    sent,
-    opened:       0,
-    clicked:      0,
+    delivered: sent,
+    opened: 0,
+    clicked: 0,
     deliveryRate: total > 0 ? parseFloat(((sent / total) * 100).toFixed(1)) : 0,
-    openRate:     0,
-    clickRate:    0
+    openRate: 0,
+    clickRate: 0
   };
   await campaign.save();
 }
@@ -116,19 +114,16 @@ async function processCampaignSMS(campaign, vendorId, userRole) {
 // GET: Fetch all campaigns for CRM
 export const GET = authMiddlewareCrm(async (req, ctx) => {
   try {
-    console.log('Received GET /api/crm/campaigns request');
-    console.log('Auth context:', ctx);
+
 
     const db = await _db();
-    console.log('Database connection status:', db ? 'Connected' : 'Not connected');
 
     const { searchParams } = new URL(req.url);
     const vendorId = searchParams.get('vendorId') || req.user?.userId;
-    const status   = searchParams.get('status');
-    const page     = parseInt(searchParams.get('page'))  || 1;
-    const limit    = parseInt(searchParams.get('limit')) || 10;
+    const status = searchParams.get('status');
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 10;
 
-    console.log('Fetching campaigns with filters:', { vendorId, status, page, limit });
 
     const query = {};
     if (vendorId) {
@@ -138,14 +133,13 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
     }
     if (status) query.status = status;
 
-    const total     = await Campaign.countDocuments(query);
+    const total = await Campaign.countDocuments(query);
     const campaigns = await Campaign.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .select('-__v');
 
-    console.log(`Found ${campaigns.length} campaigns in database`);
 
     return NextResponse.json(
       { success: true, data: campaigns, total, page, limit, totalPages: Math.ceil(total / limit) },
@@ -163,13 +157,10 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
 // POST: Create a new campaign
 export const POST = authMiddlewareCrm(async (req, ctx) => {
   try {
-    console.log('Received POST /api/crm/campaigns request');
 
     const db = await _db();
-    console.log('Database connection status:', db ? 'Connected' : 'Not connected');
 
     const body = await req.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
 
     if (!body.name || !body.content || !body.type || body.type.length === 0) {
       return NextResponse.json(
@@ -199,16 +190,16 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     }
 
     const campaignData = {
-      name:           body.name,
-      type:           Array.isArray(body.type) ? body.type : [body.type],
-      templateId:     templateId,
-      content:        body.content,
-      status:         body.status || 'Draft',
-      vendorId:       body.vendorId || req.user?.userId,
-      createdBy:      req.user?.userId,
+      name: body.name,
+      type: Array.isArray(body.type) ? body.type : [body.type],
+      templateId: templateId,
+      content: body.content,
+      status: body.status || 'Draft',
+      vendorId: body.vendorId || req.user?.userId,
+      createdBy: req.user?.userId,
       targetAudience: body.targetAudience || 'All Customers',
-      scheduledDate:  body.scheduledDate ? new Date(body.scheduledDate) : new Date(),
-      budget:         body.budget || 0,
+      scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : new Date(),
+      budget: body.budget || 0,
       metrics: { messagesSent: 0, delivered: 0, opened: 0, clicked: 0, deliveryRate: 0, openRate: 0, clickRate: 0 }
     };
 
@@ -223,12 +214,11 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       }
     }
 
-    console.log('Campaign created successfully:', campaign);
 
     return NextResponse.json(
       {
         success: true,
-        data:    campaign,
+        data: campaign,
         message: campaignData.status === 'Active' ? 'Campaign launched successfully' : 'Campaign created successfully'
       },
       { status: 201, headers: { 'Content-Type': 'application/json' } }
@@ -255,10 +245,8 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
 // PUT: Update an existing campaign
 export const PUT = authMiddlewareCrm(async (req, ctx) => {
   try {
-    console.log('Received PUT /api/crm/campaigns request');
 
     const db = await _db();
-    console.log('Database connection status:', db ? 'Connected' : 'Not connected');
 
     const body = await req.json();
     const { _id, ...updateData } = body;
@@ -274,8 +262,8 @@ export const PUT = authMiddlewareCrm(async (req, ctx) => {
 
     if (updateData.status === 'Active' && campaign.status !== 'Active' && campaign.status !== 'Completed') {
       try {
-        if (updateData.name)           campaign.name           = updateData.name;
-        if (updateData.content)        campaign.content        = updateData.content;
+        if (updateData.name) campaign.name = updateData.name;
+        if (updateData.content) campaign.content = updateData.content;
         if (updateData.targetAudience) campaign.targetAudience = updateData.targetAudience;
         campaign.status = 'Active';
         await processCampaignSMS(campaign, campaign.vendorId, req.user?.role);
@@ -288,7 +276,6 @@ export const PUT = authMiddlewareCrm(async (req, ctx) => {
       await campaign.save();
     }
 
-    console.log('Campaign updated successfully:', campaign);
 
     return NextResponse.json(
       { success: true, data: campaign, message: 'Campaign updated successfully' },
@@ -306,7 +293,6 @@ export const PUT = authMiddlewareCrm(async (req, ctx) => {
 // DELETE: Delete a campaign
 export const DELETE = authMiddlewareCrm(async (req, ctx) => {
   try {
-    console.log('Received DELETE /api/crm/campaigns request');
 
     const db = await _db();
 

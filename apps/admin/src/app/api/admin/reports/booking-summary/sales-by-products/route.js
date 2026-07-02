@@ -21,7 +21,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -35,13 +35,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const category = searchParams.get('category'); // Category filter
     const brand = searchParams.get('brand'); // Brand filter
     const regionId = searchParams.get('regionId'); // Region filter
-    
-    console.log("Sales by Products Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, userType, businessName, category, brand });
-    
+
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -57,7 +56,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -65,7 +64,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -73,7 +72,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -82,10 +81,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { createdAt: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
-    console.log("Date filter:", dateFilter);
-    
+
     // Build mode filter (using paymentMethod for online/offline distinction)
     const buildModeFilter = (saleType) => {
       if (!saleType || saleType === 'all') {
@@ -99,11 +97,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       return {};
     };
-    
+
     const modeFilter = buildModeFilter(saleType);
-    
+
     const regionQuery = getRegionQuery(req.user, regionId);
-    
+
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
@@ -111,20 +109,19 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...regionQuery,
       status: "Delivered" // Only count delivered orders
     };
-    
-    console.log("Combined filter for Sales by Products:", combinedFilter);
-    
+
+
     // Build city filter pipeline
     const cityFilterPipeline = [
       { $match: combinedFilter },
       { $unwind: "$items" },
-      { 
-        $lookup: { 
-          from: "crm_products", 
-          localField: "items.productId", 
-          foreignField: "_id", 
-          as: "productInfo" 
-        } 
+      {
+        $lookup: {
+          from: "crm_products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productInfo"
+        }
       },
       { $unwind: { path: "$productInfo", preserveNullAndEmptyArrays: true } },
       {
@@ -155,13 +152,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
           "ownerType": { $ifNull: ["$productInfo.origin", "Vendor"] }
         }
       },
-      ...(city && city !== 'all' ? [{ 
-        $match: { 
+      ...(city && city !== 'all' ? [{
+        $match: {
           $or: [
             { "vendorInfo.city": city },
             { "supplierInfo.city": city }
           ]
-        } 
+        }
       }] : []),
       // Add business name filter
       ...(businessName && businessName !== 'all' ? [{
@@ -179,7 +176,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       }] : [])
     ];
-    
+
     // Get sales by products data
     const salesByProductsPipeline = [
       ...cityFilterPipeline,
@@ -193,20 +190,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
           productCategory: { $first: "$productInfo.category" }, // Add category reference
           productBrand: { $first: { $ifNull: ["$productInfo.brand", ""] } }, // Add brand
           ownerId: { $first: "$productInfo.vendorId" },
-          ownerName: { $first: { 
-            $cond: {
-              if: { $eq: ["$productInfo.origin", "Vendor"] },
-              then: { $ifNull: [{ $let: { vars: { vendor: { $arrayElemAt: ["$vendorInfo", 0] } }, in: "$$vendor.businessName" } }, "Unknown Vendor"] },
-              else: { $ifNull: [{ $let: { vars: { supplier: { $arrayElemAt: ["$supplierInfo", 0] } }, in: "$$supplier.shopName" } }, "Unknown Supplier"] }
+          ownerName: {
+            $first: {
+              $cond: {
+                if: { $eq: ["$productInfo.origin", "Vendor"] },
+                then: { $ifNull: [{ $let: { vars: { vendor: { $arrayElemAt: ["$vendorInfo", 0] } }, in: "$$vendor.businessName" } }, "Unknown Vendor"] },
+                else: { $ifNull: [{ $let: { vars: { supplier: { $arrayElemAt: ["$supplierInfo", 0] } }, in: "$$supplier.shopName" } }, "Unknown Supplier"] }
+              }
             }
-          }},
-          ownerCity: { $first: { 
-            $cond: {
-              if: { $eq: ["$productInfo.origin", "Vendor"] },
-              then: { $ifNull: [{ $let: { vars: { vendor: { $arrayElemAt: ["$vendorInfo", 0] } }, in: "$$vendor.city" } }, ""] },
-              else: { $ifNull: [{ $let: { vars: { supplier: { $arrayElemAt: ["$supplierInfo", 0] } }, in: "$$supplier.city" } }, ""] }
+          },
+          ownerCity: {
+            $first: {
+              $cond: {
+                if: { $eq: ["$productInfo.origin", "Vendor"] },
+                then: { $ifNull: [{ $let: { vars: { vendor: { $arrayElemAt: ["$vendorInfo", 0] } }, in: "$$vendor.city" } }, ""] },
+                else: { $ifNull: [{ $let: { vars: { supplier: { $arrayElemAt: ["$supplierInfo", 0] } }, in: "$$supplier.city" } }, ""] }
+              }
             }
-          }},
+          },
           ownerType: { $first: { $ifNull: ["$productInfo.origin", "Vendor"] } },
           totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
           totalQuantity: { $sum: "$items.quantity" },
@@ -231,16 +232,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       },
       // Add category filter
-      ...(category && category !== 'all' ? [{ 
-        $match: { 
-          categoryName: category 
-        } 
+      ...(category && category !== 'all' ? [{
+        $match: {
+          categoryName: category
+        }
       }] : []),
       // Add brand filter
-      ...(brand && brand !== 'all' ? [{ 
-        $match: { 
-          productBrand: brand 
-        } 
+      ...(brand && brand !== 'all' ? [{
+        $match: {
+          productBrand: brand
+        }
       }] : []),
       {
         $group: {
@@ -271,15 +272,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       },
       { $sort: { totalRevenue: -1 } }
     ];
-    
+
     // Add debug logging
-    console.log("Executing sales by products pipeline");
     const salesByProducts = await ClientOrderModel.aggregate(salesByProductsPipeline);
-    console.log("Sales by products result:", JSON.stringify(salesByProducts.slice(0, 2), null, 2));
-    
+
     // Log sample data for debugging
-    console.log("Sales by products raw data sample:", salesByProducts.slice(0, 2));
-    
+
     // Format data as requested: Product, Vendor, City, Sale (₹), Product Sold
     const formattedData = salesByProducts
       .flatMap(product => {
@@ -299,38 +297,32 @@ export const GET = authMiddlewareAdmin(async (req) => {
       })
       .filter(item => {
         // Log item for debugging
-        console.log("Processing item:", item);
-        
+
         // Filter out records with invalid vendor names
         const vendorName = item.vendor || '';
         // Ensure vendorName is a string before calling toLowerCase
         if (typeof vendorName !== 'string') {
-          console.log("Skipping item with non-string vendor name:", item);
           return false;
         }
-        
+
         // Filter out records with invalid product names
         const productName = item.product || '';
         if (typeof productName !== 'string') {
-          console.log("Skipping item with non-string product name:", item);
           return false;
         }
-        
+
         // More permissive filtering - only exclude truly invalid data
-        const shouldInclude = vendorName.trim() !== '' && 
-                             productName.trim() !== '' &&
-                             vendorName.toLowerCase() !== 'unknown vendor';
-                              
+        const shouldInclude = vendorName.trim() !== '' &&
+          productName.trim() !== '' &&
+          vendorName.toLowerCase() !== 'unknown vendor';
+
         if (!shouldInclude) {
-          console.log("Skipping item with invalid vendor or product name:", vendorName, productName);
         }
         return shouldInclude;
       });
-      
-    console.log("Formatted data count:", formattedData.length);
-    console.log("Formatted data sample:", formattedData.slice(0, 2));
-    console.log("Full formatted data:", JSON.stringify(formattedData, null, 2));
-    
+
+
+
     // Calculate aggregated totals
     const aggregatedTotals = formattedData.reduce((totals, product) => {
       // Extract numeric value from sale string (remove ₹ symbol)
@@ -346,11 +338,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalProductPlatformFee: 0,
       totalProductGST: 0
     });
-    
+
     // Calculate total business (Product Amount + Product Platform Fee + Product GST)
     aggregatedTotals.totalBusiness = aggregatedTotals.totalSale + aggregatedTotals.totalProductPlatformFee + aggregatedTotals.totalProductGST;
     aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
-    
+
     // Get unique cities for the filter dropdown
     const cityPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
@@ -389,7 +381,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $match: { "_id": { $ne: null } } }, // Filter out null cities
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     // Get unique business names for the filter dropdown
     const businessNamePipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
@@ -444,13 +436,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $match: { "_id": { $ne: null } } }, // Filter out null business names
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const citiesResult = await ClientOrderModel.aggregate(cityPipeline);
     const cities = citiesResult.map(item => item._id).filter(city => city && city !== 'N/A'); // Filter out null/undefined cities
-    
+
     const businessNamesResult = await ClientOrderModel.aggregate(businessNamePipeline);
     const businessNames = businessNamesResult.map(item => item._id).filter(name => name); // Filter out null/undefined names
-    
+
     // Get unique categories for the filter dropdown
     const categoryPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
@@ -498,7 +490,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $match: { "_id": { $ne: null } } }, // Filter out null categories
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     // Get unique brands for the filter dropdown
     const brandPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
@@ -531,13 +523,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $match: { "_id": { $ne: null } } }, // Filter out null brands
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const categoriesResult = await ClientOrderModel.aggregate(categoryPipeline);
     const categories = categoriesResult.map(item => item._id).filter(category => category); // Filter out null/undefined categories
-    
+
     const brandsResult = await ClientOrderModel.aggregate(brandPipeline);
     const brands = brandsResult.map(item => item._id).filter(brand => brand); // Filter out null/undefined brands
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -550,11 +542,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
         filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });
-    
+
   } catch (error) {
     console.error("Error fetching sales by products report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching sales by products report",
       error: error.message
