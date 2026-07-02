@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
@@ -90,6 +90,8 @@ interface Step1ServicesProps {
   weddingPackageMode?: 'default' | 'customized' | null;
   bookingMode: 'salon' | 'home';
   setBookingMode: (mode: 'salon' | 'home') => void;
+  /** Which tab to show on first render. Defaults to 'services'. Pass 'packages' when navigating from a wedding package Book button. */
+  initialViewMode?: 'services' | 'packages';
 }
 
 export function Step1_Services({
@@ -108,7 +110,8 @@ export function Step1_Services({
   selectedWeddingPackage,
   weddingPackageMode,
   bookingMode,
-  setBookingMode
+  setBookingMode,
+  initialViewMode = 'services',
 }: Step1ServicesProps) {
   // Get vendor ID from URL params
   const params = useParams();
@@ -220,7 +223,21 @@ export function Step1_Services({
     (pkg.id || pkg._id) && pkg.name
   );
   const [activeCategory, setActiveCategory] = useState("All");
-  const [viewMode, setViewMode] = useState<'services' | 'packages'>('services');
+  const [viewMode, setViewMode] = useState<'services' | 'packages'>(initialViewMode);
+
+  // Sync viewMode with initialViewMode prop updates
+  useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode]);
+
+  // Sync viewMode with selectedWeddingPackage prop updates
+  useEffect(() => {
+    if (selectedWeddingPackage) {
+      setViewMode('packages');
+    }
+  }, [selectedWeddingPackage]);
   const [selectedPackageForDetails, setSelectedPackageForDetails] = useState<WeddingPackage | null>(null);
   const [packageToConfirm, setPackageToConfirm] = useState<WeddingPackage | null>(null);
   // Removed: showHomeServiceModal, selectedHomeService state - no longer needed with strictly enforced mode
@@ -330,7 +347,8 @@ export function Step1_Services({
 
   // Handle wedding package selection with confirmation
   const handleSelectWeddingPackage = (pkg: WeddingPackage | null) => {
-    const isCurrentlySelected = selectedWeddingPackage?.id === (pkg?.id || pkg?._id);
+    const isCurrentlySelected = !!selectedWeddingPackage && 
+      (selectedWeddingPackage.id === (pkg?.id || pkg?._id) || selectedWeddingPackage._id === (pkg?.id || pkg?._id));
 
     if (onWeddingPackageSelect) {
       if (isCurrentlySelected || pkg === null) {
@@ -699,7 +717,8 @@ export function Step1_Services({
 
                 if (!isValidPackage) return null;
 
-                const isSelected = selectedWeddingPackage?.id === (pkg.id || pkg._id);
+                const isSelected = !!selectedWeddingPackage && 
+                  (selectedWeddingPackage.id === (pkg.id || pkg._id) || selectedWeddingPackage._id === (pkg.id || pkg._id));
                 const isCustomized = isSelected && weddingPackageMode === 'customized' && selectedWeddingPackage;
 
                 const displayServicesCount = isCustomized ? (selectedWeddingPackage.services?.length || 0) : (pkg.services?.length || 0);

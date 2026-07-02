@@ -718,11 +718,19 @@ export default function SalonDetailsPage() {
       return;
     }
 
-    // Store selected service in sessionStorage for the booking flow
+    // Store selected service or wedding package in sessionStorage for the booking flow
     if (service) {
-      sessionStorage.setItem("selectedService", JSON.stringify(service));
+      if (service.isWeddingPackage) {
+        // Save wedding package separately so the booking page can init the correct flow
+        sessionStorage.setItem("selectedWeddingPackage", JSON.stringify(service));
+        sessionStorage.removeItem("selectedService"); // clear any stale service key
+      } else {
+        sessionStorage.setItem("selectedService", JSON.stringify(service));
+        sessionStorage.removeItem("selectedWeddingPackage"); // clear any stale package key
+      }
     } else {
       sessionStorage.removeItem("selectedService");
+      sessionStorage.removeItem("selectedWeddingPackage");
     }
 
     // Build booking URL with offer code if provided
