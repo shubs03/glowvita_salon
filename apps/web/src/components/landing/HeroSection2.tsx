@@ -272,12 +272,31 @@ const HeroSection2 = () => {
   }, [categoriesData]);
 
   return (
-    <div className="relative w-full min-h-[500px] h-[615px] md:h-[615px] overflow-hidden">
-      {/* Background */}
+    <div className="relative w-full h-[602px] overflow-hidden">
+      {/* Solid dark maroon base */}
+      <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
+
+      {/* Right-side panel: full salon image, no crop, fits height */}
+      <div className="absolute top-0 right-0 h-full" style={{ width: "65%" }}>
+        <img
+          src="/images/hero-salon-bg.jpg"
+          alt="Salon"
+          className="h-full w-full pointer-events-none select-none"
+          style={{ objectFit: "contain", objectPosition: "center right" }}
+        />
+      </div>
+
+      {/* Gradient — solid maroon left, purple mid-blend, transparent right */}
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0"
         style={{
-          backgroundImage: `linear-gradient(to right, rgba(45, 28, 48, 0.85), rgba(45, 28, 48, 0.4)), url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200')`,
+          background: `linear-gradient(to right,
+            rgba(66, 42, 60, 1)     0%,
+            rgba(66, 42, 60, 1)     49%,
+            rgba(66, 42, 60, 0.85)  60%,
+            rgba(66, 42, 60, 0.80)  73%,
+            rgba(66, 42, 60, 0.31)  78%,
+            rgba(66, 42, 60, 0)     100%)`,
         }}
       />
 
@@ -289,7 +308,19 @@ const HeroSection2 = () => {
           </h3>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-amber-50 mb-4 md:mb-6 max-w-2xl leading-tight">
+        <h1
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 700,
+            fontSize: "70px",
+            lineHeight: "115%",
+            letterSpacing: "-0.01em",
+            width: "510px",
+            height: "160px",
+            opacity: 1,
+          }}
+          className="text-amber-50 mb-4 md:mb-6"
+        >
           Find a service
           <br />
           close to you
@@ -301,13 +332,31 @@ const HeroSection2 = () => {
         </p>
 
         {/* ── Search Bar ─────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl md:rounded-full shadow-2xl p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center gap-3 max-w-4xl mb-6 md:mb-8">
+        <div
+          className="bg-white shadow-2xl flex flex-col md:flex-row items-stretch md:items-center mb-6 md:mb-8"
+          style={{
+            width: "865px",
+            maxWidth: "100%",
+            height: "88px",
+            gap: "46px",
+            borderRadius: "61.33px",
+            paddingTop: "20px",
+            paddingRight: "14px",
+            paddingBottom: "20px",
+            paddingLeft: "40px",
+          }}
+        >
 
+          {/* Service + Address inputs wrapper */}
+          <div
+            className="flex items-center md:border-r border-gray-200"
+            style={{ width: "638px", maxWidth: "100%", height: "60px", gap: "24px" }}
+          >
           {/* Service Input */}
-          <div className="relative flex-1 flex items-center gap-3 px-4 md:border-r border-gray-200 py-2 md:py-0">
+          <div className="relative flex-1 flex items-center gap-3">
             <div className="flex flex-col flex-1">
               {!serviceInput && (
-                <label className="text-primary text-xs font-medium mb-1">
+                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
                   Service Name
                 </label>
               )}
@@ -369,10 +418,10 @@ const HeroSection2 = () => {
           </div>
 
           {/* Location Input */}
-          <div className="relative flex-1 flex items-center gap-3 px-4 py-2 md:py-0">
+          <div className="relative flex-1 flex items-center gap-3">
             <div className="flex flex-col flex-1">
               {!locationInput && (
-                <label className="text-primary text-xs font-medium mb-1">
+                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
                   Address
                 </label>
               )}
@@ -449,12 +498,19 @@ const HeroSection2 = () => {
               </div>
             )}
           </div>
+          </div>
 
           {/* Search Button */}
           <button
             onClick={handleSearch}
             disabled={isSearching}
-            className="bg-primary text-white px-6 sm:px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 w-full md:w-auto disabled:opacity-70"
+            className="text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
+            style={{
+              width: "127px",
+              height: "35px",
+              borderRadius: "21px",
+              backgroundColor: "#BA7894",
+            }}
           >
             {isSearching ? "Searching…" : "Search"}
             <Sparkles className="w-4 h-4" />
