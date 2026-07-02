@@ -36,7 +36,6 @@ export const VendorPayableReportTable = () => {
   // Use the API hook to fetch vendor payable report data with filters
   // apiFilters is derived from filters + selectedRegion in useReport
 
-  console.log("Vendor Payable Report API filters:", apiFilters);
 
   // Import the vendor payable report API hook to use for Vendor Payable data
   const { data, isLoading, isError, error } = useGetVendorPayableReportQuery(apiFilters);

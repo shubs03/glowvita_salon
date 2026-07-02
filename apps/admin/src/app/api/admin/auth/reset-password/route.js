@@ -39,7 +39,6 @@ export async function POST(request) {
 
     await AdminUserModel.findByIdAndUpdate(user._id, updateData);
 
-    console.log('Password updated and token cleared for admin:', user.emailAddress);
 
     return NextResponse.json({
       success: true,

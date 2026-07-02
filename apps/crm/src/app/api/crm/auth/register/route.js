@@ -35,11 +35,7 @@ const generateReferralCode = async (businessName) => {
 // Function to automatically create staff member from vendor data
 const createOwnerAsStaff = async (vendor, plainTextPassword) => {
   try {
-    console.log(`=== CREATE OWNER AS STAFF FUNCTION ===`);
-    console.log(`Vendor ID: ${vendor._id} (type: ${typeof vendor._id})`);
-    console.log(`Vendor email: ${vendor.email}`);
-    console.log(`Vendor name: ${vendor.firstName} ${vendor.lastName}`);
-    console.log(`Vendor ID is valid ObjectId: ${mongoose.Types.ObjectId.isValid(vendor._id)}`);
+
 
     // Ensure we have a proper ObjectId for the vendor
     let vendorObjectId;
@@ -57,17 +53,14 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
       return null;
     }
 
-    console.log(`Vendor ObjectId: ${vendorObjectId} (type: ${typeof vendorObjectId})`);
 
     // Check if staff member already exists for this vendor using multiple approaches
-    console.log('Checking if staff member already exists...');
 
     // Approach 1: Direct query
     let existingStaff = await StaffModel.findOne({
       vendorId: vendorObjectId,
       emailAddress: vendor.email
     });
-    console.log(`Approach 1 - Direct query: ${!!existingStaff}`);
 
     // Approach 2: If not found, try string conversion
     if (!existingStaff) {
@@ -76,7 +69,6 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
           vendorId: vendorObjectId.toString(),
           emailAddress: vendor.email
         });
-        console.log(`Approach 2 - String conversion: ${!!existingStaff}`);
       } catch (err) {
         console.error('String conversion approach failed:', err);
       }
@@ -89,24 +81,18 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
           vendorId: vendor._id,
           emailAddress: vendor.email
         });
-        console.log(`Approach 3 - Original vendor ID: ${!!existingStaff}`);
       } catch (err) {
         console.error('Original vendor ID approach failed:', err);
       }
     }
 
     if (existingStaff) {
-      console.log(`Staff member already exists for vendor ${vendor._id}`);
-      console.log(`Existing staff ID: ${existingStaff._id}`);
-      console.log(`Existing staff vendorId: ${existingStaff.vendorId} (type: ${typeof existingStaff.vendorId})`);
-      console.log(`Existing staff email: ${existingStaff.emailAddress}`);
+
       return existingStaff;
     }
 
     // Hash the password before creating staff member
-    console.log('Hashing password...');
     const hashedPassword = await bcrypt.hash(plainTextPassword, 10);
-    console.log('Password hashed successfully');
 
     // Create staff member using vendor details
     const staffData = {
@@ -145,8 +131,7 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
       timezone: 'UTC'
     };
 
-    console.log('Staff data to create:', JSON.stringify(staffData, null, 2));
-    console.log('Creating staff member...');
+
 
     // Create staff member with validation bypass for salon owner
     // We need to bypass validation because vendor working hours aren't set up yet
@@ -154,16 +139,12 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
     newStaff.$locals.skipValidation = true; // Bypass validation for salon owner
     await newStaff.save();
 
-    console.log(`Successfully created staff member for vendor ${vendor._id}:`, newStaff._id);
-    console.log(`New staff vendorId: ${newStaff.vendorId} (type: ${typeof newStaff.vendorId})`);
-    console.log(`New staff email: ${newStaff.emailAddress}`);
+
 
     // Verify the staff member was created correctly using multiple approaches
-    console.log('Verifying created staff member...');
 
     // Approach 1: Direct query
     let verifiedStaff = await StaffModel.findById(newStaff._id);
-    console.log(`Verification approach 1 - Direct query: ${!!verifiedStaff}`);
 
     // Approach 2: Query by vendorId and email
     if (!verifiedStaff) {
@@ -171,16 +152,12 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
         vendorId: vendorObjectId,
         emailAddress: vendor.email
       });
-      console.log(`Verification approach 2 - VendorId and email: ${!!verifiedStaff}`);
     }
 
     if (verifiedStaff) {
-      console.log(`Verified staff member - ID: ${verifiedStaff._id}, vendorId: ${verifiedStaff.vendorId}, email: ${verifiedStaff.emailAddress}`);
     } else {
-      console.log('Could not verify staff member was created');
     }
 
-    console.log(`=== END CREATE OWNER AS STAFF FUNCTION ===`);
     return newStaff;
   } catch (error) {
     console.error("Error creating staff member for vendor:", error);
@@ -298,55 +275,39 @@ export async function POST(req) {
         console.error('Registration Notification Error:', err);
       }
     })();
-    
+
     // Reload the vendor to ensure we have the proper _id
-    console.log(`Vendor created with ID: ${newVendor._id}`);
     const reloadedVendor = await VendorModel.findById(newVendor._id);
-    console.log(`Vendor reloaded with ID: ${reloadedVendor._id} (type: ${typeof reloadedVendor._id})`);
 
     // 7️⃣ Automatically create staff member from vendor data
-    console.log(`=== CREATING STAFF MEMBER FOR NEW VENDOR ===`);
-    console.log(`Vendor ID: ${reloadedVendor._id} (type: ${typeof reloadedVendor._id})`);
-    console.log(`Vendor email: ${reloadedVendor.email}`);
-    console.log(`Vendor name: ${reloadedVendor.firstName} ${reloadedVendor.lastName}`);
+
 
     const staffResult = await createOwnerAsStaff(reloadedVendor, password);
-    console.log(`Staff creation result:`, staffResult);
 
     // Verify the staff member was created
     if (staffResult && staffResult._id) {
-      console.log(`Verifying staff member was created with ID: ${staffResult._id}`);
       const verifiedStaff = await StaffModel.findById(staffResult._id);
-      console.log(`Verified staff member exists: ${!!verifiedStaff}`);
       if (verifiedStaff) {
-        console.log(`Verified staff vendorId: ${verifiedStaff.vendorId} (type: ${typeof verifiedStaff.vendorId})`);
-        console.log(`Verified staff email: ${verifiedStaff.emailAddress}`);
+
       }
 
       // Also check by vendorId and email
-      console.log('Checking staff by vendorId and email...');
       // Make sure to use the reloaded vendor ID for verification
       const staffByVendorAndEmail = await StaffModel.findOne({
         vendorId: reloadedVendor._id,
         emailAddress: reloadedVendor.email
       });
-      console.log(`Found staff by vendorId and email: ${!!staffByVendorAndEmail}`);
       if (staffByVendorAndEmail) {
-        console.log(`Staff found by vendorId and email - ID: ${staffByVendorAndEmail._id}`);
       }
     } else {
-      console.log('Staff creation may have failed, checking if staff exists anyway...');
       const existingStaff = await StaffModel.findOne({
         vendorId: reloadedVendor._id,
         emailAddress: reloadedVendor.email
       });
-      console.log(`Existing staff found: ${!!existingStaff}`);
       if (existingStaff) {
-        console.log(`Existing staff ID: ${existingStaff._id}`);
       }
     }
 
-    console.log(`=== END STAFF CREATION PROCESS ===`);
 
     // 8️⃣ Handle referral if a code was provided
     if (referredByCode) {
@@ -360,7 +321,7 @@ export async function POST(req) {
 
         // Try Vendor model first
         referringEntity = await VendorModel.findOne({ referralCode: referredCode });
-        
+
         // If not found, try User model (C2V)
         if (!referringEntity) {
           referringEntity = await UserModel.findOne({ refferalCode: referredCode });
@@ -382,7 +343,7 @@ export async function POST(req) {
 
           const bonusValue = settings?.referrerBonus?.bonusValue || 0;
           const referralId = `REF_REG_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-          const referringName = entityType === 'Vendor' 
+          const referringName = entityType === 'Vendor'
             ? (referringEntity.businessName || `${referringEntity.firstName} ${referringEntity.lastName}`)
             : `${referringEntity.firstName} ${referringEntity.lastName}`;
 

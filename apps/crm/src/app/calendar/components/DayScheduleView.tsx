@@ -322,7 +322,6 @@ const timeToMinutes = (timeStr: string): number => {
     const cleanTime = timeStr.toString().trim().toUpperCase();
 
     // Debug the raw input
-    console.log('Raw time input:', { timeStr, cleanTime });
 
     // Handle empty string
     if (!cleanTime) {
@@ -350,17 +349,7 @@ const timeToMinutes = (timeStr: string): number => {
     let hours = parseInt(hoursStr, 10);
     const minutes = parseInt(minutesStr, 10) || 0;
 
-    // Debug parsing
-    console.log('Time parts:', {
-      timeStr,
-      cleanTime,
-      period,
-      timePart,
-      hoursStr,
-      minutesStr,
-      parsedHours: hours,
-      parsedMinutes: minutes
-    });
+
 
     // Handle 12-hour to 24-hour conversion
     if (period) {
@@ -384,18 +373,7 @@ const timeToMinutes = (timeStr: string): number => {
     // Calculate total minutes since midnight
     const totalMinutes = (hours * 60) + minutes;
 
-    // Debug the final calculation
-    console.log('Time calculation:', {
-      input: timeStr,
-      cleanInput: cleanTime,
-      period,
-      hours24: hours,
-      minutes,
-      totalMinutes,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      currentTime: new Date().toLocaleTimeString(),
-      timezoneOffset: new Date().getTimezoneOffset()
-    });
+
 
     return totalMinutes;
   } catch (error) {
@@ -705,8 +683,6 @@ export default function DayScheduleView({
     }
 
     // Log the raw staff data for debugging
-    console.log('Raw staff list data:', staffList);
-
     const transformed = staffList.map(staff => {
       const transformedStaff = transformStaffData(staff);
 
@@ -835,11 +811,7 @@ export default function DayScheduleView({
 
   // Log the processed data for debugging
   useEffect(() => {
-    console.log('Processed staff data:', {
-      rawStaffList: staffList,
-      transformedStaffList,
-      staffAppointmentsWithAvailability
-    });
+
   }, [staffList, transformedStaffList, staffAppointmentsWithAvailability]);
 
   const handleDateChange = (direction: 'prev' | 'next') => {
@@ -863,7 +835,6 @@ export default function DayScheduleView({
   };
 
   const handleFormSubmit = (appointment: Appointment) => {
-    console.log('Appointment updated:', appointment);
     setIsFormOpen(false);
     setSelectedAppointment(null);
   };
@@ -1246,11 +1217,7 @@ export default function DayScheduleView({
 
     // Debug log for service type theming
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Appointment service theming:', {
-        serviceType,
-        themeClass,
-        serviceName: appointment.service
-      });
+
     }
 
     const isWeddingTeamCol = currentStaff?.name === 'Wedding Team';
@@ -1822,7 +1789,7 @@ export default function DayScheduleView({
       {/* New Appointment Dialog - only show for non-doctors */}
       {role !== 'doctor' && (
         <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
-          <DialogContent 
+          <DialogContent
             className="sm:max-w-2xl"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
@@ -1882,7 +1849,6 @@ export default function DayScheduleView({
               onUpdateAppointment={async (updatedAppointment) => {
                 // Update the selectedAppointment state with the new data
                 setSelectedAppointment(updatedAppointment as Appointment || null);
-                console.log('Appointment updated:', updatedAppointment);
 
                 // If status changed or payment collected, notify parent to refresh
                 if (onUpdateAppointmentStatus && updatedAppointment.status) {

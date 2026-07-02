@@ -30,7 +30,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const vendorName = searchParams.get('vendor'); // Vendor filter
     const regionId = searchParams.get('regionId'); // Region filter
 
-    console.log("Vendor Payable Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, city, vendorName });
 
     // Build date filter
     const buildDateFilter = (filterType, filterValue) => {
@@ -92,7 +91,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       status: { $in: ['completed', 'partially-completed'] },
     };
 
-    console.log("Main filter for appointments:", mainFilter);
 
     // Build aggregation pipeline
     const pipeline = [
@@ -186,7 +184,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     });
 
-    console.log("Vendor payable report results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [

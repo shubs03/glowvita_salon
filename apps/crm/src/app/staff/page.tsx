@@ -102,7 +102,6 @@ export default function StaffPage() {
         });
     }, [staffListRaw, sortBy, sortOrder]);
 
-    console.log("Staff List:", staffList)
 
     const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
     const [sendCredentials, { isLoading: isSendingMail }] = useSendStaffCredentialsMutation();

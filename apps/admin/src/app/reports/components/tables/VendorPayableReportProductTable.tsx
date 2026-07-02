@@ -36,7 +36,6 @@ export const VendorPayableReportProductTable = () => {
   // Use the API hook to fetch vendor payable report for products with filters
   // apiFilters is derived from filters + selectedRegion in useReport
 
-  console.log("Vendor Payable to Admin Report - Product API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetVendorPayableReportProductQuery(apiFilters);
 

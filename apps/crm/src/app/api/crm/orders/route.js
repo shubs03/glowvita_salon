@@ -113,7 +113,7 @@ export const POST = authMiddlewareCrm(async (req) => {
       try {
         // Notify Supplier
         await NotificationService.sendMarketplaceOrderAlert(supplierId, 'supplier', newOrder, 'placed');
-        
+
         // Notify Admin of new B2B activity
         await NotificationService.sendAdminAlert('New Marketplace Order', `New order ${orderId} placed from a vendor to a supplier.`);
       } catch (err) {
@@ -176,36 +176,22 @@ export const PATCH = authMiddlewareCrm(async (req) => {
 
     // Check if orderId is a valid MongoDB ObjectId format
     if (mongoose.Types.ObjectId.isValid(orderId)) {
-      console.log("orderId is a valid MongoDB ObjectId, attempting findById");
       order = await OrderModel.findById(orderId);
-      console.log("Found order by _id:", order ? "Yes" : "No");
       if (order) {
-        console.log("Order found by _id:", order._id, order.orderId);
       }
     } else {
-      console.log("orderId is not a valid MongoDB ObjectId, skipping findById");
     }
 
     // If not found, try to find by the human-readable orderId field
     if (!order) {
-      console.log("Attempting to find order by orderId field");
       order = await OrderModel.findOne({ orderId: orderId });
-      console.log("Found order by orderId field:", order ? "Yes" : "No");
       if (order) {
-        console.log("Order found by orderId field:", order._id, order.orderId);
       }
     }
 
     // Log the order details if found
     if (order) {
-      console.log("Order details:", {
-        _id: order._id,
-        orderId: order.orderId,
-        supplierId: order.supplierId,
-        vendorId: order.vendorId,
-        customerId: order.customerId,
-        status: order.status
-      });
+
     }
 
     if (!order) {
@@ -287,7 +273,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     });
 
     await order.save();
-    
+
     // Trigger Notification for Status Update (Non-blocking)
     (async () => {
       try {
@@ -297,7 +283,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
         }
         // If B2C (customer placed order to vendor), notify customer
         else if (order.customerId) {
-           await NotificationService.sendToUser(order.customerId, 'client', {
+          await NotificationService.sendToUser(order.customerId, 'client', {
             title: `Order Update: ${status} 🛍️`,
             body: `Your order ${order.orderId} from the salon is now ${status}.`,
             data: { type: 'order_update', orderId: order._id.toString(), status }

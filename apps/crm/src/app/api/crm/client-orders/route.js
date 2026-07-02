@@ -47,14 +47,6 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     const role = req.user.role;
     const { orderId, status, trackingNumber, courier, cancellationReason } = await req.json();
 
-    console.log("=== CLIENT ORDER UPDATE DEBUG INFO ===");
-    console.log("User ID:", userId);
-    console.log("User Role:", role);
-    console.log("Order ID:", orderId);
-    console.log("Status:", status);
-    console.log("Tracking Number:", trackingNumber);
-    console.log("Courier:", courier);
-    console.log("=====================================");
 
     if (!orderId || !status) {
       return NextResponse.json({ message: "Order ID and status are required" }, { status: 400 });
@@ -63,7 +55,6 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     // Validate status is one of the allowed values
     const validStatuses = ['Pending', 'Packed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
     if (!validStatuses.includes(status)) {
-      console.log("Invalid status provided:", status);
       return NextResponse.json({ message: "Invalid status value" }, { status: 400 });
     }
 
@@ -71,24 +62,17 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     const order = await ClientOrder.findById(orderId);
 
     if (!order) {
-      console.log("Order not found with ID:", orderId);
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
-    console.log("Found order:", {
-      _id: order._id,
-      vendorId: order.vendorId,
-      currentStatus: order.status
-    });
+
 
     // Security check: Only the vendor who owns this order can update it
     if (order.vendorId.toString() !== userId.toString()) {
-      console.log("Authorization failed. Order vendorId:", order.vendorId, "User ID:", userId);
       return NextResponse.json({ message: "You are not authorized to update this order" }, { status: 403 });
     }
 
     // Update order status
-    console.log("Updating order status from", order.status, "to", status);
     order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (courier) order.courier = courier;
@@ -101,14 +85,14 @@ export const PATCH = withSubscriptionCheck(async (req) => {
 
     // Record status history: replace the estimated entry for this status with the actual time
     const statusNotes = {
-      Pending:    'Your order has been placed and is awaiting confirmation.',
+      Pending: 'Your order has been placed and is awaiting confirmation.',
       Processing: 'Seller has confirmed and is now processing your order.',
-      Packed:     'Your order has been packed and is ready for pickup by the delivery partner.',
-      Shipped:    trackingNumber
-                    ? `Your order has been shipped via ${courier || 'courier'} · Tracking: ${trackingNumber}`
-                    : 'Your order has been handed to the delivery partner.',
-      Delivered:  'Your order has been delivered successfully. Enjoy!',
-      Cancelled:  `Order cancelled${cancellationReason ? '. Reason: ' + cancellationReason : '.'}`,
+      Packed: 'Your order has been packed and is ready for pickup by the delivery partner.',
+      Shipped: trackingNumber
+        ? `Your order has been shipped via ${courier || 'courier'} · Tracking: ${trackingNumber}`
+        : 'Your order has been handed to the delivery partner.',
+      Delivered: 'Your order has been delivered successfully. Enjoy!',
+      Cancelled: `Order cancelled${cancellationReason ? '. Reason: ' + cancellationReason : '.'}`,
     };
 
     if (!order.statusHistory) order.statusHistory = [];
@@ -123,8 +107,8 @@ export const PATCH = withSubscriptionCheck(async (req) => {
 
     if (estimatedIndex !== -1) {
       // ✅ Replace estimated entry with actual
-      order.statusHistory[estimatedIndex].date        = actualDate;
-      order.statusHistory[estimatedIndex].notes       = actualNote;
+      order.statusHistory[estimatedIndex].date = actualDate;
+      order.statusHistory[estimatedIndex].notes = actualNote;
       order.statusHistory[estimatedIndex].isEstimated = false;
       order.markModified('statusHistory');
     } else {
@@ -150,7 +134,6 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     })();
     // Stock Refund: Increment stock for each product if order is cancelled
     if (status === 'Cancelled' && order.items && order.items.length > 0) {
-      console.log("Cancelling order, performing stock refund for items:", order.items.length);
       for (const item of order.items) {
         if (item.productId) {
           try {
@@ -164,7 +147,6 @@ export const PATCH = withSubscriptionCheck(async (req) => {
                 { $set: { stock: newStock } },
                 { new: true }
               );
-              console.log(`Refunded stock for product ${item.productId}: +${item.quantity}`);
 
               // Create inventory transaction record
               const transaction = new InventoryTransactionModel({
@@ -189,7 +171,6 @@ export const PATCH = withSubscriptionCheck(async (req) => {
       }
     }
 
-    console.log("Order saved successfully:", order._id);
     return NextResponse.json(order, { status: 200 });
 
   } catch (error) {

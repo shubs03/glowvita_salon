@@ -33,7 +33,6 @@ export const ReferralReportTable = () => {
     filterAndPaginateData
   } = useReport<ReferralData>(10);
 
-  console.log("Referral Report API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetReferralReportQuery(apiFilters);
 

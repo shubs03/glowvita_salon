@@ -26,7 +26,6 @@ export const POST = authMiddlewareAdmin(async (req) => {
             { upsert: true, new: true }
         );
 
-        console.log(`[Admin Notification] Token registered for admin: ${userId}`);
 
         return NextResponse.json({ success: true, message: 'Token registered successfully' });
     } catch (error) {

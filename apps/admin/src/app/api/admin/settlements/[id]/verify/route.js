@@ -23,17 +23,16 @@ export const PATCH = authMiddlewareAdmin(async (req, { params }) => {
             );
         }
 
-        console.log(`[VerifyAPI] Direct DB Update for ${id} to verified: ${verified}`);
-        
+
         // Use direct MongoDB driver to bypass Mongoose schema stripping for newly added fields
         const result = await VendorSettlementPaymentModel.collection.findOneAndUpdate(
             { _id: new mongoose.Types.ObjectId(id) },
-            { 
-                $set: { 
+            {
+                $set: {
                     verified: verified,
                     verifiedAt: verified ? new Date() : null,
                     verifiedBy: verified ? new mongoose.Types.ObjectId(req.user.userId) : null
-                } 
+                }
             },
             { returnDocument: 'after' }
         );
@@ -53,7 +52,6 @@ export const PATCH = authMiddlewareAdmin(async (req, { params }) => {
             .populate({ path: 'vendorId', select: 'businessName ownerName contactNumber email', strictPopulate: false })
             .lean();
 
-        console.log(`[VerifyAPI] Final Save Check - Verified: ${updatedPayment?.verified}`);
 
         return NextResponse.json({
             success: true,

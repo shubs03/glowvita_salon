@@ -78,8 +78,7 @@ const ProductFormFields = ({
   // Debug logging
   useEffect(() => {
     if (productMastersData) {
-      console.log('[CRM Products] Product Masters loaded:', productMasters.length, 'items');
-      console.log('[CRM Products] Sample product master:', productMasters[0]);
+
     }
   }, [productMastersData, productMasters]);
 
@@ -122,7 +121,6 @@ const ProductFormFields = ({
       const categoryName = typeof pm.category === 'object' ? pm.category.name : '';
       return categoryName === formData.category;
     });
-    console.log(`[CRM Products] Filtering for category "${formData.category}":`, filtered.length, 'products');
     return filtered;
   }, [productMasters, formData.category]);
 
@@ -134,7 +132,7 @@ const ProductFormFields = ({
       onFieldChange('productName', '');
       return; // Don't update matched product, let user type
     }
-    
+
     setIsManualEntry(false);
     onFieldChange('productName', productName);
 

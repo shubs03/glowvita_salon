@@ -34,9 +34,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const userQuery = getRegionQuery(req.user, regionId && regionId !== 'all' ? regionId : null);
 
     // Debug logging to troubleshoot "empty" results
-    console.log('=== ADMIN USERS API ===');
-    console.log('Param regionId:', regionId);
-    console.log('Final userQuery:', JSON.stringify(userQuery));
 
     // ── Optional: also filter by vendorId (show only users who booked that vendor)
     if (vendorId) {
@@ -73,14 +70,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       UserModel.countDocuments(userQuery)
     ]);
 
-    console.log(`Found ${users.length} users for query. Total in DB matching query: ${total}`);
 
     // If query returned nothing but regionId was specified, log a sample user for debugging
     if (users.length === 0 && userQuery.regionId) {
       const sample = await UserModel.findOne({}).select('regionId firstName').lean();
-      console.log('Sample user in DB:', sample ? { ...sample, regionId: sample.regionId?.toString() } : 'No users at all');
       if (sample && sample.regionId) {
-        console.log(`Param ID (${regionId}) vs Sample ID (${sample.regionId.toString()}): ${regionId === sample.regionId.toString() ? 'MATCH' : 'MISMATCH'}`);
       }
     }
 

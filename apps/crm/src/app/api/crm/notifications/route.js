@@ -33,16 +33,16 @@ export const POST = withSubscriptionCheck(async (req) => {
     );
   }
 
-  const notificationToInsert = { 
-    title, 
-    channels, 
-    content, 
-    targetType, 
+  const notificationToInsert = {
+    title,
+    channels,
+    content,
+    targetType,
     targets: includesSpecific ? targets : [],
     date: new Date(),
-    status: 'Sent', 
-    createdAt: new Date(), 
-    updatedAt: new Date() 
+    status: 'Sent',
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
 
   // 3️⃣ Create or update VendorNotifications document
@@ -59,7 +59,7 @@ export const POST = withSubscriptionCheck(async (req) => {
   try {
     const { NotificationService } = await import("@repo/lib");
     const targetTypesArray = Array.isArray(targetType) ? targetType : [targetType];
-    
+
     // Group recipient IDs by role
     const recipientsByRole = {
       client: new Set(),
@@ -74,9 +74,9 @@ export const POST = withSubscriptionCheck(async (req) => {
 
     for (const type of targetTypesArray) {
       if (type === 'all_online_clients') {
-        const appointments = await AppointmentModel.find({ 
-          vendorId: new mongoose.Types.ObjectId(vendorId), 
-          client: { $exists: true, $ne: null } 
+        const appointments = await AppointmentModel.find({
+          vendorId: new mongoose.Types.ObjectId(vendorId),
+          client: { $exists: true, $ne: null }
         }).select('client').lean();
         appointments.forEach(appt => recipientsByRole.client.add(appt.client.toString()));
       } else if (type === 'all_offline_clients') {
@@ -99,7 +99,6 @@ export const POST = withSubscriptionCheck(async (req) => {
     for (const [role, idsSet] of Object.entries(recipientsByRole)) {
       const recipientIds = Array.from(idsSet);
       if (recipientIds.length > 0) {
-        console.log(`Sending mass notification to ${recipientIds.length} ${role}s`);
         await NotificationService.sendMassNotification(recipientIds, role, {
           title: title,
           body: content,

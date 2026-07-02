@@ -36,7 +36,6 @@ async function verifyJwt(token) {
         const { payload } = await jose.jwtVerify(token, secretKey);
         return payload;
     } catch (error) {
-        console.log("JWT Verification Error:", error.code);
         return null;
     }
 }

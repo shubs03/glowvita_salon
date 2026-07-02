@@ -84,11 +84,8 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
   };
 
   const openDocumentPreview = (src: string, type: string) => {
-    console.log('🔍 Document Preview Debug:');
-    console.log('  Original src:', src);
-    console.log('  Document type:', type);
+
     const absoluteUrl = getAbsoluteUrl(src);
-    console.log('  Absolute URL:', absoluteUrl);
     setPreviewDocument({ src: absoluteUrl, type });
     setZoom(1);
     setRotation(0);

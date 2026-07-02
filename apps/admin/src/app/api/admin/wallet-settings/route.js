@@ -76,9 +76,9 @@ export const GET = authMiddlewareAdmin(
 
       if (!settings) {
         return Response.json(
-          { 
+          {
             success: false,
-            message: "Wallet settings not found" 
+            message: "Wallet settings not found"
           },
           { status: 404 }
         );
@@ -104,10 +104,10 @@ export const GET = authMiddlewareAdmin(
     } catch (error) {
       console.error("Error fetching wallet settings:", error);
       return Response.json(
-        { 
+        {
           success: false,
           message: "Failed to fetch wallet settings",
-          error: error.message 
+          error: error.message
         },
         { status: 500 }
       );
@@ -127,9 +127,9 @@ export const PUT = authMiddlewareAdmin(
       const validationError = validateWalletSettings(settings);
       if (validationError) {
         return Response.json(
-          { 
+          {
             success: false,
-            message: validationError 
+            message: validationError
           },
           { status: 400 }
         );
@@ -154,7 +154,6 @@ export const PUT = authMiddlewareAdmin(
 
       await currentSettings.save();
 
-      console.log(`Wallet settings updated by admin: ${req.user?.email || 'Unknown'}`);
 
       return Response.json({
         success: true,
@@ -177,10 +176,10 @@ export const PUT = authMiddlewareAdmin(
     } catch (error) {
       console.error("Error updating wallet settings:", error);
       return Response.json(
-        { 
+        {
           success: false,
           message: "Failed to update wallet settings",
-          error: error.message 
+          error: error.message
         },
         { status: 500 }
       );

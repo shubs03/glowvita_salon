@@ -32,7 +32,6 @@ export const SellingServicesReportTable = () => {
     filterAndPaginateData
   } = useReport<SellingServiceData>(5);
 
-  console.log("Selling Services API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetSellingServicesReportQuery(apiFilters);
 

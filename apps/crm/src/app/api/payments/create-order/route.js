@@ -34,7 +34,6 @@ export async function POST(req) {
       receipt: (receipt || `crm_${Date.now()}`).slice(0, 40),
     });
 
-    console.log('[CRM Razorpay] Order created:', order.id, '| Amount:', amountInPaise, 'paise');
 
     return NextResponse.json({
       success: true,

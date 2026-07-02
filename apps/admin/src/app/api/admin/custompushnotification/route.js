@@ -50,7 +50,7 @@ export const POST = authMiddlewareAdmin(
     if (newNotification.status === 'Sent') {
       try {
         const targetTypesArray = Array.isArray(targetType) ? targetType : [targetType];
-        
+
         // Group recipient IDs by role
         const recipientsByRole = {
           client: new Set(),
@@ -94,7 +94,6 @@ export const POST = authMiddlewareAdmin(
         for (const [role, idsSet] of Object.entries(recipientsByRole)) {
           const recipientIds = Array.from(idsSet);
           if (recipientIds.length > 0) {
-            console.log(`Sending mass notification to ${recipientIds.length} ${role}s`);
             await NotificationService.sendMassNotification(recipientIds, role, {
               title: newNotification.title,
               body: newNotification.content,

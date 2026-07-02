@@ -68,7 +68,8 @@ export async function GET(request) {
           businessId: offer.businessId,
           isVendorOffer: true,
           isAdminGlobal: false,
-          createdAt: offer.createdAt
+          createdAt: offer.createdAt,
+          offerImage: offer.offerImage
         });
       }
     }

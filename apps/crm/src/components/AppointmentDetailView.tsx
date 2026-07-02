@@ -514,7 +514,6 @@ export function AppointmentDetailView({
   const handleFormSubmit = async (formData: any) => {
     const toastId = toast.loading('Saving appointment...');
     try {
-      console.log('Starting form submission with data:', { formData, appointment });
 
       const appointmentId = appointment?._id || appointment?.id || '';
       if (!appointmentId) {
@@ -552,7 +551,6 @@ export function AppointmentDetailView({
         totalAmount: formData.totalAmount || appointment?.totalAmount || 0,
       };
 
-      console.log('Updated appointment data:', updatedAppointment);
 
       // Call the update handler if provided
       if (onUpdateAppointment) {
@@ -613,17 +611,7 @@ export function AppointmentDetailView({
       : [];
   }, [overridePaymentHistory, liveAppointment]);
 
-  // Debug: Log appointment data to console
-  console.log('=== APPOINTMENT PAYMENT DATA ===');
-  console.log('Appointment ID:', (liveAppointment as any)._id);
-  console.log('finalAmount:', (liveAppointment as any).finalAmount);
-  console.log('totalAmount:', (liveAppointment as any).totalAmount);
-  console.log('amountPaid (from liveAppointment):', (liveAppointment as any).amountPaid);
-  console.log('amountRemaining (from liveAppointment):', (liveAppointment as any).amountRemaining);
-  console.log('paymentStatus:', (liveAppointment as any).paymentStatus);
-  console.log('payment.paid:', payment.paid);
-  console.log('calculated remainingAmount:', remainingAmount);
-  console.log('=== END APPOINTMENT PAYMENT DATA ===');
+
 
   // Update paymentData when remainingAmount changes
   useEffect(() => {
@@ -686,8 +674,6 @@ export function AppointmentDetailView({
 
       const filtered = activeHistoryFilter === 'all' ? history : history.filter(h => h.status === activeHistoryFilter);
       if (process && process.env && typeof window !== 'undefined') {
-        console.log('[ClientHistory] Matches total:', history.length, 'Filter:', activeHistoryFilter, 'Shown:', filtered.length);
-        console.log('[ClientHistory] Current client id/name/phone:', { currentClientId, currentClientName, currentClientPhone });
       }
       setClientHistory(filtered);
     } catch (e) {
@@ -978,11 +964,9 @@ export function AppointmentDetailView({
         notes: paymentData.notes,
       };
 
-      console.log('Submitting payment with payload:', paymentPayload);
 
       // Call API
       const result: any = await collectPayment(paymentPayload).unwrap();
-      console.log('Payment API response:', result);
 
       if (!result || !result.success) {
         throw new Error(result?.message || 'Failed to process payment');
@@ -1000,11 +984,6 @@ export function AppointmentDetailView({
       const newPaymentStatus =
         paymentDetails.paymentStatus ?? updatedAppointmentData.paymentStatus ?? (appointment as any).paymentStatus ?? 'pending';
 
-      console.log('Updating payment data:', {
-        newAmountPaid,
-        newRemainingAmount,
-        newPaymentStatus,
-      });
 
       // Update parent with latest appointment state
       if (onUpdateAppointment) {
@@ -1029,7 +1008,6 @@ export function AppointmentDetailView({
           amount: (updatedAppointment as any).finalAmount || updatedAppointment.totalAmount || updatedAppointment.amount || 0,
         };
 
-        console.log('Calling onUpdateAppointment with:', updatedAppointment);
         await onUpdateAppointment(updatedAppointment);
       }
 
@@ -1062,17 +1040,8 @@ export function AppointmentDetailView({
         newStatus = 'completed';
       }
 
-      console.log('Status update check:', {
-        currentStatus: appointment.status,
-        backendStatus: updatedAppointmentData?.status,
-        calculatedStatus: newStatus,
-        remainingAmount: newRemainingAmount,
-        amountPaid: newAmountPaid
-      });
-
       // Set override if status changed
       if (newStatus !== appointment.status) {
-        console.log(`Setting status override from ${appointment.status} to ${newStatus}`);
         setOverrideStatus(newStatus);
       }
 
@@ -1389,7 +1358,6 @@ export function AppointmentDetailView({
   }
 
   // Debug log to check appointment data
-  console.log('Appointment data:', JSON.stringify(appointment, null, 2));
 
   // Helper function to format currency with proper symbol and formatting
   const formatCurrency = (amount: number | string): string => {
@@ -1398,7 +1366,7 @@ export function AppointmentDetailView({
     return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const isFutureAppointment = new Date(liveAppointment.date).setHours(0,0,0,0) > new Date().setHours(0,0,0,0);
+  const isFutureAppointment = new Date(liveAppointment.date).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0);
 
   return (
     <>
@@ -1435,7 +1403,7 @@ export function AppointmentDetailView({
                               liveAppointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
                                 liveAppointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
                                   'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
-                  } border-0`}
+                    } border-0`}
                 >
                   {liveAppointment.status.toUpperCase().replace(/-/g, ' ')}
                 </Badge>
@@ -2160,7 +2128,7 @@ export function AppointmentDetailView({
                                   }
                                 }
                               }
-                              
+
                               const duration = Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length);
                               const staggeredStartTime = addMinutesToTimeStr(appointment.startTime, idx * duration);
                               const staggeredEndTime = addMinutesToTimeStr(appointment.startTime, (idx + 1) * duration);

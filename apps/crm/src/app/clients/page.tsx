@@ -316,7 +316,7 @@ export default function ClientsPage() {
         // We'll count it if it's a "Counter Bill" (manual sale) or if there's no associated appointment
         if (bill.billingType === "Counter Bill" || !bill.appointmentId) {
           countsById.set(clientId, (countsById.get(clientId) || 0) + 1);
-          
+
           if (status === "completed") {
             totalsById.set(clientId, (totalsById.get(clientId) || 0) + amount);
             completedCountById.set(clientId, (completedCountById.get(clientId) || 0) + 1);
@@ -540,11 +540,7 @@ export default function ClientsPage() {
 
   const handleSaveAppointment = (appointmentData: AppointmentFormData, client: Client) => {
     // Here you would typically save the appointment to your backend
-    console.log("Saving appointment:", {
-      ...appointmentData,
-      clientId: client._id,
-      clientName: client.fullName,
-    });
+
     alert("Appointment saved successfully!");
   };
 

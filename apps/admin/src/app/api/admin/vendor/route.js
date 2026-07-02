@@ -368,14 +368,6 @@ export const GET = authMiddlewareAdmin(
     const url = new URL(req.url);
     const vendorIdParam = url.searchParams.get('vendorId');
 
-    console.log('[Vendor GET] Request from user:', {
-      userId: req.user._id,
-      roleName: req.user.roleName,
-      assignedRegions: req.user.assignedRegions,
-      vendorIdParam,
-      requestUrl: req.url
-    });
-
     // If vendorId is provided, fetch clients for that vendor
     if (vendorIdParam) {
       try {
@@ -393,9 +385,7 @@ export const GET = authMiddlewareAdmin(
 
     // Otherwise fetch all vendors with region filter
     const regionQuery = buildRegionQueryFromRequest(req);
-    console.log('[Vendor GET] Query:', regionQuery);
     const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").populate("regionId", "name").select("-password").lean();
-    console.log('[Vendor GET] Found vendors:', vendors.length);
     return Response.json(vendors);
   }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
   "vendors:view"

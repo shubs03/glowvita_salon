@@ -31,15 +31,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const regionId = searchParams.get('regionId'); // Region filter
 
-    console.log("Vendor Payout Settlement Report - Product Filter parameters:", {
-      filterType,
-      filterValue,
-      startDateParam,
-      endDateParam,
-      city,
-      businessName,
-      userType
-    });
+
 
     // Build date filter
     const buildDateFilter = (filterType, filterValue) => {
@@ -102,7 +94,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // City filter will be applied after lookups
 
-    console.log("Main filter for client orders:", mainFilter);
 
     // Build aggregation pipeline
     const pipeline = [
@@ -272,7 +263,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     });
 
-    console.log("Vendor payout settlement report - product results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [

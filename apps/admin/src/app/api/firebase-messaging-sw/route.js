@@ -42,7 +42,6 @@ const broadcastNotification = (payload) => {
 };
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[ADMIN SW] Background Message:', payload);
   const { title, body, data } = broadcastNotification(payload);
 
   const options = {

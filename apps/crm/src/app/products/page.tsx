@@ -323,7 +323,6 @@ export default function ProductsPage() {
         (field) => formData[field] !== selectedProduct[field],
       );
 
-      console.log("Edit Check - Changed Fields:", changedFields);
 
       if (changedFields.length === 0 && formData.stock !== selectedProduct.stock) {
         // ONLY stock changed. Use adjustInventory to avoid re-approval.

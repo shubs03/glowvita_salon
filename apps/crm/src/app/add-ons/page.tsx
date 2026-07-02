@@ -71,25 +71,25 @@ export default function AddOnsPage() {
     ) => {
         setModalType(type);
         setEditingAddOn(addon || null);
-        
+
         if (type === 'add') {
-          setFormData({
-            name: "",
-            price: "",
-            duration: "",
-            status: "active",
-            services: [] as string[],
-          });
+            setFormData({
+                name: "",
+                price: "",
+                duration: "",
+                status: "active",
+                services: [] as string[],
+            });
         } else if (addon) {
-          setFormData({
-            name: addon.name,
-            price: String(addon.price),
-            duration: String(addon.duration),
-            status: addon.status,
-            services: addon.services || (addon.service ? [addon.service] : []),
-          });
+            setFormData({
+                name: addon.name,
+                price: String(addon.price),
+                duration: String(addon.duration),
+                status: addon.status,
+                services: addon.services || (addon.service ? [addon.service] : []),
+            });
         }
-        
+
         setIsModalOpen(true);
     };
 
@@ -109,17 +109,12 @@ export default function AddOnsPage() {
                 duration: Number(formData.duration),
             };
 
-            console.log("Add-ons Page - Saving payload:", JSON.stringify(payload, null, 2));
 
             if (editingAddOn) {
-                console.log("Add-ons Page - Updating add-on:", editingAddOn._id);
                 const result = await updateAddOn({ ...payload, _id: editingAddOn._id }).unwrap();
-                console.log("Add-ons Page - Update successful:", result);
                 toast.success("Add-on updated successfully");
             } else {
-                console.log("Add-ons Page - Creating new add-on");
                 const result = await createAddOn(payload).unwrap();
-                console.log("Add-ons Page - Create successful:", result);
                 toast.success("Add-on created successfully");
             }
             setIsModalOpen(false);
@@ -144,16 +139,16 @@ export default function AddOnsPage() {
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             {/* Enhanced Header Section */}
             <div className="mb-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
-                    Add-Ons
-                  </h1>
-                  <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
-                    Manage your add-ons and track services
-                  </p>
+                <div className="flex items-center gap-4 mb-6">
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                            Add-Ons
+                        </h1>
+                        <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                            Manage your add-ons and track services
+                        </p>
+                    </div>
                 </div>
-              </div>
             </div>
 
             {/* Add-Ons Filters Toolbar */}

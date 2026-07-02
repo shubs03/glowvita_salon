@@ -30,16 +30,15 @@ const determineUserType = async (identifier, referralType) => {
   } else if (referralType === 'V2V') {
     return { type: 'Vendor', name: identifier };
   }
-  
+
   return { type: 'Unknown', name: identifier };
 };
 
 // GET - Fetch referral report data
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
-    console.log("Referral Report API called");
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const startDateParam = searchParams.get('startDate');
@@ -49,9 +48,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city');
     const vendor = searchParams.get('vendor');
     const regionId = searchParams.get('regionId');
-    
-    console.log("Filter parameters:", { startDateParam, endDateParam, referralType, status, city, vendor });
-    
+
+
     // Build date filter
     let dateFilter = {};
     if (startDateParam && endDateParam) {
@@ -60,22 +58,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
       endDate.setHours(23, 59, 59, 999);
       dateFilter = { date: { $gte: startDate, $lte: endDate } };
     }
-    
+
     // Build referral type filter
     let referralTypeFilter = {};
     if (referralType && referralType !== 'all') {
       referralTypeFilter = { referralType };
     }
-    
+
     // Build status filter
     let statusFilter = {};
     if (status && status !== 'all') {
       statusFilter = { status };
     }
-    
+
     // Get region query
     const regionQuery = getRegionQuery(req.user, regionId);
-    
+
     // Combine all filters
     const query = {
       ...dateFilter,
@@ -83,14 +81,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...statusFilter,
       ...regionQuery
     };
-    
-    console.log("MongoDB query:", JSON.stringify(query));
-    
+
+
     // Fetch referrals
     const referrals = await ReferralModel.find(query).sort({ date: -1 }).lean();
-    
-    console.log(`Found ${referrals.length} referrals`);
-    
+
+
     // Format referrals for frontend
     const { default: User } = await import("@repo/lib/models/user/User.model");
     const { default: Vendor } = await import("@repo/lib/models/Vendor/Vendor.model");
@@ -99,102 +95,102 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     const getModel = (type) => {
       switch (type) {
-          case 'Vendor': return Vendor;
-          case 'Doctor': return Doctor;
-          case 'Supplier': return Supplier;
-          default: return User;
+        case 'Vendor': return Vendor;
+        case 'Doctor': return Doctor;
+        case 'Supplier': return Supplier;
+        default: return User;
       }
     };
 
     const formattedReferrals = await Promise.all(referrals.map(async (ref) => {
       try {
-          const RefModel = getModel(ref.referrerType || 'User');
-          const ReeModel = getModel(ref.refereeType || 'User');
+        const RefModel = getModel(ref.referrerType || 'User');
+        const ReeModel = getModel(ref.refereeType || 'User');
 
-          let referrerName = ref.referrer || 'N/A';
-          let refereeName = ref.referee || 'N/A';
+        let referrerName = ref.referrer || 'N/A';
+        let refereeName = ref.referee || 'N/A';
 
-          // Aggressive Name Lookup for Referrer
-          if (mongoose.Types.ObjectId.isValid(ref.referrer)) {
-              const allModels = [Vendor, Doctor, Supplier, User];
-              let doc = null;
-              
-              const PrimaryModel = getModel(ref.referrerType || 'User');
-              doc = await PrimaryModel.findById(ref.referrer).select('firstName lastName businessName shopName name').lean();
-              
-              if (!doc) {
-                for (const M of allModels.filter(m => m !== PrimaryModel)) {
-                  doc = await M.findById(ref.referrer).select('firstName lastName businessName shopName name').lean();
-                  if (doc) break;
-                }
-              }
+        // Aggressive Name Lookup for Referrer
+        if (mongoose.Types.ObjectId.isValid(ref.referrer)) {
+          const allModels = [Vendor, Doctor, Supplier, User];
+          let doc = null;
 
-              if (doc) {
-                  if (doc.businessName) referrerName = doc.businessName;
-                  else if (doc.shopName) referrerName = doc.shopName;
-                  else if (doc.name) referrerName = doc.name;
-                  else if (doc.firstName || doc.lastName) referrerName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
-              }
+          const PrimaryModel = getModel(ref.referrerType || 'User');
+          doc = await PrimaryModel.findById(ref.referrer).select('firstName lastName businessName shopName name').lean();
+
+          if (!doc) {
+            for (const M of allModels.filter(m => m !== PrimaryModel)) {
+              doc = await M.findById(ref.referrer).select('firstName lastName businessName shopName name').lean();
+              if (doc) break;
+            }
           }
 
-          // Aggressive Name Lookup for Referee
-          if (mongoose.Types.ObjectId.isValid(ref.referee)) {
-              const allModels = [Vendor, Doctor, Supplier, User];
-              let doc = null;
-              
-              const PrimaryModel = getModel(ref.refereeType || 'User');
-              doc = await PrimaryModel.findById(ref.referee).select('firstName lastName businessName shopName name').lean();
-              
-              if (!doc) {
-                for (const M of allModels.filter(m => m !== PrimaryModel)) {
-                  doc = await M.findById(ref.referee).select('firstName lastName businessName shopName name').lean();
-                  if (doc) break;
-                }
-              }
+          if (doc) {
+            if (doc.businessName) referrerName = doc.businessName;
+            else if (doc.shopName) referrerName = doc.shopName;
+            else if (doc.name) referrerName = doc.name;
+            else if (doc.firstName || doc.lastName) referrerName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+          }
+        }
 
-              if (doc) {
-                  if (doc.businessName) refereeName = doc.businessName;
-                  else if (doc.shopName) refereeName = doc.shopName;
-                  else if (doc.name) refereeName = doc.name;
-                  else if (doc.firstName || doc.lastName) refereeName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
-              }
+        // Aggressive Name Lookup for Referee
+        if (mongoose.Types.ObjectId.isValid(ref.referee)) {
+          const allModels = [Vendor, Doctor, Supplier, User];
+          let doc = null;
+
+          const PrimaryModel = getModel(ref.refereeType || 'User');
+          doc = await PrimaryModel.findById(ref.referee).select('firstName lastName businessName shopName name').lean();
+
+          if (!doc) {
+            for (const M of allModels.filter(m => m !== PrimaryModel)) {
+              doc = await M.findById(ref.referee).select('firstName lastName businessName shopName name').lean();
+              if (doc) break;
+            }
           }
 
-          // Extract bonus amount for calculations
-          let bonusAmount = 0;
-          if (ref.bonus) {
-            const match = ref.bonus.match(/[\d.]+/);
-            bonusAmount = match ? parseFloat(match[0]) : 0;
+          if (doc) {
+            if (doc.businessName) refereeName = doc.businessName;
+            else if (doc.shopName) refereeName = doc.shopName;
+            else if (doc.name) refereeName = doc.name;
+            else if (doc.firstName || doc.lastName) refereeName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
           }
+        }
 
-          return {
-            referralId: ref.referralId || ref._id.toString(),
-            referralType: ref.referralType,
-            referrerName: referrerName,
-            referrerType: ref.referrerType || 'User',
-            refereeName: refereeName,
-            refereeType: ref.refereeType || 'User',
-            date: ref.date || ref.createdAt,
-            status: ref.status || 'Pending',
-            bonus: ref.bonus || '₹0',
-            bonusAmount: bonusAmount
-          };
+        // Extract bonus amount for calculations
+        let bonusAmount = 0;
+        if (ref.bonus) {
+          const match = ref.bonus.match(/[\d.]+/);
+          bonusAmount = match ? parseFloat(match[0]) : 0;
+        }
+
+        return {
+          referralId: ref.referralId || ref._id.toString(),
+          referralType: ref.referralType,
+          referrerName: referrerName,
+          referrerType: ref.referrerType || 'User',
+          refereeName: refereeName,
+          refereeType: ref.refereeType || 'User',
+          date: ref.date || ref.createdAt,
+          status: ref.status || 'Pending',
+          bonus: ref.bonus || '₹0',
+          bonusAmount: bonusAmount
+        };
       } catch (err) {
-          return {
-            referralId: ref.referralId || ref._id.toString(),
-            referralType: ref.referralType,
-            referrerName: ref.referrer || 'N/A',
-            referrerType: ref.referrerType || 'User',
-            refereeName: ref.referee || 'N/A',
-            refereeType: ref.refereeType || 'User',
-            date: ref.date || ref.createdAt,
-            status: ref.status || 'Pending',
-            bonus: ref.bonus || '₹0',
-            bonusAmount: 0
-          };
+        return {
+          referralId: ref.referralId || ref._id.toString(),
+          referralType: ref.referralType,
+          referrerName: ref.referrer || 'N/A',
+          referrerType: ref.referrerType || 'User',
+          refereeName: ref.referee || 'N/A',
+          refereeType: ref.refereeType || 'User',
+          date: ref.date || ref.createdAt,
+          status: ref.status || 'Pending',
+          bonus: ref.bonus || '₹0',
+          bonusAmount: 0
+        };
       }
     }));
-    
+
     // Calculate summary statistics
     const summary = {
       totalReferrals: formattedReferrals.length,
@@ -205,14 +201,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
       c2vCount: formattedReferrals.filter(ref => ref.referralType === 'C2V').length,
       v2vCount: formattedReferrals.filter(ref => ref.referralType === 'V2V').length,
     };
-    
+
     // Get unique values for filters (optional)
     const cities = [];
     const vendors = [];
     const statuses = ['Pending', 'Completed', 'Bonus Paid'];
-    
-    console.log("Summary:", summary);
-    
+
+
     return NextResponse.json({
       success: true,
       data: {
@@ -223,15 +218,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
         statuses: statuses
       }
     });
-    
+
   } catch (error) {
     console.error("Referral report error:", error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: "Failed to fetch referral report data", 
-        error: error.message 
-      }, 
+        message: "Failed to fetch referral report data",
+        error: error.message
+      },
       { status: 500 }
     );
   }

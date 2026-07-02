@@ -39,7 +39,7 @@ export const GET = authMiddlewareCrm(async (req) => {
     if (vendorId) {
       originalsQuery.createdBy = { $ne: new mongoose.Types.ObjectId(vendorId) };
     }
-    
+
     const originals = await SocialMediaTemplate.find(originalsQuery)
       .select('-__v')
       .sort({ createdAt: -1 })
@@ -48,11 +48,11 @@ export const GET = authMiddlewareCrm(async (req) => {
     // 2. This vendor's copies (any template scoped to vendorId or created by the vendor)
     const vendorCopies = vendorId
       ? await SocialMediaTemplate.find({
-          $or: [
-            { vendorId: new mongoose.Types.ObjectId(vendorId) },
-            { createdBy: new mongoose.Types.ObjectId(vendorId) }
-          ]
-        }).select('-__v').lean()
+        $or: [
+          { vendorId: new mongoose.Types.ObjectId(vendorId) },
+          { createdBy: new mongoose.Types.ObjectId(vendorId) }
+        ]
+      }).select('-__v').lean()
       : [];
 
     // 3. Self-healing DB migration: link older template copies to their originals
@@ -66,7 +66,6 @@ export const GET = authMiddlewareCrm(async (req) => {
         });
 
         if (originalMatch) {
-          console.log(`[Migration] Self-healing link: copying template ID ${copy._id} parent to original ${originalMatch._id}`);
           await SocialMediaTemplate.updateOne(
             { _id: copy._id },
             {
@@ -156,8 +155,10 @@ export const GET = authMiddlewareCrm(async (req) => {
   } catch (error) {
     console.error('Error in GET /api/crm/social-media-templates:', error);
     return NextResponse.json(
-      { success: false, message: 'Error fetching social media templates',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      {
+        success: false, message: 'Error fetching social media templates',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -240,8 +241,10 @@ export const POST = authMiddlewareCrm(async (req) => {
   } catch (error) {
     console.error('Error in POST /api/crm/social-media-templates:', error);
     return NextResponse.json(
-      { success: false, message: 'Error saving customized template',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      {
+        success: false, message: 'Error saving customized template',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }
@@ -293,8 +296,10 @@ export const DELETE = authMiddlewareCrm(async (req) => {
   } catch (error) {
     console.error('Error in DELETE /api/crm/social-media-templates:', error);
     return NextResponse.json(
-      { success: false, message: 'Error deleting customized template',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined },
+      {
+        success: false, message: 'Error deleting customized template',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

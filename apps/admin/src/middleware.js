@@ -11,7 +11,6 @@ async function verifyJwt(token) {
     return payload;
   } catch (error) {
     // This will catch errors for expired tokens, invalid signatures, etc.
-    console.log("Admin JWT Verification Error in Middleware:", error.code);
     return null;
   }
 }
