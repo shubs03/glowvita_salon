@@ -71,7 +71,7 @@ export default function HomePage() {
         <Suspense fallback={<div className="min-h-screen bg-background animate-pulse" />}>
           <HeroSection2 />
           <OffersSection2 />
-          <WhereToGo maxSalons={8} showViewAllButton={false} />
+          <WhereToGo maxSalons={8} showViewAllButton={true} />
           <AllSalons maxSalons={8} />
           <NewlyAddedSalons maxSalons={8} />
           <WhyChooseUs />
