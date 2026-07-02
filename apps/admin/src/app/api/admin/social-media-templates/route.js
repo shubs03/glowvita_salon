@@ -307,7 +307,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
             "width": 800,
             "height": 80,
             "fill": "#000000",
-            "text": "02, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar,\nMumbai Naka, Nashik, Maharashtra 422001",
+            "text": "Corporate Office : Business Plus, A Wing, 5th Floor, Office No. 505, 506,\nNear Sai Square, Mumbai Naka, Nashik, Maharashtra, India PIN - 422009",
             "fontSize": 25,
             "fontWeight": "normal",
             "fontFamily": "Arial",
