@@ -337,12 +337,12 @@ const HeroSection2 = () => {
           style={{
             width: "865px",
             maxWidth: "100%",
-            height: "88px",
+            height: "72px",
             gap: "46px",
-            borderRadius: "61.33px",
-            paddingTop: "20px",
+            borderRadius: "50px",
+            paddingTop: "12px",
             paddingRight: "14px",
-            paddingBottom: "20px",
+            paddingBottom: "12px",
             paddingLeft: "40px",
           }}
         >
@@ -350,7 +350,7 @@ const HeroSection2 = () => {
           {/* Service + Address inputs wrapper */}
           <div
             className="flex items-center md:border-r border-gray-200"
-            style={{ width: "638px", maxWidth: "100%", height: "60px", gap: "24px" }}
+            style={{ width: "638px", maxWidth: "100%", height: "48px", gap: "24px" }}
           >
             {/* Service Input */}
             <div className="relative flex-1 flex items-center gap-3">
@@ -518,14 +518,14 @@ const HeroSection2 = () => {
         </div>
 
         {/* Service Categories Marquee */}
-        <div className="max-w-4xl overflow-hidden relative rounded-full">
+        <div className="max-w-4xl overflow-hidden relative rounded-full py-1">
           <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
           <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
             {categoriesLoading
               ? Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  style={{ width: 113, height: 30, opacity: 1 }}
+                  style={{ width: 113, height: 36, opacity: 1 }}
                   className="bg-white bg-opacity-10 backdrop-blur-sm border border-white rounded-full flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 animate-pulse"
                 >
                   <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-gray-300 rounded-full" />
@@ -541,7 +541,7 @@ const HeroSection2 = () => {
                   }}
                   style={{
                     width: 113,
-                    height: 30,
+                    height: 36,
                     border: "1px solid #FFFFFF",
                     opacity: 1,
                   }}
