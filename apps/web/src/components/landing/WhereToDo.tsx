@@ -508,7 +508,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
       {/* Filters Row - Only show on salons page */}
       {isSalonsPage && (
         <div className="mb-12 mx-8 md:mx-16 lg:mx-24">
-          <div className="p-6 bg-[#EBF3FD] border border-blue-100 rounded-3xl shadow-sm">
+          <div className="p-8 md:p-10 bg-[#EBF3FD] border border-blue-100 rounded-3xl shadow-sm">
             <div className="flex items-center justify-end mb-4">
               <button
                 onClick={resetFilters}
