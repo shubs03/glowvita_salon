@@ -352,152 +352,152 @@ const HeroSection2 = () => {
             className="flex items-center md:border-r border-gray-200"
             style={{ width: "638px", maxWidth: "100%", height: "60px", gap: "24px" }}
           >
-          {/* Service Input */}
-          <div className="relative flex-1 flex items-center gap-3">
-            <div className="flex flex-col flex-1">
-              {!serviceInput && (
-                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
-                  Service Name
-                </label>
-              )}
-              <input
-                type="text"
-                placeholder="Book your services..."
-                value={serviceInput}
-                onChange={(e) => setServiceInput(e.target.value)}
-                onFocus={() => setIsServiceFocused(true)}
-                onBlur={() => setTimeout(() => setIsServiceFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
-              />
-            </div>
-            <Scissors className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            {/* Service Input */}
+            <div className="relative flex-1 flex items-center gap-3">
+              <div className="flex flex-col flex-1">
+                {!serviceInput && (
+                  <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
+                    Service Name
+                  </label>
+                )}
+                <input
+                  type="text"
+                  placeholder="Book your services..."
+                  value={serviceInput}
+                  onChange={(e) => setServiceInput(e.target.value)}
+                  onFocus={() => setIsServiceFocused(true)}
+                  onBlur={() => setTimeout(() => setIsServiceFocused(false), 200)}
+                  className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
+                />
+              </div>
+              <Scissors className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
-            {/* Service Suggestions */}
-            {isServiceFocused && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 md:right-auto md:w-[400px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
-                {suggestions.map((item: any) => (
-                  <button
-                    key={item._id}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSuggestionSelection(item);
-                    }}
-                    className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center justify-between group transition-colors"
-                  >
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                      <div
-                        className={cn(
-                          "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 flex-shrink-0",
-                          item.type === "category" ? "bg-purple-100/50" : "bg-amber-100/50"
-                        )}
-                      >
-                        {item.type === "category" ? (
-                          <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
-                        ) : item.type === "salon" ? (
-                          <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                        ) : (
-                          <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
-                        )}
+              {/* Service Suggestions */}
+              {isServiceFocused && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 md:right-auto md:w-[400px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
+                  {suggestions.map((item: any) => (
+                    <button
+                      key={item._id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSuggestionSelection(item);
+                      }}
+                      className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center justify-between group transition-colors"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div
+                          className={cn(
+                            "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 flex-shrink-0",
+                            item.type === "category" ? "bg-purple-100/50" : "bg-amber-100/50"
+                          )}
+                        >
+                          {item.type === "category" ? (
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
+                          ) : item.type === "salon" ? (
+                            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                          ) : (
+                            <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-gray-900 font-bold text-xs sm:text-sm tracking-tight truncate">
+                            {item.name}
+                          </span>
+                          <span className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                            {item.type}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Location Input */}
+            <div className="relative flex-1 flex items-center gap-3">
+              <div className="flex flex-col flex-1">
+                {!locationInput && (
+                  <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
+                    Address
+                  </label>
+                )}
+                <input
+                  type="text"
+                  placeholder="Neighbourhood, city or area…"
+                  value={locationInput}
+                  onChange={(e) => handleLocationInputChange(e.target.value)}
+                  onFocus={() => setIsLocationFocused(true)}
+                  onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
+                  className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
+                />
+              </div>
+
+              {/* Green dot = coords resolved */}
+              {selectedLat != null ? (
+                <div className="relative flex-shrink-0">
+                  <MapPin className="w-4 h-4 text-green-500" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                </div>
+              ) : (
+                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              )}
+
+              {/* Location Dropdown */}
+              {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
+                <div className="absolute top-full left-0 right-0 md:right-auto md:w-[380px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-64 overflow-y-auto no-scrollbar">
+                  {/* Current Location */}
+                  {!locationInput && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCurrentLocation();
+                        setIsLocationFocused(false);
+                      }}
+                      className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center gap-2 sm:gap-3 transition-colors group"
+                    >
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors flex items-center justify-center flex-shrink-0">
+                        <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="text-gray-900 font-bold text-xs sm:text-sm tracking-tight truncate">
-                          {item.name}
+                          {isLocating ? "Locating…" : "Use Current Location"}
                         </span>
-                        <span className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                          {item.type}
+                        <span className="text-[8px] sm:text-[9px] text-gray-400 font-black uppercase">
+                          Instant Search
                         </span>
                       </div>
-                    </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <Sparkles className="w-3 h-3 text-amber-400" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+                    </button>
+                  )}
 
-          {/* Location Input */}
-          <div className="relative flex-1 flex items-center gap-3">
-            <div className="flex flex-col flex-1">
-              {!locationInput && (
-                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
-                  Address
-                </label>
+                  {locationPredictions.map((prediction, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectPrediction(prediction);
+                      }}
+                      className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center gap-2 sm:gap-3 transition-colors group"
+                    >
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 group-hover:bg-amber-100 transition-colors flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-amber-600" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-gray-800 font-bold text-xs sm:text-sm tracking-tight truncate">
+                          {prediction.structured_formatting?.main_text || prediction.description}
+                        </span>
+                        <span className="text-[9px] text-gray-400 truncate">
+                          {prediction.structured_formatting?.secondary_text || ""}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               )}
-              <input
-                type="text"
-                placeholder="Neighbourhood, city or area…"
-                value={locationInput}
-                onChange={(e) => handleLocationInputChange(e.target.value)}
-                onFocus={() => setIsLocationFocused(true)}
-                onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
-              />
             </div>
-
-            {/* Green dot = coords resolved */}
-            {selectedLat != null ? (
-              <div className="relative flex-shrink-0">
-                <MapPin className="w-4 h-4 text-green-500" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              </div>
-            ) : (
-              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            )}
-
-            {/* Location Dropdown */}
-            {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
-              <div className="absolute top-full left-0 right-0 md:right-auto md:w-[380px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-64 overflow-y-auto no-scrollbar">
-                {/* Current Location */}
-                {!locationInput && (
-                  <button
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleCurrentLocation();
-                      setIsLocationFocused(false);
-                    }}
-                    className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center gap-2 sm:gap-3 transition-colors group"
-                  >
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors flex items-center justify-center flex-shrink-0">
-                      <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-gray-900 font-bold text-xs sm:text-sm tracking-tight truncate">
-                        {isLocating ? "Locating…" : "Use Current Location"}
-                      </span>
-                      <span className="text-[8px] sm:text-[9px] text-gray-400 font-black uppercase">
-                        Instant Search
-                      </span>
-                    </div>
-                  </button>
-                )}
-
-                {locationPredictions.map((prediction, i) => (
-                  <button
-                    key={i}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectPrediction(prediction);
-                    }}
-                    className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center gap-2 sm:gap-3 transition-colors group"
-                  >
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 group-hover:bg-amber-100 transition-colors flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-amber-600" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-gray-800 font-bold text-xs sm:text-sm tracking-tight truncate">
-                        {prediction.structured_formatting?.main_text || prediction.description}
-                      </span>
-                      <span className="text-[9px] text-gray-400 truncate">
-                        {prediction.structured_formatting?.secondary_text || ""}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           </div>
 
           {/* Search Button */}
@@ -518,12 +518,16 @@ const HeroSection2 = () => {
         </div>
 
         {/* Service Categories Marquee */}
-        <div className="max-w-4xl overflow-hidden relative">
-          <div className="rounded-full absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
+        <div className="max-w-4xl overflow-hidden relative rounded-full">
+          <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
           <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
             {categoriesLoading
               ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white bg-opacity-10 backdrop-blur-sm border border-purple-950 border-opacity-30 px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 animate-pulse">
+                <div
+                  key={i}
+                  style={{ width: 113, height: 30, opacity: 1 }}
+                  className="bg-white bg-opacity-10 backdrop-blur-sm border border-white rounded-full flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 animate-pulse"
+                >
                   <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-gray-300 rounded-full" />
                   <div className="h-3.5 sm:h-4 bg-gray-300 rounded w-12 sm:w-16" />
                 </div>
@@ -535,14 +539,25 @@ const HeroSection2 = () => {
                     setSelectedCategoryId(cat.id);
                     setServiceInput(cat.label);
                   }}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0"
+                  style={{
+                    width: 113,
+                    height: 30,
+                    border: "1px solid #FFFFFF",
+                    opacity: 1,
+                  }}
+                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:bg-opacity-20 text-white rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0"
                 >
-                  <cat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {cat.label}
+                  <cat.icon style={{ width: 20, height: 20, opacity: 1 }} />
+                  <span
+                    style={{ width: 49, height: 18, opacity: 1 }}
+                    className="overflow-hidden text-ellipsis inline-block leading-[18px]"
+                  >
+                    {cat.label}
+                  </span>
                 </button>
               ))}
           </div>
-          <div className="rounded-full absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-l from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-l from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
         </div>
       </div>
     </div>
