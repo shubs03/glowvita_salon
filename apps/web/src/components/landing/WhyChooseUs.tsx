@@ -97,9 +97,9 @@ const WhyChooseUs = () => {
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
             Why Customers Choose GlowVita ?
           </h2>
-          <div
-            className="absolute bottom-0 left-0 h-0.5 w-full"
-            style={{ background: 'linear-gradient(to right, #1f2937 0%, #1f2937 40%, transparent 100%)' }}
+          <span
+            className="absolute bottom-0 left-0 h-[3px] w-full rounded-full"
+            style={{ background: 'linear-gradient(to right, #080b0eff 0%, #1f2937 40%, transparent 100%)' }}
           />
         </div>
       </div>
