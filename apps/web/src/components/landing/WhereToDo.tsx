@@ -101,9 +101,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
   return (
     <div className="relative w-full">
-      <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</label>
+      <label className="text-xs text-gray-700 font-bold uppercase tracking-wider">{label}</label>
       <div
-        className={`mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${isOpen ? 'ring-1 ring-primary' : ''}`}
+        className={`mt-1 w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm transition-colors focus-visible:outline-none ${isOpen ? 'ring-1 ring-primary' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center justify-between h-full gap-2">
@@ -111,7 +111,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             <div className="flex flex-wrap gap-1 py-0.5">
               {selectedOptions.length > 0 ? (
                 selectedOptions.map(option => (
-                  <div key={option} className="flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded whitespace-nowrap">
+                  <div key={option} className="flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md whitespace-nowrap">
                     {option}
                     <button
                       type="button"
@@ -143,10 +143,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                 <X size={16} />
               </button>
             )}
-            <div className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+            <div className="ml-2 flex-shrink-0">
+              <img src="/images/caret-down 1.png" alt="arrow" className="w-3 h-3 object-contain" />
             </div>
           </div>
         </div>
@@ -160,7 +158,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             <input
               type="text"
               placeholder="Search..."
-              className="w-full h-8 px-2 text-sm border border-border rounded mb-2"
+              className="w-full h-8 px-2 text-sm border border-border rounded-md mb-2"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onClick={(e) => e.stopPropagation()}
@@ -463,7 +461,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 </h3>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <img src="/images/star 6.png" alt="rating" className="w-3.5 h-3.5" />
-                  <span className="text-xs font-normal text-gray-900">
+                  <span className="text-xs font-bold text-gray-900">
                     {Number(salon.rating).toFixed(1)}
                   </span>
                 </div>
@@ -471,12 +469,12 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
 
               {/* Location */}
               <div className="mb-2">
-                <p className="text-gray-900 text-[10px] uppercase tracking-wider font-normal truncate">
+                <p className="text-gray-900 text-[11px] uppercase tracking-wider font-normal truncate">
                   {salon.type}
                 </p>
                 <div className="flex items-start gap-1.5 mt-1.5">
                   <img src="/images/placeholder 6.png" alt="location" className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <p className="text-gray-900 text-xs leading-tight truncate font-normal">
+                  <p className="text-gray-900 text-[13px] leading-tight truncate font-normal">
                     {salon.location}
                   </p>
                 </div>
@@ -486,7 +484,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
               <div className="flex items-center justify-between pt-1 h-8">
                 <div className="flex items-center gap-1.5">
                   <img src="/images/customer 6.png" alt="clients" className="w-3.5 h-3.5" />
-                  <span className="text-xs font-semibold text-card-foreground">
+                  <span className="text-[13px] font-semibold text-card-foreground">
                     {salon.clients} Clients
                   </span>
                 </div>
@@ -506,27 +504,22 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   );
 
   return (
-    <section className="py-1 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="py-8 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Filters Row - Only show on salons page */}
       {isSalonsPage && (
-        <div className="mb-12">
-          <div className="p-6 bg-card border border-border rounded-3xl shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-primary" />
-                <h3 className="font-bold text-foreground text-lg">Filter Salons:</h3>
-              </div>
-
+        <div className="mb-12 mx-8 md:mx-16 lg:mx-24">
+          <div className="p-6 bg-[#EBF3FD] border border-blue-100 rounded-3xl shadow-sm">
+            <div className="flex items-center justify-end mb-4">
               <button
                 onClick={resetFilters}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 font-bold bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors duration-200"
               >
-                <RotateCcw className="h-4 w-4" />
-                Reset Filters
+                <img src="/images/redo 1.png" alt="refresh" className="h-3.5 w-3.5 object-contain" />
+                Refresh
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-10">
               {/* Category Filter */}
               <div className="flex flex-col gap-2">
                 <MultiSelect
@@ -551,16 +544,21 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
 
               {/* Rating Filter - Single Select */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Rating</label>
-                <select
-                  value={ratingFilter}
-                  onChange={(e) => setRatingFilter(e.target.value)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="all">All Ratings</option>
-                  <option value="high-to-low">Highest Rated First</option>
-                  <option value="low-to-high">Lowest Rated First</option>
-                </select>
+                <label className="text-xs text-gray-700 font-bold uppercase tracking-wider">Rating</label>
+                <div className="relative">
+                  <select
+                    value={ratingFilter}
+                    onChange={(e) => setRatingFilter(e.target.value)}
+                    className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none appearance-none pr-8 text-gray-700 font-normal"
+                  >
+                    <option value="all">All Ratings</option>
+                    <option value="high-to-low">Highest Rated First</option>
+                    <option value="low-to-high">Lowest Rated First</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
+                    <img src="/images/caret-down 1.png" alt="arrow" className="w-3 h-3 object-contain" />
+                  </div>
+                </div>
               </div>
 
               {/* Location Filter */}
