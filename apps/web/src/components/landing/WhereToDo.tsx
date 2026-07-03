@@ -586,7 +586,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
             className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
             style={{
               background:
-                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100% )",
             }}
           />
         </h2>
