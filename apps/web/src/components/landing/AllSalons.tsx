@@ -108,7 +108,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
   }
 
   return (
-    <section className="py-6 px-6 lg:px-8 max-w-7xl mx-auto">
+    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="mb-5 flex items-center justify-between">
         <h2
           className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"

@@ -506,7 +506,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   );
 
   return (
-    <section className="py-1 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Filters Row - Only show on salons page */}
       {isSalonsPage && (
         <div className="mb-12">
