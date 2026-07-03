@@ -2,13 +2,13 @@ import React from 'react';
 
 const DownloadApp = () => {
   return (
-    <section id="download-app" className="pt-6 pb-0 px-6 lg:px-8 bg-[#FAFAFA] overflow-hidden">
+    <section id="download-app" className="pt-0 pb-0 px-6 lg:px-8 bg-[#FAFAFA] overflow-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12 items-center">
           {/* Left Content */}
-          <div className="order-2 lg:order-1 lg:pl-8 text-center lg:text-left">
+          <div className="order-2 lg:order-1 lg:col-span-3 text-center lg:text-left w-full">
             <h2
-              className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-4 sm:mb-5 lg:mb-6"
+              className="relative inline-block text-3xl md:text-4xl lg:text-[44px] leading-tight font-serif font-bold pb-3 mb-4 sm:mb-5 lg:mb-6"
               style={{ color: "#252B42" }}
             >
               Access GlowVita Anywhere
@@ -25,7 +25,7 @@ const DownloadApp = () => {
             </p>
 
             {/* Key Features */}
-            <div className="mb-5 sm:mb-6 lg:mb-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 lg:gap-4 max-w-md mx-auto lg:max-w-none lg:mx-0">
+            <div className="mb-5 sm:mb-6 lg:mb-8 grid grid-cols-2 gap-y-2.5 gap-x-6 sm:gap-y-3 sm:gap-x-8 lg:gap-y-4 lg:gap-x-10 w-fit mx-auto lg:mx-0">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                   <img
@@ -103,7 +103,7 @@ const DownloadApp = () => {
           </div>
 
           {/* Right Image Container */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative">
+          <div className="order-1 lg:order-2 lg:col-span-2 flex justify-center lg:justify-end relative w-full">
             <img
               src="/images/close-up-hand-holding-phone (1) (2) 1.png"
               alt="Download App"
