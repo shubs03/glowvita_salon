@@ -69,8 +69,8 @@ const OffersSection2 = () => {
   const marqueeItems = isLoopingRequired ? displayOffersList : offers;
 
   return (
-    <section className="py-6 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
-      <div className="mb-4 flex items-center justify-between">
+    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+      <div className="mb-5 flex items-center justify-between">
         <h2
           className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
           style={{ color: "#252B42" }}

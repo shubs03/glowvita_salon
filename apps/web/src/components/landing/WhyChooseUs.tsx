@@ -85,23 +85,27 @@ const WhyChooseUs = () => {
   );
 
   return (
-    <section className="py-10 px-6 lg:px-10 max-w-7xl mx-auto bg-white">
+    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-10">
+      <div className="flex items-center gap-3 mb-8">
         <img
           src={ICONS.qbubble}
           alt="Question bubbles"
-          className="w-13 h-13 flex-shrink-0 object-contain"
+          className="w-12 h-12 flex-shrink-0 object-contain"
         />
-        <div className="relative inline-block pb-3">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Why Customers Choose GlowVita ?
-          </h2>
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
+          style={{ color: "#252B42" }}
+        >
+          Why Customers Choose GlowVita ?
           <span
-            className="absolute bottom-0 left-0 h-[3px] w-full rounded-full"
-            style={{ background: 'linear-gradient(to right, #080b0eff 0%, #1f2937 40%, transparent 100%)' }}
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
           />
-        </div>
+        </h2>
       </div>
 
       {/* Row 1 - #FEF0ED */}
