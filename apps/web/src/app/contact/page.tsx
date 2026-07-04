@@ -13,7 +13,6 @@ import ContactSection from './components/ContactSection';
 import FixedBookmark from './components/FixedBookmark';
 import AwardsSection from './components/AwardsSection';
 import DownloadApp from '@/components/landing/DownloadApp';
-import CTASection from '../salons/components/CTASection';
 
 export default function ContactPage() {
   return (
@@ -24,7 +23,6 @@ export default function ContactPage() {
       <FixedBookmark/>
       <AwardsSection/>
       <DownloadApp/>
-      <CTASection/>
     </PageContainer>
   );
 }
