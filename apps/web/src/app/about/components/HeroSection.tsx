@@ -1,52 +1,107 @@
 import React from 'react';
-import { Sparkles, Download, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const HeroSection = () => {
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  };
-
   return (
-    <section className="container relative w-full py-36 my-6 bg-gradient-to-br from-primary to-primary/80 rounded-3xl overflow-hidden mx-auto">
-      {/* Content */}
-      <div className="relative z-10 max-w-4xl mx-auto text-center">
-        {/* Main Heading */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-primary-foreground mb-6">
-          We're Building the Future of Beauty & Wellness
-        </h1>
+    <div className="relative w-full min-h-[420px] sm:min-h-[500px] lg:h-[700px] overflow-hidden">
+      {/* Solid dark maroon base */}
+      <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
-        {/* Supporting Paragraph */}
-        <p className="text-primary-foreground/90 text-base md:text-lg leading-relaxed max-w-3xl mx-auto mb-8">
-          At GlowVita, we connect exceptional salons with customers seeking premium beauty experiences. 
-          Our mission is to make quality self-care accessible, convenient, and delightful for everyone.
-        </p>
-        
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button 
-            onClick={() => scrollToSection('download-app')}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center gap-2 shadow-sm"
+      {/* Right-side panel: hidden on mobile, visible on md+ */}
+      <div className="hidden md:block absolute top-0 right-0 h-full" style={{ width: "55%" }}>
+        <img
+          src="/images/hero-salon-bg.jpg"
+          alt="Salon"
+          className="h-full w-full pointer-events-none select-none"
+          style={{ objectFit: "contain", objectPosition: "center right" }}
+        />
+      </div>
+
+      {/* Gradient — solid maroon left, fades to transparent right (only on md+) */}
+      <div
+        className="absolute inset-0 hidden md:block"
+        style={{
+          background: `linear-gradient(to right,
+            rgba(66, 42, 60, 1)     0%,
+            rgba(66, 42, 60, 1)     49%,
+            rgba(66, 42, 60, 0.85)  60%,
+            rgba(66, 42, 60, 0.80)  73%,
+            rgba(66, 42, 60, 0.31)  78%,
+            rgba(66, 42, 60, 0)     100%)`,
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center py-12 sm:py-14 lg:py-16 max-w-7xl">
+        <div className="max-w-xl md:max-w-2xl lg:max-w-4xl">
+          <h3 className="text-amber-100 text-xs sm:text-sm font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-4 sm:mb-6 lg:mb-8">
+            WELCOME TO GLOWVITA SALON
+          </h3>
+
+          <h1
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 700,
+              fontSize: "clamp(32px, 6vw, 70px)",
+              lineHeight: "115%",
+              letterSpacing: "-0.01em",
+              color: "#F7E5C1",
+            }}
+            className="mb-6 sm:mb-8 lg:mb-10"
           >
-            <Download className="w-5 h-5" />
-            Download App
-          </button>
-          
-          <button 
-            onClick={() => scrollToSection('cta-section')}
-            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground px-8 py-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center gap-2 shadow-sm"
+            Discover Your Perfect<br />Salon Experience
+          </h1>
+
+          <p
+            style={{
+              fontFamily: "'Manrope', sans-serif",
+              fontWeight: 400,
+              fontSize: "clamp(14px, 2vw, 18px)",
+              lineHeight: "170%",
+              letterSpacing: "0%",
+              textAlign: "justify",
+            }}
+            className="text-gray-200 mb-6 sm:mb-8 lg:mb-10 max-w-[679px]"
           >
-            Learn More
-            <ArrowRight className="w-5 h-5" />
-          </button>
+            GlowVita is your trusted online platform for discovering and booking
+            exceptional salon services. Explore verified salons near you or across
+            the city, read authentic reviews, compare services and schedule
+            appointments effortlessly—all in one elegant experience.
+          </p>
+
+          <p
+            style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 500,
+              fontSize: "clamp(13px, 1.5vw, 16px)",
+              lineHeight: "160%",
+              letterSpacing: "0%",
+              color: "#AF9A9A",
+            }}
+            className="mb-8 sm:mb-12 lg:mb-16 max-w-full"
+          >
+            From haircuts to spa treatments, finding quality and wellness services has never been easier.
+          </p>
+
+          <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <Link
+              href="/salons"
+              className="bg-transparent hover:bg-white/10 text-white border border-white/50 px-5 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              Explore Salons
+            </Link>
+
+            <a
+              href={`${NEXT_PUBLIC_CRM_URL || "https://partners.glowvitasalon.com"}/login`}
+              className="bg-white hover:bg-gray-100 text-gray-900 px-5 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm"
+            >
+              Join GlowVita Today
+            </a>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
