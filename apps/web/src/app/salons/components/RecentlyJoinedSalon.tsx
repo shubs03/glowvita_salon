@@ -196,27 +196,32 @@ const RecentlyJoinedSalon = () => {
   }
 
   return (
-    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="py-8 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
-      <div className="mb-16">
-        <div className="flex items-center gap-4 mb-4">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-            Recently Joined Salon
-          </h2>
-        </div>
-        <p className="text-muted-foreground max-w-2xl">
-          Discover our newest partner salon
-        </p>
+      <div className="mb-8">
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
+          style={{ color: "#252B42" }}
+        >
+          Recently Joined Salon
+          <span
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
+          />
+        </h2>
       </div>
 
       {/* Salon Card */}
       <div
-        className="bg-card overflow-hidden duration-300 cursor-pointer"
+        className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden duration-300 cursor-pointer"
         onClick={() => router.push(`/salon-details/${salon.id}`)}
       >
-        <div className="flex flex-col lg:flex-row lg:h-[460px]">
-          {/* Left - Large Image */}
-          <div className="w-full lg:w-1/2 h-80 md:h-96 lg:h-full flex-shrink-0 rounded-2xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:h-[380px]">
+          {/* Left - Large Image (Fully Square + Curved Corners on Desktop) */}
+          <div className="w-full lg:w-[380px] lg:h-[380px] h-80 md:h-96 flex-shrink-0 rounded-2xl relative overflow-hidden">
             <img
               src={salon.image}
               alt={salon.name}
@@ -227,14 +232,14 @@ const RecentlyJoinedSalon = () => {
             {/* Service Badges */}
             <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 z-10">
               {salon.isHomeService && (
-                <div className="flex items-center gap-1.5 bg-primary text-secondary text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm border border-secondary/20">
-                  <Home className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <div className="flex items-center gap-1.5 bg-[#00000082] text-white text-[9px] font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm">
+                  <img src="/images/home (12) 1.png" alt="home service" className="w-3 h-3" />
                   <span className="uppercase tracking-wider">Home Service</span>
                 </div>
               )}
               {salon.isWeddingService && (
-                <div className="flex items-center gap-1.5 bg-rose-500 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm border border-white/20">
-                  <Heart className="w-3.5 h-3.5 md:w-4 md:h-4 fill-current" />
+                <div className="flex items-center gap-1.5 bg-[#00000082] text-white text-[9px] font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm">
+                  <img src="/images/like (3) 1 (1).png" alt="wedding service" className="w-3 h-3" />
                   <span className="uppercase tracking-wider">Wedding Service</span>
                 </div>
               )}
@@ -242,65 +247,55 @@ const RecentlyJoinedSalon = () => {
           </div>
 
           {/* Right - Details */}
-          <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between h-full">
+          <div className="flex-1 flex flex-col justify-between p-6 md:p-8">
             {/* Top Section */}
             <div>
               {/* Badges Row */}
               {salon.isNew && (
-                <div className="mb-2 md:mb-3">
-                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold">
-                    New
+                <div className="mb-3">
+                  <span className="inline-flex items-center gap-1 bg-[#828282] text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <img src="/images/home (12) 1.png" alt="new" className="w-3 h-3 brightness-0 invert" />
+                    New Salon
                   </span>
                 </div>
               )}
 
               {/* Salon Name */}
-              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 md:mb-4 line-clamp-1">
+              <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3 line-clamp-1" style={{ color: "#252B42" }}>
                 {salon.name}
               </h3>
 
-              {/* Type, Location and Offer Row */}
-              <div className="flex items-center justify-between mb-4 md:mb-5">
-                <div className="flex flex-col gap-2">
-                  {/* Category */}
-                  <p className="text-muted-foreground text-sm md:text-base font-medium">
+              {/* Category & Location */}
+              <div className="flex flex-col gap-3 mb-4">
+                {/* Category */}
+                <div>
+                  <span className="inline-block bg-[#EBF3FD] text-[#2F80ED] px-2 py-1 rounded-none text-xs font-semibold">
                     {salon.category}
-                  </p>
-
-                  {/* Location */}
-                  <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
-                    <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                    <span className="text-sm md:text-base line-clamp-1">{salon.location}</span>
-                  </div>
+                  </span>
                 </div>
 
-                {/* Offer */}
-                {salon.hasOffer && (
-                  <div className="flex-shrink-0">
-                    <img
-                      src="/images/new-offer.png"
-                      alt="Offer"
-                      className="h-12 md:h-14 w-auto object-contain"
-                    />
-                  </div>
-                )}
+                {/* Location */}
+                <div className="flex items-start gap-1.5 text-gray-900">
+                  <img src="/images/placeholder 6.png" alt="location" className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm font-normal text-gray-900 leading-tight">{salon.location}</span>
+                </div>
               </div>
 
               {/* Description */}
-              <p className="text-foreground text-sm md:text-base line-clamp-3">{salon.description}</p>
+              <p className="text-gray-600 text-sm md:text-base leading-relaxed line-clamp-4">{salon.description}</p>
             </div>
 
             {/* Bottom Section - Action Button */}
-            <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
               <button
-                className="inline-flex items-center gap-1.5 md:gap-2 text-primary hover:text-primary/80 font-semibold text-sm transition-colors duration-300"
+                className="group inline-flex items-center gap-2 text-gray-900 font-semibold text-sm hover:text-primary transition-colors duration-300"
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/salon-details/${salon.id}`);
                 }}
               >
-                View Details
-                <ArrowRight className="w-4 h-4" />
+                View More
+                <img src="/images/arrow.png" alt="arrow" className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
               </button>
             </div>
           </div>

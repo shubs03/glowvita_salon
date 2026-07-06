@@ -303,21 +303,17 @@ export const GlobalSearchBar = ({
     >
       <div
         className={cn(
-          "bg-white rounded-3xl shadow-2xl p-1.5 md:p-2 flex flex-col md:flex-row items-stretch md:items-center gap-1 border border-gray-100",
-          !isHero && "md:rounded-[30px] shadow-lg"
+          "bg-white shadow-2xl p-2.5 flex flex-col md:flex-row items-stretch md:items-center gap-4 border border-gray-100",
+          isHero ? "rounded-3xl" : "rounded-[50px]"
         )}
       >
         {/* ── Service Field ─────────────────────────────────────────────────── */}
         <div
           className={cn(
-            "flex-[1.5] relative flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300",
-            isServiceFocused
-              ? "bg-gray-50 ring-2 ring-primary/5"
-              : "hover:bg-gray-50"
+            "flex-[1.5] relative flex items-center gap-3 px-4 py-2 transition-all duration-300"
           )}
         >
-          <Search className="w-4 h-4 text-gray-400 shrink-0" />
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-1 items-center gap-2 border-b border-gray-300 pb-1.5 pt-1">
             <input
               type="text"
               placeholder="Services, salons or categories"
@@ -327,8 +323,9 @@ export const GlobalSearchBar = ({
               onBlur={() =>
                 setTimeout(() => setIsServiceFocused(false), 200)
               }
-              className="w-full bg-transparent outline-none text-gray-900 font-bold text-sm md:text-base placeholder:text-gray-400 placeholder:font-medium"
+              className="w-full bg-transparent outline-none text-gray-900 font-medium text-sm placeholder:text-gray-400"
             />
+            <Search className="w-4 h-4 text-gray-400 shrink-0" />
           </div>
 
           {/* Combined Autocomplete Dropdown */}
@@ -453,54 +450,37 @@ export const GlobalSearchBar = ({
           )}
         </div>
 
-        <div className="hidden md:block w-px h-8 bg-gray-100 mx-1"></div>
+        <div className="hidden md:block w-px h-8 bg-gray-100"></div>
 
         {/* ── Location Field ────────────────────────────────────────────────── */}
         <div
           className={cn(
-            "flex-1 relative flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300",
-            isLocationFocused
-              ? "bg-gray-50 ring-2 ring-primary/5"
-              : "hover:bg-gray-50"
+            "flex-1 relative flex items-center gap-3 px-4 py-2 transition-all duration-300"
           )}
         >
-          {selectedLat != null ? (
-            <div className="relative shrink-0">
-              <MapPin className="w-4 h-4 text-green-500 shrink-0" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full" />
-            </div>
-          ) : (
-            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-          )}
-          <input
-            type="text"
-            placeholder="Neighbourhood, city or area…"
-            value={locationInput}
-            onChange={(e) => {
-              setLocationInput(e.target.value);
-              // Clear resolved coords if user is editing
-              setSelectedLat(null);
-              setSelectedLng(null);
-              if (!e.target.value.trim()) {
-                clearLocation();
+          <div className="flex flex-1 items-center gap-2 border-b border-gray-300 pb-1.5 pt-1">
+            <input
+              type="text"
+              placeholder="Neighbourhood, city or area…"
+              value={locationInput}
+              onChange={(e) => {
+                setLocationInput(e.target.value);
+                // Clear resolved coords if user is editing
+                setSelectedLat(null);
+                setSelectedLng(null);
+                if (!e.target.value.trim()) {
+                  clearLocation();
+                }
+              }}
+              onFocus={() => setIsLocationFocused(true)}
+              onBlur={() =>
+                setTimeout(() => setIsLocationFocused(false), 200)
               }
-            }}
-            onFocus={() => setIsLocationFocused(true)}
-            onBlur={() =>
-              setTimeout(() => setIsLocationFocused(false), 200)
-            }
-            className="w-full bg-transparent outline-none text-gray-900 font-bold text-sm placeholder:text-gray-400 placeholder:font-medium"
-          />
-          <button
-            onClick={handleCurrentLocation}
-            className={cn(
-              "p-1.5 hover:bg-primary/10 rounded-full transition-colors group",
-              isLocating && "animate-pulse"
-            )}
-            title="Use current location"
-          >
-            <Navigation className="w-3.5 h-3.5 text-primary opacity-50 group-hover:opacity-100" />
-          </button>
+              className="w-full bg-transparent outline-none text-gray-900 font-medium text-sm placeholder:text-gray-400"
+            />
+            <img src="/images/Vector.png" alt="location" className="w-3.5 h-3.5 object-contain shrink-0" />
+          </div>
+
 
           {/* Location Dropdown */}
           {isLocationFocused &&
@@ -563,20 +543,10 @@ export const GlobalSearchBar = ({
         {/* ── Search Button ─────────────────────────────────────────────────── */}
         <button
           onClick={handleSearch}
-          className={cn(
-            "bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 group",
-            isHero
-              ? "px-10 py-4 rounded-[20px] ml-2"
-              : "px-8 py-3 rounded-[15px] ml-1"
-          )}
+          className="bg-[#BA7894] hover:bg-[#a96783] text-white font-medium text-sm transition-all duration-300 flex items-center justify-center gap-2 group shrink-0 px-6 py-2.5 rounded-full ml-2"
         >
-          {isHero ? "Search" : ""}
-          <Search
-            className={cn(
-              "w-4 h-4",
-              isHero && "group-hover:translate-x-1 transition-transform"
-            )}
-          />
+          <span>Search</span>
+          <Search className="w-4 h-4" />
         </button>
       </div>
     </div>

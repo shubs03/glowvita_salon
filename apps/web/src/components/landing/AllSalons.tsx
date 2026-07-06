@@ -73,10 +73,10 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
               : "Beauty Services",
       location: `${vendor.city || "Unknown City"}, ${vendor.state || "Unknown State"}`,
       rating: vendor.rating || "0.0",
-      clients: `${vendor.dynamicClientCount || 
-                vendor.stats?.find((s: any) => s.label === "Happy Clients")?.value ||
-                vendor.clientCount || 
-                0}+`,
+      clients: `${vendor.dynamicClientCount ||
+        vendor.stats?.find((s: any) => s.label === "Happy Clients")?.value ||
+        vendor.clientCount ||
+        0}+`,
       image: imageUrl,
       badge: hasOffer ? "Offer Available" : null,
       serviceNames: vendor.services?.map((s: any) => s.name) || [],
@@ -108,7 +108,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
   }
 
   return (
-    <section className="py-6 px-6 lg:px-8 max-w-7xl mx-auto">
+    <section className="py-8 px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="mb-5 flex items-center justify-between">
         <h2
           className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
@@ -191,19 +191,19 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
                 </h3>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <img src="/images/star 6.png" alt="rating" className="w-3.5 h-3.5" />
-                  <span className="text-xs font-normal text-gray-900">
+                  <span className="text-xs font-bold text-gray-900">
                     {Number(salon.rating).toFixed(1)}
                   </span>
                 </div>
               </div>
 
               <div className="mb-2">
-                <p className="text-gray-900 text-[10px] uppercase tracking-wider font-normal truncate">
+                <p className="text-gray-900 text-[11px] uppercase tracking-wider font-normal truncate">
                   {salon.type}
                 </p>
                 <div className="flex items-start gap-1.5 mt-1.5">
                   <img src="/images/placeholder 6.png" alt="location" className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  <p className="text-gray-900 text-xs leading-tight truncate font-normal">
+                  <p className="text-gray-900 text-[13px] leading-tight truncate font-normal">
                     {salon.location}
                   </p>
                 </div>
@@ -212,7 +212,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
               <div className="flex items-center justify-between pt-1 h-8">
                 <div className="flex items-center gap-1.5">
                   <img src="/images/customer 6.png" alt="clients" className="w-3.5 h-3.5" />
-                  <span className="text-xs font-semibold text-card-foreground">
+                  <span className="text-[13px] font-semibold text-card-foreground">
                     {salon.clients} Clients
                   </span>
                 </div>
