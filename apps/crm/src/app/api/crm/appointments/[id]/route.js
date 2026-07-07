@@ -98,17 +98,13 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                 const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
                 if (invoice) {
                     updateObject.invoiceNumber = invoice.invoiceNumber;
-                    console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+
                 }
             } catch (invoiceError) {
                 console.error("Error in centralized invoice generation:", invoiceError);
             }
 
             // Check and credit referral bonus if user was referred (triggers on first completed appointment)
-            console.log(`[CRM ID Route] ===== STARTING REFERRAL BONUS CHECK =====`);
-            console.log(`[CRM ID Route] Appointment ID: ${appointmentId}`);
-            console.log(`[CRM ID Route] Update status: ${updateObject.status}`);
-            console.log(`[CRM ID Route] existingAppointment.client:`, existingAppointment.client);
 
             // ROBUST USER ID RESOLUTION:
             // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
@@ -124,7 +120,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                     const userDoc = await UserModel.findById(rawClientValue).select('_id').lean();
                     if (userDoc) {
                         targetUserId = rawClientValue;
-                        console.log(`[CRM ID Route] client field resolved directly to User ID: ${targetUserId}`);
                     }
                 } catch (userErr) {
                     console.warn(`[CRM ID Route] client field not a direct User ID, trying Client model:`, userErr.message);
@@ -137,28 +132,20 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                         const clientDoc = await ClientModel.findById(rawClientValue).select('userId').lean();
                         if (clientDoc && clientDoc.userId) {
                             targetUserId = clientDoc.userId.toString();
-                            console.log(`[CRM ID Route] Resolved via Client model → User ID: ${targetUserId}`);
                         } else {
-                            console.log(`[CRM ID Route] Client record found but not linked to any User account`);
                         }
                     } catch (clientErr) {
                         console.error(`[CRM ID Route] Error fetching Client record:`, clientErr);
                     }
                 }
             } else {
-                console.log(`[CRM ID Route] No client value on appointment, cannot resolve User ID`);
             }
 
             if (targetUserId) {
                 try {
-                    console.log(`[CRM ID Route] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
                     const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
-                    console.log(`[CRM ID Route] ===== REFERRAL BONUS RESULT =====`);
-                    console.log(`[CRM ID Route] Success: ${referralResult.success}`);
-                    console.log(`[CRM ID Route] Message: ${referralResult.message}`);
 
                     if (referralResult.success) {
-                        console.log(`[CRM ID Route] ✅ Referral bonus credited successfully!`);
                     } else {
                         console.warn(`[CRM ID Route] ⚠️ Referral bonus not credited: ${referralResult.message}`);
                     }
@@ -167,7 +154,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                     console.error('[CRM ID Route] ❌ ERROR crediting referral bonus:', referralError);
                 }
             } else {
-                console.log(`[CRM ID Route] ❌ No valid User ID found for referral bonus check`);
             }
         }
 
@@ -208,28 +194,24 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                 let clientName = updatedAppointment.client?.fullName || updatedAppointment.clientName;
                 let clientPhone = updatedAppointment.client?.phone;
 
-                console.log(`[Email Debug ID Route] Initial Client Info: Name=${clientName}, Email=${clientEmail}`);
 
                 // Fallback for online bookings where client stores User ID
                 // Use existingAppointment.client as it's the raw ID before population
                 const rawClientId = existingAppointment.client;
 
                 if (!clientEmail && rawClientId) {
-                    console.log(`[Email Debug ID Route] Client email missing, checking User model for ID: ${rawClientId}`);
                     try {
                         const user = await UserModel.findById(rawClientId).select('firstName lastName emailAddress email mobileNo');
                         if (user) {
                             clientEmail = user.emailAddress || user.email;
                             clientName = clientName || `${user.firstName} ${user.lastName}`;
                             clientPhone = user.mobileNo || user.phone;
-                            console.log(`[Email Debug ID Route] Found user info from User model: Name=${clientName}, Email=${clientEmail}, Phone=${clientPhone}`);
                         }
                     } catch (userError) {
                         console.error('[Email Debug ID Route] Error fetching user data:', userError);
                     }
                 }
 
-                console.log(`[Email Debug ID Route] Final Client Info for email: Name=${clientName}, Email=${clientEmail}`);
 
                 if (clientEmail) {
                     if (updateObject.status === 'confirmed') {
@@ -247,13 +229,11 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                             subject: `Appointment Confirmed - ${businessName}`,
                             html: emailHtml
                         });
-                        console.log(`Confirmation email sent to ${clientEmail}`);
                     } else if (updateObject.status === 'completed' || updateObject.status === 'completed without payment') {
                         // Prepare Invoice HTML
                         let invoiceHtml;
                         let invoice;
                         try {
-                            console.log('Generating invoice template...');
 
                             // Fetch formal invoice
                             const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
@@ -305,7 +285,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                                     paymentMethod: updatedAppointment.paymentMethod
                                 });
                             }
-                            console.log('Invoice template generated successfully.');
                         } catch (tplError) {
                             console.error('Error generating invoice template:', tplError);
                             invoiceHtml = null;
@@ -314,11 +293,9 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                         // Generate PDF Buffer
                         let pdfBuffer;
                         if (invoiceHtml) {
-                            console.log('Generating Invoice PDF...');
                             try {
                                 const pdfPromise = new Promise((resolve, reject) => {
                                     try {
-                                        console.log('Calling pdf.create...');
                                         const options = {
                                             format: 'A4',
                                             timeout: 50000
@@ -329,7 +306,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                                                 console.error('pdf.create error callback:', err);
                                                 reject(err);
                                             } else {
-                                                console.log('pdf.create success callback');
                                                 resolve(buffer);
                                             }
                                         });
@@ -344,7 +320,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                                 );
 
                                 pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
-                                console.log('Invoice PDF generated, size:', pdfBuffer.length);
                             } catch (pdfError) {
                                 console.error('⚠️ PDF Generation failed or timed out:', pdfError.message);
                             }
@@ -381,7 +356,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                                 }
                             ] : []
                         });
-                        console.log(`Completion email sent to ${clientEmail} with invoice attachment`);
                     } else if (updateObject.status === 'cancelled') {
                         const emailHtml = getCancellationTemplate({
                             clientName,
@@ -397,7 +371,6 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                             subject: `Appointment Cancelled - ${businessName}`,
                             html: emailHtml
                         });
-                        console.log(`Cancellation email sent to ${clientEmail}`);
                     }
                 }
             } catch (emailError) {
@@ -427,11 +400,9 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
 
 export const DELETE = authMiddlewareCrm(async (req, { params }) => {
     try {
-        console.log('=== DELETE REQUEST START ===');
         const vendorId = req.user.userId || req.user._id;
         const { id: appointmentId } = params;
 
-        console.log('DELETE Request - ID:', appointmentId);
 
         if (!appointmentId) {
             console.error('No appointment ID found for deletion');

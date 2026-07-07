@@ -117,11 +117,11 @@ export const POST = authMiddlewareAdmin(
           const referringDoctor = await DoctorModel.findOne({ referralCode: body.referredByCode.trim().toUpperCase() });
           if (referringDoctor) {
             const settings = await V2VSettingsModel.findOne({
-                $or: [
-                  { regionId: newDoctor.regionId },
-                  { regionId: null }
-                ]
-              }).sort({ regionId: -1 });
+              $or: [
+                { regionId: newDoctor.regionId },
+                { regionId: null }
+              ]
+            }).sort({ regionId: -1 });
 
             const bonusValue = settings?.referrerBonus?.bonusValue || 0;
             const referralId = `REF_D_${Date.now()}`;
@@ -139,7 +139,6 @@ export const POST = authMiddlewareAdmin(
               bonus: `₹${bonusValue}`,
             });
 
-            console.log(`D2D Referral created (Pending): ${referringDoctor.name} refers ${newDoctor.name}`);
           }
         } catch (err) {
           console.error("D2D Referral error:", err);

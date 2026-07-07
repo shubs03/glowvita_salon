@@ -35,7 +35,6 @@ export const POST = authMiddlewareAdmin(async (req) => {
       receipt: (receipt || `admin_${Date.now()}`).slice(0, 40),
     });
 
-    console.log('[Admin Razorpay] Order created:', order.id, '| Amount:', amountInPaise, 'paise');
 
     return NextResponse.json({
       success: true,

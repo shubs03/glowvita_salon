@@ -32,7 +32,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const businessName = searchParams.get('businessName'); // Business name filter
     const planStatus = searchParams.get('planStatus'); // Plan status filter
 
-    console.log("Subscription Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, userType, city, businessName, planStatus });
 
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
@@ -80,7 +79,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
 
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
-    console.log("Date filter:", dateFilter);
 
     // Build user type filter
     const buildUserTypeFilter = (userType) => {
@@ -137,20 +135,20 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const getDerivedStatus = (status, endDate) => {
       const rawStatus = (status || 'Pending').toString().trim();
       const normalizedStatus = rawStatus.toLowerCase();
-      
+
       if (endDate) {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const expiryDate = new Date(endDate);
-        
+
         // Ensure expiryDate is at the start of its day for comparison
         const expiryDateNormalized = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate());
-        
+
         if (!isNaN(expiryDateNormalized.getTime()) && today > expiryDateNormalized) {
           return 'Expired';
         }
       }
-      
+
       if (normalizedStatus === 'active') return 'Active';
       if (normalizedStatus === 'expired') return 'Expired';
       return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
@@ -163,7 +161,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         .map(user => {
           const sub = user.subscription;
           const plan = sub.plan;
-          
+
           if (!plan) return null;
 
           const derivedStatus = getDerivedStatus(sub.status || plan.status, sub.endDate);
@@ -229,7 +227,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       // 2. Revenue calculation
       const currentSub = sub.rawSubscription;
       const plansToCount = [];
-      
+
       if (sub.price > 0) {
         plansToCount.push({
           price: sub.price,
@@ -237,7 +235,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           end: sub.endDate ? new Date(sub.endDate).getTime() : null
         });
       }
-      
+
       if (currentSub.history && currentSub.history.length > 0) {
         currentSub.history.forEach(hItem => {
           const hPrice = (hItem.plan?.discountedPrice || hItem.plan?.price || 0);
@@ -250,13 +248,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
           }
         });
       }
-      
+
       // Deduplicate exact date matches to prevent double-counting active plans
       const uniquePlans = plansToCount.filter((p, index, self) => {
         if (!p.start || !p.end) return true; // Keep plans without valid dates
         return index === self.findIndex(t => t.start === p.start && t.end === p.end);
       });
-      
+
       totalRevenue += uniquePlans.reduce((sum, p) => sum + p.price, 0);
     });
 

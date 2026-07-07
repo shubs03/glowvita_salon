@@ -53,7 +53,6 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
     // CRM INSTANT SYNC: Listen for the sound signal to refresh the CRM bell icon IMMEDIATELY
     const setupInstantSync = () => {
       NotificationManager.onMessageListener((payload: any) => {
-        console.log('[CRM Bell] Instant signal received, refreshing...');
         fetchNotifications();
       });
     };
@@ -86,9 +85,9 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification._id);
     if (notification.type === 'appointment' && notification.data?.appointmentId) {
-       router.push(`/appointments`);
+      router.push(`/appointments`);
     } else if (notification.type === 'order' && notification.data?.orderId) {
-       router.push(`/orders`);
+      router.push(`/orders`);
     }
   };
 
@@ -104,7 +103,7 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -135,9 +134,9 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
           <div className="flex items-center justify-between">
             <span className="text-lg font-bold">Notifications</span>
             {unreadCount > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-xs h-8 text-primary hover:text-primary hover:bg-primary/5 font-semibold"
                 onClick={() => markAsRead()}
               >
@@ -146,7 +145,7 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
             )}
           </div>
         </DropdownMenuLabel>
-        
+
         <div className="max-h-[400px] overflow-y-auto py-1">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
@@ -155,8 +154,8 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
             </div>
           ) : (
             notifications.map((notification) => (
-              <DropdownMenuItem 
-                key={notification._id} 
+              <DropdownMenuItem
+                key={notification._id}
                 className={cn(
                   "p-4 border-b border-border/10 cursor-pointer flex flex-col items-start gap-1 outline-none",
                   !notification.isRead ? "bg-primary/5" : "hover:bg-muted/50"
@@ -166,16 +165,16 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
                 <div className="flex items-start gap-3 w-full">
                   <div className={cn(
                     "p-2 rounded-lg mt-0.5",
-                    notification.type === 'appointment' ? "bg-primary/10" : 
-                    notification.type === 'order' ? "bg-secondary/10" : "bg-muted/10"
+                    notification.type === 'appointment' ? "bg-primary/10" :
+                      notification.type === 'order' ? "bg-secondary/10" : "bg-muted/10"
                   )}>
                     {getIcon(notification.type)}
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                       <p className={cn("text-sm font-bold truncate", !notification.isRead ? "text-foreground" : "text-muted-foreground")}>
+                      <p className={cn("text-sm font-bold truncate", !notification.isRead ? "text-foreground" : "text-muted-foreground")}>
                         {notification.title}
-                       </p>
+                      </p>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">
                       {notification.body}

@@ -10,9 +10,9 @@ await _db();
 // Helper function to calculate date ranges based on filter period
 const getDateRanges = (period) => {
   const now = new Date();
-  
+
   let startDate, endDate;
-  
+
   if (period === 'day') {
     // Today only
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -30,14 +30,14 @@ const getDateRanges = (period) => {
     startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
 // Helper function to parse custom date ranges from query parameters
 const getCustomDateRanges = (startDateStr, endDateStr) => {
   let startDate, endDate;
-  
+
   if (startDateStr && endDateStr) {
     // Parse the custom date range
     startDate = new Date(startDateStr);
@@ -45,27 +45,22 @@ const getCustomDateRanges = (startDateStr, endDateStr) => {
     // Set end date to end of day
     endDate.setHours(23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
 // Main handler function for the supplier metrics endpoint
 async function getSupplierMetricsHandler(request) {
   try {
-    console.log("Full user object:", JSON.stringify(request.user, null, 2));
     // Use userId and convert to string based on other routes in the app
     const supplierId = (request.user.userId || request.user.id).toString();
-    console.log("Fetching metrics for supplier ID:", supplierId);
-    
+
     // Get filter parameters from query parameters
     const url = new URL(request.url);
     const period = url.searchParams.get('period') || 'all';
     const startDateParam = url.searchParams.get('startDate');
     const endDateParam = url.searchParams.get('endDate');
-    
-    console.log("Filter period:", period);
-    console.log("Custom date range:", startDateParam, "to", endDateParam);
-    
+
     // Determine date ranges based on parameters
     let startDate, endDate;
     if (startDateParam && endDateParam) {
@@ -73,31 +68,25 @@ async function getSupplierMetricsHandler(request) {
       const customDates = getCustomDateRanges(startDateParam, endDateParam);
       startDate = customDates.startDate;
       endDate = customDates.endDate;
-      console.log("Using custom date range:", startDate, "to", endDate);
     } else {
       // Use preset period
       const presetDates = getDateRanges(period);
       startDate = presetDates.startDate;
       endDate = presetDates.endDate;
-      console.log("Using preset date range:", startDate, "to", endDate);
     }
-    
+
     // Also log the supplierId type to check if it's an ObjectId
-    console.log("Supplier ID type:", typeof supplierId);
 
     // Try querying with the supplierId as a string first
     let supplierProductCount = await ProductModel.countDocuments({ vendorId: supplierId });
-    console.log("Total products for this supplier (string query):", supplierProductCount);
-    
+
     // If that doesn't work, try converting to ObjectId
     if (supplierProductCount === 0) {
       try {
         const mongoose = require('mongoose');
         const supplierObjectId = new mongoose.Types.ObjectId(supplierId);
         supplierProductCount = await ProductModel.countDocuments({ vendorId: supplierObjectId });
-        console.log("Total products for this supplier (ObjectId query):", supplierProductCount);
       } catch (objectIdError) {
-        console.log("Could not convert supplierId to ObjectId:", objectIdError.message);
       }
     }
 
@@ -105,10 +94,10 @@ async function getSupplierMetricsHandler(request) {
     // Try with string supplierId first
     let totalRevenue = 0;
     let totalOrders = 0;
-    
+
     // Find products belonging to this supplier
     let supplierProducts = await ProductModel.find({ vendorId: supplierId }, { _id: 1 });
-    
+
     // If that doesn't work, try with ObjectId
     if (supplierProducts.length === 0) {
       try {
@@ -116,7 +105,6 @@ async function getSupplierMetricsHandler(request) {
         const supplierObjectId = new mongoose.Types.ObjectId(supplierId);
         supplierProducts = await ProductModel.find({ vendorId: supplierObjectId }, { _id: 1 });
       } catch (error) {
-        console.log("Error converting supplierId to ObjectId for products query:", error.message);
       }
     }
 
@@ -155,7 +143,7 @@ async function getSupplierMetricsHandler(request) {
         try {
           const mongoose = require('mongoose');
           const objectIdProductIds = productIds.map(id => new mongoose.Types.ObjectId(id));
-          
+
           supplierOrderAggregation = await ClientOrder.aggregate([
             {
               $match: {
@@ -181,7 +169,6 @@ async function getSupplierMetricsHandler(request) {
             }
           ]);
         } catch (error) {
-          console.log("Error with ObjectId conversion for orders aggregation:", error.message);
         }
       }
 
@@ -190,9 +177,6 @@ async function getSupplierMetricsHandler(request) {
         totalOrders = supplierOrderAggregation[0].totalOrders || 0;
       }
     }
-
-    console.log("Total revenue from supplier's products:", totalRevenue);
-    console.log("Total orders containing supplier's products:", totalOrders);
 
     // 2. Total Products Count
     const totalProducts = supplierProductCount;
@@ -262,12 +246,10 @@ async function getSupplierMetricsHandler(request) {
             createdAt: { $gte: startDate, $lte: endDate }
           });
         } catch (error) {
-          console.log("Error with ObjectId conversion for order counts:", error.message);
         }
       }
     }
 
-    console.log("Order status counts - Pending:", pendingOrders, "Shipped:", shippedOrders, "Delivered:", deliveredOrders, "Cancelled:", cancelledOrders);
 
     // 4. Average Order Value
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
@@ -296,7 +278,6 @@ async function getSupplierMetricsHandler(request) {
       }
     }
 
-    console.log("Inventory value:", inventoryValue);
 
     // Compile final metrics
     const metrics = {
@@ -313,13 +294,12 @@ async function getSupplierMetricsHandler(request) {
       recentOrders: [] // Will implement if needed
     };
 
-    console.log("Final supplier metrics:", JSON.stringify(metrics, null, 2));
-    
+
     return NextResponse.json({
       success: true,
       data: metrics
     });
-    
+
   } catch (error) {
     console.error("Error fetching supplier dashboard metrics:", error);
     return NextResponse.json(

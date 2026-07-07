@@ -31,7 +31,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const vendorName = searchParams.get('vendor'); // Vendor filter
     const regionId = searchParams.get('regionId'); // Region filter
 
-    console.log("Vendor Payout Settlement Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, city, vendorName });
 
     // Build date filter
     const buildDateFilter = (filterType, filterValue) => {
@@ -87,7 +86,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Removed strict status filter to show everything (even scheduled/cancelled for visibility)
     // Admin can then see what's pending
     const regionQuery = getRegionQuery(req.user, regionId);
-    
+
     const vendorMatch = { ...regionQuery };
     if (city && city !== 'all') {
       vendorMatch.city = city;
@@ -96,7 +95,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       vendorMatch.businessName = vendorName;
     }
 
-    console.log("Vendor match query:", vendorMatch);
 
     // Build aggregation pipeline starting from VendorModel
     const pipeline = [
@@ -135,41 +133,47 @@ export const GET = authMiddlewareAdmin(async (req) => {
           servicePlatformFee: { $sum: { $ifNull: ["$appointments.platformFee", 0] } },
           serviceTax: { $sum: { $ifNull: ["$appointments.serviceTax", 0] } },
           serviceTotalAmount: { $sum: { $ifNull: ["$appointments.finalAmount", 0] } },
-          completedTotal: { 
-            $sum: { 
+          completedTotal: {
+            $sum: {
               $cond: [
-                { $eq: ["$appointments.status", "completed"] }, 
-                { $subtract: [
+                { $eq: ["$appointments.status", "completed"] },
+                {
+                  $subtract: [
                     { $ifNull: ["$appointments.finalAmount", 0] },
                     { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
-                ]}, 
+                  ]
+                },
                 0
-              ] 
-            } 
+              ]
+            }
           },
-          pendingTotal: { 
-            $sum: { 
+          pendingTotal: {
+            $sum: {
               $cond: [
-                { $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, 
-                { $subtract: [
+                { $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] },
+                {
+                  $subtract: [
                     { $ifNull: ["$appointments.finalAmount", 0] },
                     { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
-                ]}, 
+                  ]
+                },
                 0
-              ] 
-            } 
+              ]
+            }
           },
-          refundableTotal: { 
-            $sum: { 
+          refundableTotal: {
+            $sum: {
               $cond: [
-                { $eq: ["$appointments.status", "cancelled"] }, 
-                { $subtract: [
+                { $eq: ["$appointments.status", "cancelled"] },
+                {
+                  $subtract: [
                     { $ifNull: ["$appointments.finalAmount", 0] },
                     { $add: [{ $ifNull: ["$appointments.platformFee", 0] }, { $ifNull: ["$appointments.serviceTax", 0] }] }
-                ]}, 
+                  ]
+                },
                 0
-              ] 
-            } 
+              ]
+            }
           },
           appointmentCount: { $sum: { $cond: [{ $ifNull: ["$appointments._id", false] }, 1, 0] } },
           completedAppointments: { $sum: { $cond: [{ $eq: ["$appointments.status", "completed"] }, 1, 0] } },
@@ -237,7 +241,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     });
 
-    console.log("Vendor payout settlement report results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown from VendorModel
     const cityPipeline = [

@@ -32,7 +32,6 @@ export const POST = authMiddlewareCrm(async (req) => {
     const vendorId = req.user.userId || req.user._id;
     const body = await req.json();
 
-    console.log('Received payment request body:', JSON.stringify(body, null, 2));
 
     const {
       appointmentId,
@@ -43,12 +42,6 @@ export const POST = authMiddlewareCrm(async (req) => {
       paymentDate
     } = body;
 
-    console.log('Received payment request with appointmentId:', appointmentId);
-    console.log('Amount:', amount);
-    console.log('Payment Method:', paymentMethod);
-    console.log('Notes:', notes);
-    console.log('Transaction ID:', transactionId);
-    console.log('Client-sent paymentDate:', paymentDate);
 
     // Normalize client-sent date if provided
     const paymentAt = paymentDate ? new Date(paymentDate) : new Date();
@@ -91,32 +84,16 @@ export const POST = authMiddlewareCrm(async (req) => {
       );
     }
 
-    // Find the appointment
-    console.log('=== DEBUG: Finding appointment ===');
-    console.log('Appointment ID:', appointmentId);
-    console.log('Vendor ID:', vendorId);
+
 
     const appointment = await AppointmentModel.findOne({
       _id: appointmentId,
       vendorId: vendorId
     }).populate('service', 'name duration price');
 
-    console.log('Found appointment:', appointment ? appointment._id : 'None');
     if (appointment) {
-      console.log('Appointment details:');
-      console.log('  - ID:', appointment._id);
-      console.log('  - Service:', appointment.service);
-      console.log('  - Service Name:', appointment.serviceName);
-      console.log('  - Has service field:', !!appointment.service);
-      console.log('  - Service type:', typeof appointment.service);
-      console.log('  - Client ID (Raw):', appointment.client);
-      console.log('  - Client Name:', appointment.clientName);
-      console.log('  - Amount:', appointment.amount);
-      console.log('  - Total Amount:', appointment.totalAmount);
-      console.log('  - Final Amount:', appointment.finalAmount);
-      console.log('  - Payment Status:', appointment.paymentStatus);
+
     } else {
-      console.log('ERROR: Appointment not found or access denied');
       return NextResponse.json(
         { success: false, message: 'Appointment not found or access denied' },
         { status: 404 }
@@ -132,9 +109,9 @@ export const POST = authMiddlewareCrm(async (req) => {
     // Validate that payment does not exceed remaining balance
     if (amount > remainingBalance + 0.01) { // Allow small float precision difference
       return NextResponse.json(
-        { 
-          success: false, 
-          message: `Payment amount (₹${amount.toFixed(2)}) exceeds remaining balance (₹${remainingBalance.toFixed(2)})` 
+        {
+          success: false,
+          message: `Payment amount (₹${amount.toFixed(2)}) exceeds remaining balance (₹${remainingBalance.toFixed(2)})`
         },
         { status: 400 }
       );
@@ -143,14 +120,6 @@ export const POST = authMiddlewareCrm(async (req) => {
     const newPaidAmount = currentPaid + amount;
     const remainingAmount = Math.max(0, totalAmount - newPaidAmount);
 
-    console.log('=== PAYMENT CALCULATION DEBUG ===');
-    console.log('totalAmount:', totalAmount);
-    console.log('currentPaid (from appointment.amountPaid):', appointment.amountPaid);
-    console.log('currentPaid (from appointment.payment?.paid):', appointment.payment?.paid);
-    console.log('currentPaid (final):', currentPaid);
-    console.log('amount to add:', amount);
-    console.log('newPaidAmount:', newPaidAmount);
-    console.log('remainingAmount:', remainingAmount);
 
     // Determine payment status
     let paymentStatus = 'pending';
@@ -170,15 +139,9 @@ export const POST = authMiddlewareCrm(async (req) => {
       appointmentStatus = 'partially-completed';
     }
 
-    // Prepare service details
-    console.log('=== DEBUG: Preparing service details ===');
-    console.log('Appointment isMultiService:', appointment.isMultiService);
-    console.log('Appointment serviceItems:', appointment.serviceItems);
-    console.log('ServiceItems length:', appointment.serviceItems ? appointment.serviceItems.length : 'N/A');
 
     let serviceDetails = [];
     if (appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0) {
-      console.log('Processing multi-service appointment');
       serviceDetails = appointment.serviceItems.map(item => ({
         serviceId: item.service,
         serviceName: item.serviceName,
@@ -189,9 +152,7 @@ export const POST = authMiddlewareCrm(async (req) => {
         duration: item.duration,
         amount: item.amount
       }));
-      console.log('Multi-service details:', JSON.stringify(serviceDetails, null, 2));
     } else {
-      console.log('Processing single-service appointment');
       serviceDetails = [{
         serviceId: appointment.service,
         serviceName: appointment.serviceName,
@@ -202,11 +163,9 @@ export const POST = authMiddlewareCrm(async (req) => {
         duration: appointment.duration,
         amount: appointment.amount
       }];
-      console.log('Single service details:', JSON.stringify(serviceDetails, null, 2));
     }
 
     // Check if there's already a payment collection record for this appointment
-    console.log('=== DEBUG: Checking for existing payment collection ===');
     const existingPaymentCollection = await PaymentCollectionModel.findOne({
       appointmentId: appointmentId,
       vendorId: vendorId
@@ -216,8 +175,6 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     if (existingPaymentCollection) {
       // Update existing payment collection record
-      console.log('=== DEBUG: Updating existing payment collection ===');
-      console.log('Existing payment collection ID:', existingPaymentCollection._id);
 
       // Update the existing payment collection with new payment details
       const updatedPaymentCollection = await PaymentCollectionModel.findByIdAndUpdate(
@@ -250,31 +207,9 @@ export const POST = authMiddlewareCrm(async (req) => {
       );
 
       savedPaymentCollection = updatedPaymentCollection;
-      console.log('Payment collection updated successfully:', savedPaymentCollection._id);
     } else {
       // Create new payment collection record
-      console.log('=== DEBUG: Creating new payment collection ===');
-      console.log('Payment collection data:', {
-        vendorId: vendorId,
-        appointmentId: appointmentId,
-        clientId: appointment.client || null,
-        serviceDetails: serviceDetails,
-        mode: appointment.mode || 'offline',
-        subtotal: appointment.amount,
-        discount: appointment.discountAmount || appointment.discount || 0,
-        totalAmount: totalAmount,
-        couponCode: appointment.payment?.offer?.code || null,
-        offerType: appointment.payment?.offer ? 'vendor' : null,
-        paymentType: paymentMethod,
-        paymentStatus: paymentStatus,
-        amountPaid: newPaidAmount,
-        remainingAmount: remainingAmount,
-        serviceTax: appointment.serviceTax || 0,
-        platformFee: appointment.platformFee || 0,
-        notes: notes || '',
-        transactionId: transactionId || null,
-        paymentDate: paymentAt
-      });
+
 
       const paymentCollection = new PaymentCollectionModel({
         vendorId: vendorId,
@@ -299,10 +234,8 @@ export const POST = authMiddlewareCrm(async (req) => {
       });
 
       // Save payment collection record
-      console.log('=== DEBUG: Saving payment collection ===');
       try {
         savedPaymentCollection = await paymentCollection.save();
-        console.log('Payment collection saved successfully:', savedPaymentCollection._id);
       } catch (saveError) {
         console.error('Failed to save payment collection:', saveError);
         return NextResponse.json(
@@ -313,30 +246,13 @@ export const POST = authMiddlewareCrm(async (req) => {
     }
 
     // Update appointment payment status using findByIdAndUpdate to avoid validation issues
-    console.log('=== DEBUG: Updating appointment ===');
-    console.log('Updating appointment with ID:', appointmentId);
-    console.log('Update data:', {
-      paymentStatus: appointmentPaymentStatus,
-      status: appointmentStatus,
-      amountPaid: newPaidAmount,
-      amountRemaining: remainingAmount
-    });
+
 
     // Log the actual update operation
-    console.log('=== APPOINTMENT UPDATE OPERATION ===');
-    console.log('Find ID:', appointmentId);
-    console.log('Update object:', {
-      $set: {
-        paymentStatus: appointmentPaymentStatus,
-        status: appointmentStatus,
-        amountPaid: newPaidAmount,
-        amountRemaining: remainingAmount
-      }
-    });
+
 
     try {
       // Use findByIdAndUpdate with runValidators: false to avoid validation issues
-      console.log('=== PERFORMING APPOINTMENT UPDATE ===');
       const updateQuery = {
         $set: {
           paymentStatus: appointmentPaymentStatus,
@@ -359,7 +275,6 @@ export const POST = authMiddlewareCrm(async (req) => {
       // to reference the existing payment collection ID
       if (existingPaymentCollection) {
         // The paymentCollectionId is already being set correctly above
-        console.log('Using existing payment collection ID for appointment update');
       }
 
       // Add the paymentCollectionId to the payment history
@@ -367,7 +282,6 @@ export const POST = authMiddlewareCrm(async (req) => {
         updateQuery.$push.paymentHistory.paymentCollectionId = savedPaymentCollection._id;
       }
 
-      console.log('Update query:', JSON.stringify(updateQuery, null, 2));
 
       // TRIGGER CENTRALIZED INVOICE GENERATION if appointment is reaching completed status
       if (appointmentStatus === 'completed' || appointmentStatus === 'completed without payment') {
@@ -376,7 +290,6 @@ export const POST = authMiddlewareCrm(async (req) => {
           const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
           if (invoice) {
             updateQuery.$set.invoiceNumber = invoice.invoiceNumber;
-            console.log(`Prepared sequential invoice ${invoice.invoiceNumber} for appointment ${appointmentId}`);
           }
         } catch (invoiceError) {
           console.error("Error in centralized invoice generation during payment:", invoiceError);
@@ -385,13 +298,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
       // First, let's check if the appointment exists and log its current state
       const currentAppointment = await AppointmentModel.findById(appointmentId);
-      console.log('Current appointment state before update:', currentAppointment ? {
-        _id: currentAppointment._id,
-        paymentStatus: currentAppointment.paymentStatus,
-        status: currentAppointment.status,
-        amountPaid: currentAppointment.amountPaid,
-        amountRemaining: currentAppointment.amountRemaining
-      } : 'null');
+
 
       // Apply updates to the current appointment document
       if (updateQuery.$set) {
@@ -412,21 +319,13 @@ export const POST = authMiddlewareCrm(async (req) => {
         { path: 'staff', select: 'name email phone' }
       ]);
 
-      console.log('Appointment update result:', updatedAppointment ? {
-        _id: updatedAppointment._id,
-        paymentStatus: updatedAppointment.paymentStatus,
-        status: updatedAppointment.status,
-        amountPaid: updatedAppointment.amountPaid,
-        amountRemaining: updatedAppointment.amountRemaining,
-        invoiceNumber: updatedAppointment.invoiceNumber
-      } : 'null');
+
 
       // SYNC STAFF COMMISSION — runs independently of invoice logic
       if (appointmentStatus === 'completed' || appointmentStatus === 'completed without payment') {
         try {
           const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
           const syncResult = await syncStaffCommission(appointmentId);
-          console.log(`[Collect Payment] Staff commission sync result for ${appointmentId}:`, syncResult);
         } catch (commError) {
           console.error("[Collect Payment] Error syncing staff commission:", commError);
         }
@@ -437,11 +336,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
       // Verify the update was successful
       if (updatedAppointment) {
-        console.log('=== UPDATE VERIFICATION ===');
-        console.log('Expected amountPaid:', newPaidAmount);
-        console.log('Actual amountPaid:', updatedAppointment.amountPaid);
-        console.log('Expected amountRemaining:', remainingAmount);
-        console.log('Actual amountRemaining:', updatedAppointment.amountRemaining);
+
 
         // Check if the values match what we expected
         if (updatedAppointment.amountPaid !== newPaidAmount || updatedAppointment.amountRemaining !== remainingAmount) {
@@ -451,15 +346,9 @@ export const POST = authMiddlewareCrm(async (req) => {
         console.error('FAILED TO UPDATE APPOINTMENT: Appointment not found or update failed');
       }
 
-      // Send email if appointment is completed
-      console.log('=== EMAIL SENDING CHECK ===');
-      console.log('appointmentStatus:', appointmentStatus);
-      console.log('appointment.status (before update):', appointment.status);
-      console.log('Condition check:', appointmentStatus === 'completed' && appointment.status !== 'completed');
 
       if (appointmentStatus === 'completed' && appointment.status !== 'completed') {
         try {
-          console.log('=== SENDING COMPLETION EMAIL AND INVOICE ===');
           const vendor = await VendorModelLib.findById(vendorId).select('businessName address phone city state pincode');
           const businessName = vendor?.businessName || 'GlowVita Salon';
           const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
@@ -473,18 +362,14 @@ export const POST = authMiddlewareCrm(async (req) => {
           // Since we removed auto-populate, appointment.client is the raw ID string or ObjectId
           const clientId = appointment.client;
 
-          console.log('Initial client email (from appointment):', clientEmail);
-          console.log('Initial client name (from appointment):', clientName);
-          console.log('Client ID (Raw):', clientId);
+
 
           if (!clientEmail && clientId) {
-            console.log(`Searching for email for Client ID: ${clientId}`);
 
             // 1. Try Client Collection (Vendor-specific clients)
             try {
               const clientDoc = await ClientModel.findById(clientId);
               if (clientDoc) {
-                console.log('Found in Client collection:', clientDoc._id);
                 clientEmail = clientDoc.email;
                 if (!clientName) clientName = clientDoc.fullName;
                 clientPhone = clientDoc.phone;
@@ -495,11 +380,9 @@ export const POST = authMiddlewareCrm(async (req) => {
 
             // 2. If not found, Try User Collection (Online bookings)
             if (!clientEmail) {
-              console.log('Not found in Client collection or no email. Checking User collection...');
               try {
                 const userDoc = await UserModel.findById(clientId);
                 if (userDoc) {
-                  console.log('Found in User collection:', userDoc._id);
                   clientEmail = userDoc.emailAddress || userDoc.email;
                   if (!clientName) clientName = `${userDoc.firstName} ${userDoc.lastName}`;
                   clientPhone = userDoc.mobileNo || userDoc.phone;
@@ -512,13 +395,11 @@ export const POST = authMiddlewareCrm(async (req) => {
 
 
           if (clientEmail) {
-            console.log('Sending emails to:', clientEmail);
             logToFile(`Attempting to send email to: ${clientEmail}`);
 
             let invoiceHtml;
             let invoice;
             try {
-              console.log('Generating invoice template...');
               logToFile('Generating invoice template...');
 
               // Fetch the saved invoice to get formal items and other details
@@ -582,12 +463,10 @@ export const POST = authMiddlewareCrm(async (req) => {
             // Generate PDF Buffer with Timeout
             let pdfBuffer;
             if (invoiceHtml) {
-              console.log('Generating Invoice PDF...');
               logToFile('Starting PDF generation...');
               try {
                 const pdfPromise = new Promise((resolve, reject) => {
                   try {
-                    console.log('Calling pdf.create...');
                     logToFile('Calling pdf.create...');
 
                     const options = {
@@ -601,7 +480,6 @@ export const POST = authMiddlewareCrm(async (req) => {
                         logToFile(`pdf.create error callback: ${err.message}`);
                         reject(err);
                       } else {
-                        console.log('pdf.create success callback');
                         logToFile('pdf.create success callback');
                         resolve(buffer);
                       }
@@ -621,12 +499,10 @@ export const POST = authMiddlewareCrm(async (req) => {
                 );
 
                 pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
-                console.log('Invoice PDF generated, size:', pdfBuffer.length);
                 logToFile(`PDF Generation successful. Size: ${pdfBuffer.length}`);
               } catch (pdfError) {
                 console.error('⚠️ PDF Generation failed or timed out:', pdfError.message);
                 logToFile(`PDF Generation overall failed: ${pdfError.message}`);
-                console.log('Proceeding to send email without invoice attachment.');
               }
             } else {
               logToFile('Skipping PDF generation due to template error.');
@@ -666,87 +542,72 @@ export const POST = authMiddlewareCrm(async (req) => {
             const emailResult = await sendEmail(emailOptions);
             if (emailResult.success) {
               logToFile(`Email sent successfully. MessageID: ${emailResult.messageId}`);
-              console.log(`✅ Completion email sent successfully to ${clientEmail}`);
             } else {
               logToFile(`Email sending FAILED. Error: ${emailResult.error}`);
               console.error(`❌ Email sending failed: ${emailResult.error}`);
             }
           } else {
             console.warn('⚠️ No client email found - emails not sent');
-            console.log('Client data:', JSON.stringify(appointment.client, null, 2));
           }
         } catch (emailError) {
           console.error('❌ Error sending completion emails:', emailError);
           console.error('Email error stack:', emailError.stack);
         }
       } else {
-        console.log('⚠️ Email condition not met - emails not sent');
-        console.log('Reason: appointmentStatus !== "completed" OR appointment was already completed');
       }
 
       // Check and credit referral bonus if user was referred (triggers on first completed appointment)
       // This is crucial for offline/pay-at-salon appointments handled via Collect Payment
       if (appointmentStatus === 'completed') {
-          console.log(`[Collect Payment Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
 
-          // ROBUST USER ID RESOLUTION:
-          // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
-          // Step 1: Try using the client field value directly as a User ID.
-          // Step 2: If not found, look up Client model to get the linked userId.
-          let targetUserId = null;
-          const rawClientValue = finalAppointment.client?.toString();
-          console.log(`[Collect Payment Referral] Raw client value from appointment: ${rawClientValue}`);
+        // ROBUST USER ID RESOLUTION:
+        // The `client` field can hold either a User ID (online bookings) or a Client ID (offline bookings).
+        // Step 1: Try using the client field value directly as a User ID.
+        // Step 2: If not found, look up Client model to get the linked userId.
+        let targetUserId = null;
+        const rawClientValue = finalAppointment.client?.toString();
 
-          if (rawClientValue) {
-              try {
-                  // Step 1: Check if rawClientValue is a valid User ID directly
-                  const { default: UserModelLib } = await import('../../../../../../../../packages/lib/src/models/user/User.model');
-                  const userDoc = await UserModelLib.findById(rawClientValue).select('_id').lean();
-                  if (userDoc) {
-                      targetUserId = rawClientValue;
-                      console.log(`[Collect Payment Referral] client field resolved directly to User ID: ${targetUserId}`);
-                  }
-              } catch (userErr) {
-                  console.warn(`[Collect Payment Referral] client field not a direct User ID, trying Client model:`, userErr.message);
-              }
-
-              if (!targetUserId) {
-                  try {
-                      // Step 2: client field is a Client record ID — look up linked userId
-                      const { default: ClientModelLib } = await import('../../../../../../../../packages/lib/src/models/Vendor/Client.model');
-                      const clientDoc = await ClientModelLib.findById(rawClientValue).select('userId').lean();
-                      if (clientDoc && clientDoc.userId) {
-                          targetUserId = clientDoc.userId.toString();
-                          console.log(`[Collect Payment Referral] Resolved via Client model → User ID: ${targetUserId}`);
-                      } else {
-                          console.log(`[Collect Payment Referral] Client record found but not linked to any User account`);
-                      }
-                  } catch (err) {
-                      console.error(`[Collect Payment Referral] Error fetching Client record:`, err);
-                  }
-              }
-          } else {
-              console.log(`[Collect Payment Referral] No client value on appointment, cannot resolve User ID`);
+        if (rawClientValue) {
+          try {
+            // Step 1: Check if rawClientValue is a valid User ID directly
+            const { default: UserModelLib } = await import('../../../../../../../../packages/lib/src/models/user/User.model');
+            const userDoc = await UserModelLib.findById(rawClientValue).select('_id').lean();
+            if (userDoc) {
+              targetUserId = rawClientValue;
+            }
+          } catch (userErr) {
+            console.warn(`[Collect Payment Referral] client field not a direct User ID, trying Client model:`, userErr.message);
           }
 
-          if (targetUserId) {
-              try {
-                  console.log(`[Collect Payment Referral] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
-                  const { checkAndCreditReferralBonus } = await import('../../../../../../../../packages/lib/src/utils/referralWalletCredit');
-                  const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
-                  console.log(`[Collect Payment Referral] Success: ${referralResult.success}`);
-                  console.log(`[Collect Payment Referral] Message: ${referralResult.message}`);
-                  if (referralResult.success) {
-                      console.log(`[Collect Payment Referral] ✅ Referral bonus credited successfully!`);
-                  } else {
-                      console.warn(`[Collect Payment Referral] ⚠️ Referral bonus not credited: ${referralResult.message}`);
-                  }
-              } catch (referralError) {
-                  console.error('[Collect Payment Referral] Error crediting bonus:', referralError);
+          if (!targetUserId) {
+            try {
+              // Step 2: client field is a Client record ID — look up linked userId
+              const { default: ClientModelLib } = await import('../../../../../../../../packages/lib/src/models/Vendor/Client.model');
+              const clientDoc = await ClientModelLib.findById(rawClientValue).select('userId').lean();
+              if (clientDoc && clientDoc.userId) {
+                targetUserId = clientDoc.userId.toString();
+              } else {
               }
-          } else {
-              console.log(`[Collect Payment Referral] ❌ No valid User ID found for referral bonus check`);
+            } catch (err) {
+              console.error(`[Collect Payment Referral] Error fetching Client record:`, err);
+            }
           }
+        } else {
+        }
+
+        if (targetUserId) {
+          try {
+            const { checkAndCreditReferralBonus } = await import('../../../../../../../../packages/lib/src/utils/referralWalletCredit');
+            const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
+            if (referralResult.success) {
+            } else {
+              console.warn(`[Collect Payment Referral] ⚠️ Referral bonus not credited: ${referralResult.message}`);
+            }
+          } catch (referralError) {
+            console.error('[Collect Payment Referral] Error crediting bonus:', referralError);
+          }
+        } else {
+        }
       }
 
 

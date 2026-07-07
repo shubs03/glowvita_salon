@@ -36,7 +36,6 @@ export const VendorPayoutSettlementReportProductTable = () => {
   // Use the API hook to fetch vendor payout settlement report for products with filters
   // apiFilters is derived from filters + selectedRegion in useReport
 
-  console.log("Vendor Payout Settlement Report - Product API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetVendorPayoutSettlementReportProductQuery(apiFilters);
 

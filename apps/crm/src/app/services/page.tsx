@@ -126,7 +126,6 @@ export default function ServicesPage() {
     });
   }, [data.services]);
 
-  console.log("Services Data on Services page : ", services)
 
   const [deleteVendorServices] = useDeleteVendorServicesMutation();
   const [updateVendorServices] = useUpdateVendorServicesMutation();

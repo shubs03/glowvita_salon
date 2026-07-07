@@ -5,8 +5,8 @@ const OfficesLocations = () => {
   const offices = [
     {
       city: 'Nashik, Maharashtra',
-      label: 'Headquarters',
-      address: 'Office No. 1, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar, Mumbai Naka, Nashik, Maharashtra, India PIN - 422009',
+      label: 'Corporate Office',
+      address: 'Corporate Office : Business Plus, A Wing, 5th Floor, Office No. 505, 506, Near Sai Square, Mumbai Naka, Nashik, Maharashtra, India PIN - 422009',
     },
     {
       city: 'Pune, Maharashtra',
@@ -78,7 +78,7 @@ const OfficesLocations = () => {
                   rel="noopener noreferrer"
                   className="flex items-center text-xs tracking-wide font-medium text-center text-primary"
                 >
-                  Get Directions <ArrowRightIcon className='w-4 h-4 ml-2'/>
+                  Get Directions <ArrowRightIcon className='w-4 h-4 ml-2' />
                 </a>
               </div>
             </div>

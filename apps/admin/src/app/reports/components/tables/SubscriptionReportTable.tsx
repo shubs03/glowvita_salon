@@ -39,7 +39,6 @@ export const SubscriptionReportTable = () => {
 
   const [activeTab, setActiveTab] = useState("active");
 
-  console.log("Subscription Report API filters:", apiFilters);
 
   const { data, isLoading, isError, error } = useGetSubscriptionReportQuery(apiFilters);
   const { data: allPlansRaw = [] } = useGetSubscriptionPlansQuery(undefined);
@@ -122,11 +121,11 @@ export const SubscriptionReportTable = () => {
 
     if ((Object.keys(apiFilters).length === 0 || allPlanStatuses.length === 0) && subscriptionData.length > 0) {
       const statuses: string[] = Array.from(new Set<string>(subscriptionData.map((item: SubscriptionData) => getDerivedStatus(item.planStatus, item.endDate, item.startDate)))).filter(status => status);
-      
+
       if (!statuses.includes('Scheduled')) {
         statuses.push('Scheduled');
       }
-      
+
       setAllPlanStatuses(statuses);
     }
   }, [subscriptionData, apiFilters, allBusinessNames.length, allPlanStatuses.length]);
@@ -138,7 +137,7 @@ export const SubscriptionReportTable = () => {
   // Use memo to get unique subscriptions per vendor
   const uniqueSubscriptionData = useMemo(() => {
     const vendorMap = new Map<string, SubscriptionData>();
-    
+
     subscriptionData.forEach((sub) => {
       // Normalize status based on end date and start date
       const normalizedStatus = getDerivedStatus(sub.planStatus, sub.endDate, sub.startDate);
@@ -153,10 +152,10 @@ export const SubscriptionReportTable = () => {
           if (status === 'Scheduled') return 2;
           return 1;
         };
-        
+
         const newPriority = getPriority(normalizedSub.planStatus);
         const oldPriority = getPriority(existing.planStatus);
-        
+
         if (newPriority > oldPriority) {
           vendorMap.set(normalizedSub.vendor, normalizedSub);
         } else if (newPriority === oldPriority) {
@@ -167,7 +166,7 @@ export const SubscriptionReportTable = () => {
         }
       }
     });
-    
+
     return Array.from(vendorMap.values());
   }, [subscriptionData]);
 
@@ -188,14 +187,14 @@ export const SubscriptionReportTable = () => {
   // Flatten history to show all subscriptions ever purchased
   const allHistoryData = useMemo(() => {
     const flattened: SubscriptionData[] = [];
-    
+
     subscriptionData.forEach(sub => {
       // Add the current subscription
       flattened.push({
         ...sub,
         planStatus: getDerivedStatus(sub.planStatus, sub.endDate, sub.startDate)
       });
-      
+
       // Add history items
       if (sub.rawSubscription && sub.rawSubscription.history) {
         sub.rawSubscription.history.forEach((hItem: any) => {
@@ -203,7 +202,7 @@ export const SubscriptionReportTable = () => {
           const hPlanName = typeof hItem.plan === 'object' ? hItem.plan?.name : undefined;
           const hPlan = allPlans.find(p => p._id === hPlanId || p.name === hPlanName);
           const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
-          
+
           flattened.push({
             ...sub,
             subscription: hPlanName || hPlan?.name || hPlanId || 'Unknown Plan',
@@ -229,7 +228,7 @@ export const SubscriptionReportTable = () => {
     // Sort by purchase date descending
     return uniqueFlattened.sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
   }, [subscriptionData, allPlans]);
-  
+
   // Total Revenue = SUM of all PAID subscriptions across history (Active + Scheduled + Expired)
   const calculatedTotalRevenue = allHistoryData
     .filter(s => (s.price || 0) > 0)
@@ -238,16 +237,16 @@ export const SubscriptionReportTable = () => {
   const vendorRevenueMap = useMemo(() => {
     const map = new Map<string, number>();
     allHistoryData.forEach((sub) => {
-       if ((sub.price || 0) > 0) {
-         map.set(sub.vendor, (map.get(sub.vendor) || 0) + sub.price);
-       }
+      if ((sub.price || 0) > 0) {
+        map.set(sub.vendor, (map.get(sub.vendor) || 0) + sub.price);
+      }
     });
     return map;
   }, [allHistoryData]);
 
   // Filter data based on Tab and search term
   const filteredData = useMemo((): SubscriptionData[] => {
-    let baseData = activeTab === "active" 
+    let baseData = activeTab === "active"
       ? uniqueSubscriptionData.filter(s => s.planStatus === 'Active')
       : allHistoryData; // Show all history instead of just current unique rows
 
@@ -759,19 +758,19 @@ export const SubscriptionReportTable = () => {
                 <TableCell>₹{(vendorRevenueMap.get(subscription.vendor) || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${subscription.planStatus === 'Active'
-                      ? 'bg-green-100 text-green-800'
-                      : subscription.planStatus === 'Scheduled'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-red-100 text-red-800'
+                    ? 'bg-green-100 text-green-800'
+                    : subscription.planStatus === 'Scheduled'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-red-100 text-red-800'
                     }`}>
                     {subscription.planStatus}
                   </span>
                 </TableCell>
                 <TableCell>{subscription.paymentMode}</TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     className="h-8 w-8 p-0"
                     onClick={() => {
                       setSelectedSubscription(subscription);
@@ -958,9 +957,8 @@ export const SubscriptionReportTable = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${
-                                hStatus === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                              }`}>
+                              <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${hStatus === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
                                 {hStatus}
                               </div>
                             </div>

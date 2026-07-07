@@ -14,7 +14,7 @@ interface DateRangeFilterProps {
   showUserTypeFilter?: boolean;
 }
 
-export const DateRangeFilter = ({ 
+export const DateRangeFilter = ({
   onFilterChange,
   cities = [],
   showStatusFilter = false,
@@ -30,7 +30,6 @@ export const DateRangeFilter = ({
 
   const handleApplyFilters = () => {
     const filters = { startDate, endDate, saleType, city, status, userType };
-    console.log("Applying filters:", filters);
     onFilterChange(filters);
   };
 
@@ -42,7 +41,6 @@ export const DateRangeFilter = ({
     setStatus('all');
     setUserType('all');
     const filters = { startDate: '', endDate: '', saleType: 'all', city: 'all', status: 'all', userType: 'all' };
-    console.log("Clearing filters:", filters);
     onFilterChange(filters);
   };
 
@@ -57,7 +55,7 @@ export const DateRangeFilter = ({
           className="w-full"
         />
       </div>
-      
+
       <div className="flex flex-col">
         <label className="text-sm font-medium mb-1">End Date</label>
         <Input
@@ -67,7 +65,7 @@ export const DateRangeFilter = ({
           className="w-full"
         />
       </div>
-      
+
       {showBookingTypeFilter && (
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Booking Type</label>
@@ -83,7 +81,7 @@ export const DateRangeFilter = ({
           </Select>
         </div>
       )}
-      
+
       {showUserTypeFilter && (
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">User Type</label>
@@ -99,7 +97,7 @@ export const DateRangeFilter = ({
           </Select>
         </div>
       )}
-      
+
       <div className="flex flex-col">
         <label className="text-sm font-medium mb-1">City</label>
         <Select value={city} onValueChange={setCity}>
@@ -114,7 +112,7 @@ export const DateRangeFilter = ({
           </SelectContent>
         </Select>
       </div>
-      
+
       {showStatusFilter && (
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Status</label>
@@ -131,7 +129,7 @@ export const DateRangeFilter = ({
           </Select>
         </div>
       )}
-      
+
       <div className="flex items-end gap-2">
         <Button onClick={handleApplyFilters} className="mt-1">
           Apply Filters

@@ -180,17 +180,17 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         const points = qrCode.cornerPoints;
         const bounds = points?.length
           ? {
-              left: Math.min(...points.map((point: { x: number }) => point.x)),
-              top: Math.min(...points.map((point: { y: number }) => point.y)),
-              right: Math.max(...points.map((point: { x: number }) => point.x)),
-              bottom: Math.max(...points.map((point: { y: number }) => point.y)),
-            }
+            left: Math.min(...points.map((point: { x: number }) => point.x)),
+            top: Math.min(...points.map((point: { y: number }) => point.y)),
+            right: Math.max(...points.map((point: { x: number }) => point.x)),
+            bottom: Math.max(...points.map((point: { y: number }) => point.y)),
+          }
           : {
-              left: qrCode.boundingBox.x,
-              top: qrCode.boundingBox.y,
-              right: qrCode.boundingBox.x + qrCode.boundingBox.width,
-              bottom: qrCode.boundingBox.y + qrCode.boundingBox.height,
-            };
+            left: qrCode.boundingBox.x,
+            top: qrCode.boundingBox.y,
+            right: qrCode.boundingBox.x + qrCode.boundingBox.width,
+            bottom: qrCode.boundingBox.y + qrCode.boundingBox.height,
+          };
 
         const qrWidth = bounds.right - bounds.left;
         const qrHeight = bounds.bottom - bounds.top;
@@ -251,21 +251,19 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             <div className="flex gap-2 mb-6 bg-muted p-1 rounded-lg">
               <button
                 onClick={() => setActiveTab('upi')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'upi'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'upi'
                     ? 'bg-background shadow-sm text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 <Smartphone className="h-4 w-4" /> UPI / QR Code
               </button>
               <button
                 onClick={() => setActiveTab('bank')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'bank'
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'bank'
                     ? 'bg-background shadow-sm text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 <Building2 className="h-4 w-4" /> Bank Details
               </button>
@@ -403,13 +401,12 @@ function PaymentSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                   <Label htmlFor="confirmAccountNumber">Confirm Account Number</Label>
                   <input
                     id="confirmAccountNumber"
-                    className={`${inputCls} ${
-                      confirmAccount && settings.accountNumber && confirmAccount !== settings.accountNumber
+                    className={`${inputCls} ${confirmAccount && settings.accountNumber && confirmAccount !== settings.accountNumber
                         ? 'border-red-500 focus-visible:ring-red-500'
                         : confirmAccount && settings.accountNumber && confirmAccount === settings.accountNumber
-                        ? 'border-green-500 focus-visible:ring-green-500'
-                        : ''
-                    }`}
+                          ? 'border-green-500 focus-visible:ring-green-500'
+                          : ''
+                      }`}
                     placeholder="Re-enter account number"
                     value={confirmAccount}
                     onChange={e => setConfirmAccount(e.target.value)}
@@ -811,14 +808,14 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
   );
 }
 
-function VerifyConfirmationDialog({ 
-  open, 
-  onOpenChange, 
-  onConfirm, 
-  transaction 
-}: { 
-  open: boolean; 
-  onOpenChange: (v: boolean) => void; 
+function VerifyConfirmationDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  transaction
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
   onConfirm: () => void;
   transaction: Transaction | null;
 }) {
@@ -832,9 +829,9 @@ function VerifyConfirmationDialog({
             <AlertCircle className="h-5 w-5 text-orange-500" /> Confirm Verification
           </DialogTitle>
           <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg mt-3">
-             <p className="text-sm text-blue-900 leading-tight">
-               Please double-check the <b>UTR / Transaction ID</b> in your bank or UPI statement before clicking verify.
-             </p>
+            <p className="text-sm text-blue-900 leading-tight">
+              Please double-check the <b>UTR / Transaction ID</b> in your bank or UPI statement before clicking verify.
+            </p>
           </div>
         </DialogHeader>
         <div className="bg-muted/50 p-4 rounded-xl space-y-3 mt-4 border border-muted">
@@ -847,8 +844,8 @@ function VerifyConfirmationDialog({
             <span className="font-mono font-bold bg-background px-2 py-0.5 rounded border">{transaction.transactionId || 'N/A'}</span>
           </div>
           <div className="flex justify-between text-xs items-center border-t pt-2 mt-2">
-             <span className="text-muted-foreground uppercase font-black tracking-tighter">Salon:</span>
-             <span className="font-bold text-foreground truncate max-w-[150px]">{transaction.vendorId?.businessName || 'Unknown'}</span>
+            <span className="text-muted-foreground uppercase font-black tracking-tighter">Salon:</span>
+            <span className="font-bold text-foreground truncate max-w-[150px]">{transaction.vendorId?.businessName || 'Unknown'}</span>
           </div>
         </div>
         <div className="flex gap-3 mt-6">
@@ -902,7 +899,6 @@ export default function PayoutPage() {
     setIsLoading(true);
     try {
       const url = buildSettlementsUrl();
-      console.log('[PayoutPage] Fetching settlements with URL:', url);
       const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
@@ -994,21 +990,19 @@ export default function PayoutPage() {
     const tid = toast.loading("Verifying payment...");
     setIsVerifying(true);
     try {
-      console.log(`[PayoutPage] Calling verify API for ${txnId} with status ${verified}`);
       const resp = await fetch(`/api/admin/settlements/${txnId}/verify`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verified })
       });
       const data = await resp.json();
-      console.log(`[PayoutPage] Verify API response for ${txnId}:`, data);
-      
+
       if (data.success && data.data) {
         toast.success(data.message, { id: tid });
-        
+
         // 1. Update Global History Data
         setHistoryData(prev => prev.map(t => t._id === txnId ? data.data : t));
-        
+
         // 2. Update Payouts Data (for individual vendor views)
         setPayoutData(prev => prev.map(p => ({
           ...p,
@@ -1017,7 +1011,7 @@ export default function PayoutPage() {
 
         setVerifyDialogOpen(false);
         setTxnToVerify(null);
-        
+
         // Re-fetch everything to ensure all balances are synced correctly
         setTimeout(() => fetchPayouts(), 200);
       } else {
@@ -1396,7 +1390,7 @@ export default function PayoutPage() {
                                           ) : (
                                             <div className="flex items-center gap-1">
                                               <span className="text-[8px] bg-red-50 text-red-600 font-bold px-1 rounded uppercase tracking-tighter">Unverified</span>
-                                              <button 
+                                              <button
                                                 onClick={() => { setTxnToVerify(txn); setVerifyDialogOpen(true); }}
                                                 className="text-[8px] text-blue-600 font-bold hover:underline"
                                               >
@@ -1454,41 +1448,40 @@ export default function PayoutPage() {
         <TabsContent value="history">
           <Card>
             <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                  <div>
-                    <CardTitle>Global Payment History</CardTitle>
-                    <CardDescription>
-                      Track all historical payments received from vendors and payouts sent to vendors.
-                    </CardDescription>
-                    <div className="flex bg-muted/50 p-1 rounded-xl w-fit mt-4 border border-muted/50">
-                        {[
-                          { id: 'all', label: 'All Payments', count: historyData.length },
-                          { id: 'unverified', label: 'Unverified', count: unverifiedCount, color: 'text-red-500 bg-red-50' },
-                          { id: 'verified', label: 'Verified', count: historyData.length - unverifiedCount, color: 'text-green-600 bg-green-50' }
-                        ].map((tab) => (
-                          <button
-                            key={tab.id}
-                            onClick={() => { setHistoryFilter(tab.id as any); setHistoryPage(1); }}
-                            className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2.5 ${
-                              historyFilter === tab.id 
-                                ? 'bg-background text-blue-600 shadow-sm border border-muted' 
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                            }`}
-                          >
-                            {tab.label}
-                            {tab.count > 0 && (
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] ${tab.id === historyFilter ? (tab.color || 'bg-muted text-primary') : 'bg-muted text-muted-foreground'}`}>
-                                {tab.count}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                    </div>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                  <CardTitle>Global Payment History</CardTitle>
+                  <CardDescription>
+                    Track all historical payments received from vendors and payouts sent to vendors.
+                  </CardDescription>
+                  <div className="flex bg-muted/50 p-1 rounded-xl w-fit mt-4 border border-muted/50">
+                    {[
+                      { id: 'all', label: 'All Payments', count: historyData.length },
+                      { id: 'unverified', label: 'Unverified', count: unverifiedCount, color: 'text-red-500 bg-red-50' },
+                      { id: 'verified', label: 'Verified', count: historyData.length - unverifiedCount, color: 'text-green-600 bg-green-50' }
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => { setHistoryFilter(tab.id as any); setHistoryPage(1); }}
+                        className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-2.5 ${historyFilter === tab.id
+                            ? 'bg-background text-blue-600 shadow-sm border border-muted'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                          }`}
+                      >
+                        {tab.label}
+                        {tab.count > 0 && (
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] ${tab.id === historyFilter ? (tab.color || 'bg-muted text-primary') : 'bg-muted text-muted-foreground'}`}>
+                            {tab.count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => fetchPayouts()} className="h-9 font-bold">
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
-                  </Button>
                 </div>
+                <Button variant="outline" size="sm" onClick={() => fetchPayouts()} className="h-9 font-bold">
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto no-scrollbar">
@@ -1546,37 +1539,37 @@ export default function PayoutPage() {
                         <TableCell className="font-black whitespace-nowrap text-foreground">₹{txn.amount.toFixed(2)}</TableCell>
                         <TableCell className="text-[11px] font-mono font-bold text-foreground/80">
                           <div className="flex items-center gap-1 group">
-                             <span>{txn.transactionId || '---'}</span>
-                             {txn.transactionId && (
-                               <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
-                                 navigator.clipboard.writeText(txn.transactionId!);
-                                 toast.success('Transaction ID copied');
-                               }}>
-                                 <Copy className="h-3 w-3" />
-                               </Button>
-                             )}
+                            <span>{txn.transactionId || '---'}</span>
+                            {txn.transactionId && (
+                              <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
+                                navigator.clipboard.writeText(txn.transactionId!);
+                                toast.success('Transaction ID copied');
+                              }}>
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-xs font-medium">{txn.paymentMethod}</TableCell>
                         <TableCell>
                           {txn.verified ? (
-                             <div className="flex flex-col gap-1">
-                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-700 border border-green-200">
-                                 <CheckCircle className="h-3.5 w-3.5" /> Verified
-                               </span>
-                               <div className="flex flex-col pl-1">
-                                 <p className="text-[8px] text-muted-foreground font-bold">BY {txn.verifiedBy?.name || 'ADMIN'}</p>
-                                 {txn.verifiedAt && (
-                                   <p className="text-[8px] text-muted-foreground/60 italic font-medium">
-                                     {new Date(txn.verifiedAt).toLocaleDateString()}
-                                   </p>
-                                 )}
-                               </div>
-                             </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-700 border border-green-200">
+                                <CheckCircle className="h-3.5 w-3.5" /> Verified
+                              </span>
+                              <div className="flex flex-col pl-1">
+                                <p className="text-[8px] text-muted-foreground font-bold">BY {txn.verifiedBy?.name || 'ADMIN'}</p>
+                                {txn.verifiedAt && (
+                                  <p className="text-[8px] text-muted-foreground/60 italic font-medium">
+                                    {new Date(txn.verifiedAt).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                           ) : (
-                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-500 border border-red-100 animate-pulse">
-                               <AlertCircle className="h-3.5 w-3.5" /> Unverified
-                             </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-500 border border-red-100 animate-pulse">
+                              <AlertCircle className="h-3.5 w-3.5" /> Unverified
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -1613,10 +1606,10 @@ export default function PayoutPage() {
         </TabsContent>
       </Tabs>
 
-      <VerifyConfirmationDialog 
-        open={verifyDialogOpen} 
-        onOpenChange={setVerifyDialogOpen} 
-        onConfirm={() => txnToVerify && handleVerifyPayment(txnToVerify._id, true)} 
+      <VerifyConfirmationDialog
+        open={verifyDialogOpen}
+        onOpenChange={setVerifyDialogOpen}
+        onConfirm={() => txnToVerify && handleVerifyPayment(txnToVerify._id, true)}
         transaction={txnToVerify}
       />
     </div>

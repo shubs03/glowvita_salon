@@ -70,8 +70,7 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
   // Debug logging
   useEffect(() => {
     if (productMastersData) {
-      console.log('[Supplier Products] Product Masters loaded:', productMasters.length, 'items');
-      console.log('[Supplier Products] Sample product master:', productMasters[0]);
+
     }
   }, [productMastersData, productMasters]);
 
@@ -113,7 +112,6 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
       const categoryName = typeof pm.category === 'object' ? pm.category.name : '';
       return categoryName === formData.category;
     });
-    console.log(`[Supplier Products] Filtering for category "${formData.category}":`, filtered.length, 'products');
     return filtered;
   }, [productMasters, formData.category]);
 

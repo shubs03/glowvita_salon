@@ -17,19 +17,16 @@ const userRoles = [
 
 export async function POST(request) {
   try {
-    console.log('Forgot password endpoint called');
-    
+
     // Connect to database
     try {
       await _db();
-      console.log('Database connected successfully');
     } catch (dbError) {
       console.error('Database connection error:', dbError);
       return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 500 });
     }
 
     const { email } = await request.json();
-    console.log('Forgot password request for email:', email);
 
     if (!email) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
@@ -43,7 +40,6 @@ export async function POST(request) {
 
     for (const roleInfo of userRoles) {
       try {
-        console.log(`Searching in ${roleInfo.type} model for email field ${roleInfo.emailField}:`, email);
         const query = {};
         query[roleInfo.emailField] = email;
         const foundUser = await roleInfo.model.findOne(query);
@@ -52,7 +48,6 @@ export async function POST(request) {
           userType = roleInfo.type;
           Model = roleInfo.model;
           emailField = roleInfo.emailField;
-          console.log(`User found in ${userType} model:`, user[emailField]);
           break;
         }
       } catch (modelError) {
@@ -61,21 +56,18 @@ export async function POST(request) {
     }
 
     if (!user) {
-      console.log('User not found for email:', email);
       // For security reasons, we don't reveal if the email exists or not
-      return NextResponse.json({ 
-        success: true, 
-        message: "If your email exists in our system, you will receive a password reset link shortly." 
+      return NextResponse.json({
+        success: true,
+        message: "If your email exists in our system, you will receive a password reset link shortly."
       });
     }
 
-    console.log('User found:', user[emailField], user.fullName || user.firstName || user.name || user.businessName);
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     // Set expiration to a very short time (1 minute) since we'll invalidate on first access
     const resetTokenExpiry = Date.now() + 60000; // 1 minute from now
-    console.log('Generated reset token for user:', user[emailField]);
 
     // Save token and expiry to user
     try {
@@ -83,12 +75,11 @@ export async function POST(request) {
         resetPasswordToken: resetToken,
         resetPasswordExpires: resetTokenExpiry
       });
-      console.log('Reset token saved for user:', user[emailField]);
     } catch (saveError) {
       console.error('Error saving reset token:', saveError);
-      return NextResponse.json({ 
-        success: false, 
-        error: "Failed to save reset token. Please try again later." 
+      return NextResponse.json({
+        success: false,
+        error: "Failed to save reset token. Please try again later."
       }, { status: 500 });
     }
 
@@ -96,7 +87,7 @@ export async function POST(request) {
     // Support reverse proxy headers for correct live domain
     const forwardedHost = request.headers.get('x-forwarded-host');
     const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
-    
+
     let baseUrl;
     if (forwardedHost) {
       // Use the first host if it's a comma-separated list
@@ -106,7 +97,7 @@ export async function POST(request) {
       const url = new URL(request.url);
       baseUrl = `${url.protocol}//${url.host}`;
     }
-    
+
     // In case there is an env var override
     const overrideUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_CRM_URL || process.env.CRM_URL;
     if (overrideUrl) {
@@ -114,8 +105,7 @@ export async function POST(request) {
     }
 
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${email}`;
-    console.log('Reset URL:', resetUrl);
-    
+
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Password Reset Request</h2>
@@ -134,35 +124,33 @@ export async function POST(request) {
     `;
 
     try {
-      console.log('Attempting to send email...');
       const emailResult = await sendEmail({
         to: user[emailField],
         subject: 'Password Reset Request',
         html: emailContent
       });
-      
-      console.log('Email sending result:', emailResult);
-      
+
+
       if (emailResult.success) {
-        return NextResponse.json({ 
-          success: true, 
-          message: "If your email exists in our system, you will receive a password reset link shortly." 
+        return NextResponse.json({
+          success: true,
+          message: "If your email exists in our system, you will receive a password reset link shortly."
         });
       } else {
         console.error('Email sending failed:', emailResult.error);
         // Still return success for security reasons
-        return NextResponse.json({ 
-          success: true, 
-          message: "If your email exists in our system, you will receive a password reset link shortly." 
+        return NextResponse.json({
+          success: true,
+          message: "If your email exists in our system, you will receive a password reset link shortly."
         });
       }
     } catch (emailError) {
       console.error('Error sending email:', emailError);
       // Still return success for security reasons
-      return NextResponse.json({ 
-          success: true, 
-          message: "If your email exists in our system, you will receive a password reset link shortly." 
-        });
+      return NextResponse.json({
+        success: true,
+        message: "If your email exists in our system, you will receive a password reset link shortly."
+      });
     }
   } catch (error) {
     console.error("Forgot password error:", error);

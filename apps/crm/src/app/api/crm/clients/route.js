@@ -252,7 +252,6 @@ export const POST = withSubscriptionCheck(async (req) => {
             status: 'New'
         };
 
-        console.log('Creating client with regionId:', clientData.regionId, 'role:', req.user.role);
 
         const client = new ClientModel(clientData);
         await client.save();

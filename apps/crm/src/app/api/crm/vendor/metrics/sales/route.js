@@ -8,9 +8,9 @@ await _db();
 // Helper function to calculate date ranges based on filter period
 const getDateRanges = (period) => {
   const now = new Date();
-  
+
   let startDate, endDate;
-  
+
   if (period === 'day') {
     // Today only
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -28,14 +28,14 @@ const getDateRanges = (period) => {
     startDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
     endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
 // Helper function to parse custom date ranges from query parameters
 const getCustomDateRanges = (startDateStr, endDateStr) => {
   let startDate, endDate;
-  
+
   if (startDateStr && endDateStr) {
     // Parse the custom date range
     startDate = new Date(startDateStr);
@@ -43,7 +43,7 @@ const getCustomDateRanges = (startDateStr, endDateStr) => {
     // Set end date to end of day
     endDate.setHours(23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
@@ -52,13 +52,13 @@ async function getSalesDataHandler(request) {
   try {
     // Get vendor ID from authenticated user
     const vendorId = (request.user.userId || request.user.id).toString();
-    
+
     // Get filter parameters from query parameters
     const url = new URL(request.url);
     const period = url.searchParams.get('period') || 'all';
     const startDateParam = url.searchParams.get('startDate');
     const endDateParam = url.searchParams.get('endDate');
-    
+
     // Determine date ranges based on parameters
     let startDate, endDate;
     if (startDateParam && endDateParam) {
@@ -72,7 +72,7 @@ async function getSalesDataHandler(request) {
       startDate = presetDates.startDate;
       endDate = presetDates.endDate;
     }
-    
+
     // Try querying with string vendorId first
     let matchCondition = {
       vendorId: vendorId,
@@ -83,7 +83,7 @@ async function getSalesDataHandler(request) {
       ],
       date: { $gte: startDate, $lte: endDate }
     };
-    
+
     // Aggregate to get monthly sales data
     let salesData = await AppointmentModel.aggregate([
       {
@@ -112,14 +112,14 @@ async function getSalesDataHandler(request) {
         }
       }
     ]);
-    
+
     // If no data found with string vendorId, try with ObjectId
     if (salesData.length === 0) {
       try {
         const mongoose = require('mongoose');
         const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
         matchCondition.vendorId = vendorObjectId;
-        
+
         salesData = await AppointmentModel.aggregate([
           {
             $match: matchCondition
@@ -148,29 +148,28 @@ async function getSalesDataHandler(request) {
           }
         ]);
       } catch (objectIdError) {
-        console.log("Could not convert vendorId to ObjectId:", objectIdError.message);
       }
     }
-    
+
     // Format the data for the chart
     const formattedData = [];
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    
+
     // For day filter, we show today's data
     if (period === 'day') {
       // Get today's date
       const today = new Date();
-      const todayData = salesData.filter(d => 
-        d.year === today.getFullYear() && 
+      const todayData = salesData.filter(d =>
+        d.year === today.getFullYear() &&
         d.month === (today.getMonth() + 1)
       );
-      
+
       formattedData.push({
         name: "Today",
         sales: todayData.reduce((sum, d) => sum + Math.round(d.totalSales), 0),
         appointments: todayData.reduce((sum, d) => sum + d.appointmentCount, 0)
       });
-    } 
+    }
     // For month filter, we show daily data for the current month
     else if (period === 'month') {
       // For simplicity, we'll still show monthly data but label it as current month
@@ -194,18 +193,18 @@ async function getSalesDataHandler(request) {
       // Create an array of the last 7 months (for all time) or current year months
       const monthsToShow = period === 'all' ? 7 : 12;
       const currentDate = new Date();
-      
+
       for (let i = monthsToShow - 1; i >= 0; i--) {
-        const date = period === 'all' 
+        const date = period === 'all'
           ? new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
           : new Date(currentDate.getFullYear(), i, 1);
-          
+
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
-        
+
         // Find data for this month or default to 0
         const monthData = salesData.find(d => d.year === year && d.month === month);
-        
+
         formattedData.push({
           name: monthNames[month - 1],
           sales: monthData ? Math.round(monthData.totalSales) : 0,
@@ -213,12 +212,12 @@ async function getSalesDataHandler(request) {
         });
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       data: formattedData
     });
-    
+
   } catch (error) {
     console.error("Error fetching sales data:", error);
     return NextResponse.json(

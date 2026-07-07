@@ -10,7 +10,6 @@ await _db();
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const productMasters = await ProductMasterModel.find({}).populate("category", "name");
-    console.log('Admin: Sending product masters:', productMasters.length, 'items');
     return Response.json({
       success: true,
       data: productMasters,

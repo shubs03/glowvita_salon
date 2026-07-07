@@ -188,8 +188,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
         }
 
         // Debug: Log vendor subscription data to understand the issue
-        console.log('Vendor subscription data:', JSON.stringify(vendor.subscription, null, 2));
-        console.log('Vendor ID:', vendorId);
+
 
         // Remove _id from body if present to prevent accidental updates
         delete body._id;
@@ -288,7 +287,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
                         }
                     });
                     vendor.markModified('taxes');
-                    console.log('Updated taxes field:', vendor.taxes);
                 } else if (field !== 'profileImage' && field !== 'gallery') {
                     // Handle all other fields normally
                     vendor[field] = body[field];
@@ -307,7 +305,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
         // Handle subscription validation issues gracefully
         if (!vendor.subscription || !vendor.subscription.plan || !vendor.subscription.endDate) {
-            console.log('Vendor has incomplete subscription data, using validateBeforeSave: false');
 
             // For vendors with incomplete subscription data, save without validation
             // and let the admin/system handle subscription setup separately

@@ -76,31 +76,23 @@ export async function POST(request) {
 
     // Generate referralCode for users who don't have one
     if (!user.referralCode) {
-        let nameForCode = '';
-        if (userType === 'supplier') {
-            nameForCode = user.shopName || user.firstName;
-        } else if (userType === 'doctor') {
-            nameForCode = user.name || user.firstName;
-        } else if (userType === 'vendor') {
-            nameForCode = user.businessName || user.firstName;
-        }
-        
-        console.log(`Generating referral code for ${userType}:`, { 
-            nameForCode, 
-            hasShopName: !!user.shopName,
-            hasName: !!user.name,
-            hasBusinessName: !!user.businessName,
-            hasFirstName: !!user.firstName
-        });
-        
-        if (nameForCode) {
-            const referralCode = await generateReferralCode(nameForCode, Model);
-            await Model.findByIdAndUpdate(user._id, { referralCode });
-            user.referralCode = referralCode;
-            console.log(`Generated referral code: ${referralCode}`);
-        } else {
-            console.log(`Could not generate referral code - no name field found for ${userType}`);
-        }
+      let nameForCode = '';
+      if (userType === 'supplier') {
+        nameForCode = user.shopName || user.firstName;
+      } else if (userType === 'doctor') {
+        nameForCode = user.name || user.firstName;
+      } else if (userType === 'vendor') {
+        nameForCode = user.businessName || user.firstName;
+      }
+
+
+
+      if (nameForCode) {
+        const referralCode = await generateReferralCode(nameForCode, Model);
+        await Model.findByIdAndUpdate(user._id, { referralCode });
+        user.referralCode = referralCode;
+      } else {
+      }
     }
 
     // Reload the user from the database to ensure all fields are included
@@ -108,7 +100,7 @@ export async function POST(request) {
       const reloadedUser = await Model.findById(user._id);
       if (reloadedUser) {
         user = reloadedUser;
-        
+
         // For staff, get regionId from their vendor/doctor
         if (userType === 'staff' && user.vendorId) {
           const ownerModel = user.userType === 'Doctor' ? DoctorModel : VendorModel;
@@ -121,11 +113,11 @@ export async function POST(request) {
     }
 
     const { accessToken, refreshToken } = generateTokens(
-      user._id, 
-      userType, 
-      permissions, 
-      user.assignedRegions || (user.regionId ? [user.regionId] : []), 
-      null, 
+      user._id,
+      userType,
+      permissions,
+      user.assignedRegions || (user.regionId ? [user.regionId] : []),
+      null,
       user.regionId,
       userType === 'staff' ? user.vendorId : (userType === 'vendor' ? user._id : null)
     );
@@ -133,9 +125,9 @@ export async function POST(request) {
     const { password: _, ...safeUser } = user.toObject();
 
     if (Model && Model.findByIdAndUpdate) {
-      await Model.findByIdAndUpdate(user._id, { 
+      await Model.findByIdAndUpdate(user._id, {
         lastLogin: new Date(),
-        inactivityReminderSent: false 
+        inactivityReminderSent: false
       });
     }
 

@@ -19,7 +19,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -30,13 +30,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city'); // City filter
     const vendorName = searchParams.get('vendor'); // Vendor filter
     const regionId = searchParams.get('regionId'); // Region filter
-    
-    console.log("Completed Bookings Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city });
-    
+
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -52,7 +51,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -60,7 +59,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -68,7 +67,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -77,10 +76,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { date: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
-    console.log("Date filter:", dateFilter);
-    
+
     // Build mode filter
     const buildModeFilter = (saleType) => {
       if (!saleType || saleType === 'all') {
@@ -88,9 +86,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       return { mode: saleType };
     };
-    
+
     const modeFilter = buildModeFilter(saleType);
-    
+
     // Build vendor filter
     const buildVendorFilter = async (vendorName) => {
       if (!vendorName || vendorName === 'all') {
@@ -103,10 +101,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       return { vendorId: vendor._id };
     };
-    
+
     const vendorFilter = await buildVendorFilter(vendorName);
     const regionQuery = getRegionQuery(req.user, regionId);
-    
+
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
@@ -115,9 +113,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...regionQuery,
       status: "completed"
     };
-    
-    console.log("Combined filter for Completed Bookings:", combinedFilter);
-    
+
+
     // Build filter pipeline that handles both city and vendor filters
     const filterPipeline = [
       { $match: combinedFilter },
@@ -126,86 +123,86 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : []),
       ...(vendorName && vendorName !== 'all' ? [{ $match: { "vendorInfo.businessName": vendorName } }] : [])
     ];
-    
+
     // 1. Total Completed Bookings
     const totalCompletedBookingsPipeline = [
       ...filterPipeline
     ];
-    
+
     const totalCompletedBookingsResult = await AppointmentModel.aggregate([
       ...totalCompletedBookingsPipeline,
       { $count: "total" }
     ]);
-    
+
     const totalCompletedBookings = totalCompletedBookingsResult.length > 0 ? totalCompletedBookingsResult[0].total : 0;
-    
+
     // 2. Completed Online vs Offline Bookings
     // These should respect the existing mode filter
     let completedOnlineBookings = 0;
     let completedOfflineBookings = 0;
-    
+
     // Only count online/offline if we're not already filtering by mode
     const onlineBookingsPipeline = [
       ...filterPipeline,
       { $match: { mode: 'online' } }
     ];
-    
+
     const onlineBookingsResult = await AppointmentModel.aggregate([
       ...onlineBookingsPipeline,
       { $count: "total" }
     ]);
-    
+
     completedOnlineBookings = onlineBookingsResult.length > 0 ? onlineBookingsResult[0].total : 0;
-    
+
     const offlineBookingsPipeline = [
       ...filterPipeline,
       { $match: { mode: 'offline' } }
     ];
-    
+
     const offlineBookingsResult = await AppointmentModel.aggregate([
       ...offlineBookingsPipeline,
       { $count: "total" }
     ]);
-    
+
     completedOfflineBookings = offlineBookingsResult.length > 0 ? offlineBookingsResult[0].total : 0;
-    
+
     // 3. Payment Status for Completed Bookings
     const paidCompletedBookingsPipeline = [
       ...filterPipeline,
       { $match: { paymentStatus: { $in: ['paid', 'completed'] } } }
     ];
-    
+
     const paidCompletedBookingsResult = await AppointmentModel.aggregate([
       ...paidCompletedBookingsPipeline,
       { $count: "total" }
     ]);
-    
+
     const paidCompletedBookings = paidCompletedBookingsResult.length > 0 ? paidCompletedBookingsResult[0].total : 0;
-    
+
     const partialPaidCompletedBookingsPipeline = [
       ...filterPipeline,
       { $match: { paymentStatus: 'partial-paid' } }
     ];
-    
+
     const partialPaidCompletedBookingsResult = await AppointmentModel.aggregate([
       ...partialPaidCompletedBookingsPipeline,
       { $count: "total" }
     ]);
-    
+
     const partialPaidCompletedBookings = partialPaidCompletedBookingsResult.length > 0 ? partialPaidCompletedBookingsResult[0].total : 0;
-    
+
     const pendingPaymentCompletedBookingsPipeline = [
       ...filterPipeline,
       { $match: { paymentStatus: 'pending' } }
     ];
-    
+
     const pendingPaymentCompletedBookingsResult = await AppointmentModel.aggregate([
       ...pendingPaymentCompletedBookingsPipeline,
       { $count: "total" }
     ]);
-    
+
     const pendingPaymentCompletedBookings = pendingPaymentCompletedBookingsResult.length > 0 ? pendingPaymentCompletedBookingsResult[0].total : 0;
-    
+
     // 4. Revenue from Completed Bookings
     const completedAppointmentsPipeline = [
       ...filterPipeline,
@@ -241,30 +238,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       }
     ];
-    
+
     const completedAppointments = await AppointmentModel.aggregate(completedAppointmentsPipeline);
-    
-    // Log for debugging vendor information
-    console.log('Completed appointments with vendor info:', completedAppointments.map(appt => ({
-      id: appt._id,
-      vendorId: appt.vendorId,
-      vendorName: appt.vendorId?.businessName || 'No vendor name',
-      hasVendorId: !!appt.vendorId
-    })).slice(0, 5)); // Log first 5 for debugging
-    
+
+
+
     const revenueFromCompletedBookings = completedAppointments.reduce((sum, appointment) => {
       return sum + (appointment.totalAmount || 0);
     }, 0);
-    
+
     // Calculate total platform fees and service tax
     const totalPlatformFees = completedAppointments.reduce((sum, appointment) => {
       return sum + (appointment.platformFee || 0);
     }, 0);
-    
+
     const totalServiceTax = completedAppointments.reduce((sum, appointment) => {
       return sum + (appointment.serviceTax || 0);
     }, 0);
-    
+
     // 5. Vendor Performance for Completed Bookings
     const vendorStatsPipeline = [
       ...filterPipeline,
@@ -300,9 +291,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $sort: { totalRevenue: -1 } },
       { $limit: 10 }
     ];
-    
+
     const vendorStats = await AppointmentModel.aggregate(vendorStatsPipeline);
-    
+
     // Calculate aggregated totals from vendorStats
     const aggregatedTotals = vendorStats.reduce((totals, stat) => {
       totals.totalBookings += stat.totalBookings;
@@ -322,11 +313,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalPlatformFees: 0,
       totalServiceTax: 0
     });
-    
+
     // Calculate total business (Online Payments + Offline Payments + Platform Fees + Service Tax)
     aggregatedTotals.totalBusiness = aggregatedTotals.onlinePayments + aggregatedTotals.offlinePayments + aggregatedTotals.totalPlatformFees + aggregatedTotals.totalServiceTax;
     aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
-    
+
     // Populate vendor names and cities
     const vendorIds = vendorStats.map(stat => stat._id).filter(id => id);
     const vendors = await VendorModel.find({ _id: { $in: vendorIds } }, 'businessName city');
@@ -337,7 +328,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
       return map;
     }, {});
-    
+
     // Format vendor data with city information
     const formattedVendorStats = vendorStats.map(stat => ({
       vendorId: stat._id,
@@ -352,7 +343,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       onlinePayments: stat.onlinePayments,
       offlinePayments: stat.offlinePayments
     }));
-    
+
     // 6. Completed Bookings Over Time (Daily/Monthly)
     const completedBookingsByDatePipeline = [
       ...filterPipeline,
@@ -367,9 +358,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       },
       { $sort: { _id: 1 } }
     ];
-    
+
     const completedBookingsByDate = await AppointmentModel.aggregate(completedBookingsByDatePipeline);
-    
+
     // 7. Top Services by Completed Bookings
     const topServicesPipeline = [
       ...filterPipeline,
@@ -383,9 +374,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $sort: { count: -1 } },
       { $limit: 10 }
     ];
-    
+
     const topServices = await AppointmentModel.aggregate(topServicesPipeline);
-    
+
     // Get unique cities for the filter dropdown
     const cityPipeline = [
       { $match: { status: "completed" } }, // Only completed appointments
@@ -394,10 +385,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $group: { _id: "$vendorInfo.city" } }, // Get unique cities
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const citiesResult = await AppointmentModel.aggregate(cityPipeline);
     const cities = citiesResult.map(item => item._id).filter(city => city); // Filter out null/undefined cities
-    
+
     // Get unique vendors for the filter dropdown
     const vendorPipeline = [
       { $match: { status: "completed" } }, // Only completed appointments
@@ -406,10 +397,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $group: { _id: "$vendorInfo.businessName" } }, // Get unique vendor names
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const vendorsResult = await AppointmentModel.aggregate(vendorPipeline);
     const vendorNamesForFilter = vendorsResult.map(item => item._id).filter(vendor => vendor); // Filter out null/undefined vendors
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -432,11 +423,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
         filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });
-    
+
   } catch (error) {
     console.error("Error fetching completed bookings report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching completed bookings report",
       error: error.message

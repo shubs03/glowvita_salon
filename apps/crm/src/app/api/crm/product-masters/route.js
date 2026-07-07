@@ -8,7 +8,6 @@ await _db();
 // GET: Fetch product masters
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        console.log('CRM: Fetching product masters from DB');
         const productMasters = await ProductMasterModel.find({ status: 'approved' }).populate("category", "name");
 
         return NextResponse.json({

@@ -11,32 +11,25 @@ export const dynamic = 'force-dynamic'; // Ensure dynamic route handling
 
 // GET all Social Media templates
 export const GET = authMiddlewareAdmin(async (req) => {
-  console.log('GET /api/admin/social-media-templates - Starting request');
 
   try {
-    console.log('Connecting to database...');
     await _db();
-
-    console.log('Getting model...');
     let TemplateModel;
     try {
       // Try to get existing model first
       TemplateModel = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
-      console.log('Using model:', modelName);
     } catch (e) {
       console.error('Error getting/creating model:', e);
       throw e;
     }
 
-    console.log('Ensuring indexes...');
     try {
       await TemplateModel.ensureIndexes();
     } catch (e) {
       console.warn('Warning: Could not ensure indexes:', e.message);
     }
 
-    console.log('Fetching social media templates (admin originals only)...');
-    
+
     // Self-healing migration for old customized templates
     try {
       const unlinkedCopies = await TemplateModel.find({
@@ -45,7 +38,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
       });
 
       if (unlinkedCopies.length > 0) {
-        console.log(`[Migration] Found ${unlinkedCopies.length} unlinked vendor copies in Admin GET. Healing...`);
         for (const copy of unlinkedCopies) {
           const copyTitleClean = copy.title.replace(/\s*-\s*(Edited|Customized|My Design)$/i, '').trim().toLowerCase();
           // Find original template with the clean name
@@ -56,7 +48,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
           });
 
           if (originalMatch) {
-            console.log(`[Migration] Linking ${copy.title} (ID: ${copy._id}) to original (ID: ${originalMatch._id})`);
             await TemplateModel.updateOne(
               { _id: copy._id },
               {
@@ -86,7 +77,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }));
       });
 
-    console.log(`Successfully retrieved ${templates.length} templates`);
 
     return NextResponse.json({
       success: true,
@@ -150,14 +140,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
 // POST a new Social Media template
 export const POST = authMiddlewareAdmin(async (req) => {
-  console.log('POST /api/admin/social-media-templates - Starting request');
   try {
     await _db();
     const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
 
     let body;
     const contentType = req.headers.get('content-type') || '';
-    console.log('Content-Type:', contentType);
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
@@ -167,7 +155,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
           body[key] = value;
         }
       }
-      
+
       const previewImage = formData.get('previewImage');
       const backgroundImage = formData.get('backgroundImage');
 
@@ -319,7 +307,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
             "width": 800,
             "height": 80,
             "fill": "#000000",
-            "text": "02, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar,\nMumbai Naka, Nashik, Maharashtra 422001",
+            "text": "Corporate Office : Business Plus, A Wing, 5th Floor, Office No. 505, 506,\nNear Sai Square, Mumbai Naka, Nashik, Maharashtra, India PIN - 422009",
             "fontSize": 25,
             "fontWeight": "normal",
             "fontFamily": "Arial",
@@ -521,8 +509,8 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       } else if (body.backgroundImage === '' || body.backgroundImage === null) {
         // Background image explicitly cleared
         if (updateData.jsonData) {
-           delete updateData.jsonData.backgroundImage;
-           delete updateData.jsonData.background;
+          delete updateData.jsonData.backgroundImage;
+          delete updateData.jsonData.background;
         }
       }
     }

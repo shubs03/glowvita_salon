@@ -3,13 +3,13 @@ import { NextResponse } from 'next/server';
 // GET: Fetch product masters from Admin API
 export const GET = async (req, ctx) => {
   try {
-    console.log('=== CRM Proxy: Fetching product masters from Admin API ===');
-    
+    ('=== CRM Proxy: Fetching product masters from Admin API ===');
+
     // Call Admin API directly (same server, different port)
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
     const fullUrl = `${adminApiUrl}/api/admin/product-masters`;
-    console.log('CRM: Calling Admin API at:', fullUrl);
-    
+    ('CRM: Calling Admin API at:', fullUrl);
+
     const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
@@ -18,7 +18,7 @@ export const GET = async (req, ctx) => {
       cache: 'no-store',
     });
 
-    console.log('CRM: Admin API response status:', response.status);
+    ('CRM: Admin API response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -27,7 +27,7 @@ export const GET = async (req, ctx) => {
     }
 
     const data = await response.json();
-    console.log('CRM: Received data structure:', {
+    ('CRM: Received data structure:', {
       hasSuccess: !!data.success,
       hasData: !!data.data,
       dataLength: Array.isArray(data.data) ? data.data.length : 'not an array',
@@ -39,16 +39,16 @@ export const GET = async (req, ctx) => {
     });
 
     // Return data keeping admin's structure
-    console.log('CRM: Returning', data.data?.length || 0, 'product masters');
+    ('CRM: Returning', data.data?.length || 0, 'product masters');
     return NextResponse.json(data, { status: 200 });
 
   } catch (error) {
     console.error('CRM: Error fetching product masters:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error fetching product masters', 
-        error: error.message 
+        message: 'Error fetching product masters',
+        error: error.message
       },
       { status: 500 }
     );
@@ -58,7 +58,7 @@ export const GET = async (req, ctx) => {
 // POST: Create new product master via Admin API
 export const POST = async (req, ctx) => {
   try {
-    console.log('CRM: Creating product master via Admin API');
+    ('CRM: Creating product master via Admin API');
     const body = await req.json();
 
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
@@ -89,10 +89,10 @@ export const POST = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error creating product master:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error creating product master', 
-        error: error.message 
+        message: 'Error creating product master',
+        error: error.message
       },
       { status: 500 }
     );
@@ -102,7 +102,7 @@ export const POST = async (req, ctx) => {
 // PUT: Update product master via Admin API
 export const PUT = async (req, ctx) => {
   try {
-    console.log('CRM: Updating product master via Admin API');
+    ('CRM: Updating product master via Admin API');
     const body = await req.json();
 
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
@@ -133,10 +133,10 @@ export const PUT = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error updating product master:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error updating product master', 
-        error: error.message 
+        message: 'Error updating product master',
+        error: error.message
       },
       { status: 500 }
     );
@@ -146,7 +146,7 @@ export const PUT = async (req, ctx) => {
 // DELETE: Delete product master via Admin API
 export const DELETE = async (req, ctx) => {
   try {
-    console.log('CRM: Deleting product master via Admin API');
+    ('CRM: Deleting product master via Admin API');
     const body = await req.json();
 
     const adminApiUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002';
@@ -176,10 +176,10 @@ export const DELETE = async (req, ctx) => {
   } catch (error) {
     console.error('CRM: Error deleting product master:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        message: 'Error deleting product master', 
-        error: error.message 
+        message: 'Error deleting product master',
+        error: error.message
       },
       { status: 500 }
     );

@@ -22,10 +22,9 @@ class NotificationManager {
     if (typeof window !== 'undefined') {
       // Diagnostic tool for the user
       window.playAdminTestSound = () => {
-        console.log('[Diagnostic] Manual sound test triggered');
         this.playNotificationSound();
       };
-      
+
       window.getAdminNotificationStatus = () => ({
         permission: Notification.permission,
         hasMessaging: !!this.messaging,
@@ -43,9 +42,8 @@ class NotificationManager {
       this.messaging = getMessaging(app);
 
       const triggerSound = (payload) => {
-        console.log('[NotificationManager] SIGNAL (ADMIN) -> Playing sound and notifying listeners', payload);
         this.playNotificationSound();
-        
+
         this.listeners.forEach(callback => {
           try { callback(payload); } catch (e) { console.error('[NotificationManager] Listener error:', e); }
         });
@@ -54,7 +52,6 @@ class NotificationManager {
       // Listen for signals from Service Worker (Background)
       const soundChannel = new BroadcastChannel('notification_sound_channel');
       soundChannel.onmessage = (event) => {
-        console.log('[NotificationManager] Received signal from BroadcastChannel:', event.data);
         if (event.data?.type === 'PLAY_SOUND') {
           triggerSound(event.data.payload || { from: 'SW_DIRECT_ADMIN' });
         }
@@ -62,7 +59,6 @@ class NotificationManager {
 
       // Listen for foreground messages
       onMessage(this.messaging, (payload) => {
-        console.log('[NotificationManager] Received foreground message:', payload);
         triggerSound(payload);
       });
 
@@ -74,7 +70,6 @@ class NotificationManager {
         }
         if (this.audioContext && this.audioContext.state === 'suspended') {
           await this.audioContext.resume();
-          console.log('[Audio] Admin System Ready (AudioContext resumed)');
         }
       };
 
@@ -85,7 +80,6 @@ class NotificationManager {
       // Register Service Worker and wait for it
       if ('serviceWorker' in navigator) {
         this.swRegistration = await navigator.serviceWorker.register('/api/firebase-messaging-sw', { scope: '/' });
-        console.log('[System] Admin Service Registered');
       }
     } catch (err) {
       console.error('[NotificationManager] Admin Init error:', err);
@@ -99,11 +93,11 @@ class NotificationManager {
         if (!AudioCtx) return;
         this.audioContext = new AudioCtx();
       }
-      
+
       if (this.audioContext.state === 'suspended') {
         await this.audioContext.resume();
       }
-      
+
       const ctx = this.audioContext;
       const now = ctx.currentTime;
 
@@ -141,19 +135,17 @@ class NotificationManager {
   async requestPermission() {
     try {
       if (!this.messaging) {
-         console.warn('[NotificationManager] Messaging not initialized. Retrying init...');
-         await this.initFirebase();
+        console.warn('[NotificationManager] Messaging not initialized. Retrying init...');
+        await this.initFirebase();
       }
 
-      console.log('[NotificationManager] Requesting permission...');
       const permission = await Notification.requestPermission();
-      
+
       if (permission === 'granted') {
-        console.log('[NotificationManager] Permission granted. Getting token...');
-        
+
         // Wait for SW if not ready
         if (!this.swRegistration) {
-           this.swRegistration = await navigator.serviceWorker.ready;
+          this.swRegistration = await navigator.serviceWorker.ready;
         }
 
         const token = await getToken(this.messaging, {
@@ -162,7 +154,6 @@ class NotificationManager {
         });
 
         if (token) {
-          console.log('[NotificationManager] Token obtained. Registering with server...');
           this.currentToken = token;
           await this.saveTokenToServer(token);
           return token;
@@ -173,8 +164,8 @@ class NotificationManager {
         console.warn('[NotificationManager] Permission denied:', permission);
       }
     } catch (error) {
-       console.error('[NotificationManager] requestPermission Error:', error);
-       if (!VAPID_KEY) console.error('[NotificationManager] CRITICAL: NEXT_PUBLIC_FIREBASE_VAPID_KEY is missing!');
+      console.error('[NotificationManager] requestPermission Error:', error);
+      if (!VAPID_KEY) console.error('[NotificationManager] CRITICAL: NEXT_PUBLIC_FIREBASE_VAPID_KEY is missing!');
     }
     return null;
   }
@@ -186,15 +177,14 @@ class NotificationManager {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-      
+
       const data = await response.json();
       if (response.ok) {
-        console.log('[NotificationManager] Admin Server Registration Success');
       } else {
         console.error('[NotificationManager] Admin Server Registration Failed:', data.message);
       }
     } catch (error) {
-       console.error('[NotificationManager] saveTokenToServer Error:', error);
+      console.error('[NotificationManager] saveTokenToServer Error:', error);
     }
   }
 }

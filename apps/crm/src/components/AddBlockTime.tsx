@@ -53,9 +53,9 @@ interface AddBlockTimeProps {
   onStaffChange?: (staffId: string) => void;
 }
 
-const AddBlockTime: React.FC<AddBlockTimeProps> = ({ 
-  open, 
-  onClose, 
+const AddBlockTime: React.FC<AddBlockTimeProps> = ({
+  open,
+  onClose,
   onSuccess,
   initialDate = new Date(),
   staffMembers = [],
@@ -65,7 +65,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const { status, error } = useAppSelector((state: RootState) => state.blockTime);
-  
+
   const [selectedStaffId, setSelectedStaffId] = useState(propSelectedStaffId || defaultStaffId);
   const [date, setDate] = useState<string>(() => {
     if (!initialDate) return '';
@@ -76,14 +76,14 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
       return format(new Date(), 'yyyy-MM-dd');
     }
   });
-  
+
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [reason, setReason] = useState('');
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   const isLoading = status === 'loading';
 
   // Update selected staff when prop changes
@@ -100,35 +100,35 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
         setAvailableSlots([]);
         return;
       }
-      
+
       const staff = staffMembers.find(s => s._id === selectedStaffId);
-      
+
       if (!staff) {
         setAvailableSlots([]);
         return;
       }
-      
+
       // Default working hours (9 AM to 5 PM)
       const defaultStartHour = 9;
       const defaultEndHour = 17;
-      
+
       setIsLoadingSlots(true);
-      
+
       try {
         let startHour = defaultStartHour;
         let endHour = defaultEndHour;
-        
+
         // Use staff's working hours if available
         if (staff.workingHours?.start && staff.workingHours?.end) {
           try {
             const [startH, startM] = staff.workingHours.start.split(':').map(Number);
             const [endH, endM] = staff.workingHours.end.split(':').map(Number);
-            
+
             if (!isNaN(startH) && !isNaN(endH)) {
               startHour = startH;
               // If there are minutes, add 1 to the end hour to include the full hour
               endHour = endH + (endM > 0 ? 1 : 0);
-              
+
               // Ensure end hour is after start hour
               if (endHour <= startHour) {
                 endHour = startHour + 8; // Default to 8-hour shift if invalid range
@@ -138,7 +138,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
             console.error('Error parsing working hours:', e);
           }
         }
-        
+
         // Generate 30-minute slots between start and end time
         const slots: string[] = [];
         for (let hour = startHour; hour <= endHour; hour++) {
@@ -150,8 +150,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
             slots.push(`${hour.toString().padStart(2, '0')}:30`);
           }
         }
-        
-        console.log('Generated time slots:', slots);
+
         setAvailableSlots(slots);
       } catch (error) {
         console.error('Error generating time slots:', error);
@@ -161,7 +160,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
         setIsLoadingSlots(false);
       }
     };
-    
+
     // Only generate slots if the dialog is open
     if (open) {
       generateAvailableSlots();
@@ -170,7 +169,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!selectedStaffId) {
       newErrors.staff = 'Please select a staff member';
     }
@@ -201,12 +200,12 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
     if (!validateForm()) {
       return;
     }
-    
+
     const staff = staffMembers.find(s => s._id === selectedStaffId);
-    const staffName = staff ? 
-      (staff.fullName || staff.staffName || `${staff.firstName || ''} ${staff.lastName || ''}`.trim()) : 
+    const staffName = staff ?
+      (staff.fullName || staff.staffName || `${staff.firstName || ''} ${staff.lastName || ''}`.trim()) :
       'All Staff';
-    
+
     try {
       // Fix the dispatch usage for addBlockTime thunk
       const blockTimeData: BlockTimeData = {
@@ -217,11 +216,11 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
         staffName,
         reason: reason || 'Blocked time',
       };
-      
+
       const result = await dispatch(
         blockTimeActions.addBlockTime(blockTimeData as any)
       ).unwrap();
-      
+
       toast.success('Time blocked successfully');
       if (onSuccess) onSuccess();
       handleClose();
@@ -230,26 +229,26 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
       toast.error(error.message || 'Failed to block time');
     }
   };
-  
+
   const handleClose = () => {
     // Reset form state
     setStartTime('');
     setEndTime('');
     setReason('');
     setErrors({});
-    
+
     // Reset the form in Redux
     dispatch(blockTimeActions.resetBlockTime());
-    
+
     // Close the dialog
     onClose();
   };
 
   const getStaffName = (staff: StaffMember) => {
     if (!staff) return 'Unknown Staff';
-    return staff.fullName || staff.staffName || 
-           `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 
-           `Staff ${staff._id}`;
+    return staff.fullName || staff.staffName ||
+      `${staff.firstName || ''} ${staff.lastName || ''}`.trim() ||
+      `Staff ${staff._id}`;
   };
 
   return (
@@ -263,14 +262,14 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
             Select a staff member and time slot to block their availability
           </p>
         </DialogHeader>
-        
+
         <div className="space-y-6 py-4">
           {/* Staff Selection */}
           <div className="space-y-2">
             <label htmlFor="staff" className="text-sm font-medium text-gray-700">
               Staff Member *
             </label>
-            <Select 
+            <Select
               value={selectedStaffId}
               onValueChange={handleStaffChange}
               disabled={isLoading || isLoadingSlots}
@@ -289,8 +288,8 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
                     <SelectItem key={staff._id} value={staff._id} className="cursor-pointer">
                       <div className="flex items-center">
                         {staff.photo ? (
-                          <img 
-                            src={staff.photo} 
+                          <img
+                            src={staff.photo}
                             alt={getStaffName(staff)}
                             className="h-6 w-6 rounded-full mr-2 object-cover"
                           />
@@ -356,13 +355,13 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
               >
                 <SelectTrigger className="h-12">
                   <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                  <SelectValue 
+                  <SelectValue
                     placeholder={
-                      !selectedStaffId ? "Select staff first" : 
-                      isLoadingSlots ? "Loading..." : 
-                      availableSlots.length === 0 ? "No slots available" : 
-                      "Start time"
-                    } 
+                      !selectedStaffId ? "Select staff first" :
+                        isLoadingSlots ? "Loading..." :
+                          availableSlots.length === 0 ? "No slots available" :
+                            "Start time"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -396,11 +395,11 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
               >
                 <SelectTrigger className="h-12">
                   <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                  <SelectValue 
+                  <SelectValue
                     placeholder={
-                      !startTime ? "Select start time first" : 
-                      "End time"
-                    } 
+                      !startTime ? "Select start time first" :
+                        "End time"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -454,18 +453,18 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button 
+            <Button
               type="button"
-              variant="outline" 
+              variant="outline"
               onClick={handleClose}
               className="px-6"
               disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="button"
-              onClick={handleSave} 
+              onClick={handleSave}
               disabled={isLoading || isLoadingSlots}
               className="px-6 bg-blue-600 hover:bg-blue-700"
             >

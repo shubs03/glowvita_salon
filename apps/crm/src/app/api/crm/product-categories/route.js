@@ -8,7 +8,6 @@ await _db();
 // GET: Fetch categories
 export const GET = authMiddlewareCrm(async (req) => {
   try {
-    console.log('CRM: Fetching categories from DB');
     const categories = await ProductCategoryModel.find({}).sort({ createdAt: -1 });
 
     return NextResponse.json({
@@ -34,7 +33,6 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST: Create new category
 export const POST = authMiddlewareCrm(async (req) => {
   try {
-    console.log('CRM: Creating category in DB');
     const body = await req.json();
     const { name, description } = body;
 

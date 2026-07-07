@@ -89,10 +89,9 @@ export default function MessageBlastPage() {
     token: state.crmAuth.token,
     user: state.crmAuth.user
   }));
-  
+
   // Debug authentication state
-  console.log('Auth state - isAuthenticated:', isAuthenticated, 'token:', token, 'user:', user);
-  
+
   // Fetch CRM SMS packages
   const {
     data: packagesResponse,
@@ -104,7 +103,7 @@ export default function MessageBlastPage() {
     skip: !isAuthenticated,
     refetchOnMountOrArgChange: true
   });
-  
+
   // Fetch CRM campaigns
   const {
     data: campaignsResponse,
@@ -116,7 +115,7 @@ export default function MessageBlastPage() {
     skip: !isAuthenticated,
     refetchOnMountOrArgChange: true
   });
-  
+
   // Fetch SMS Balance
   const {
     data: balanceResponse,
@@ -126,7 +125,7 @@ export default function MessageBlastPage() {
     refetchOnMountOrArgChange: true
   });
   const smsBalance = balanceResponse?.data?.smsBalance ?? 0;
-  
+
   // Fetch Purchase History
   const {
     data: purchaseHistoryResponse,
@@ -135,25 +134,23 @@ export default function MessageBlastPage() {
     skip: !isAuthenticated,
     refetchOnMountOrArgChange: true
   });
-  
+
   // Extract active package from purchase history
   const purchases = purchaseHistoryResponse?.data?.purchases || [];
   const remainingSmsCount = purchaseHistoryResponse?.data?.activePackageInfo?.remainingSmsCount || 0;
-  
+
   // A package is considered actively in use if it has not expired and the user still has an SMS balance
   const activePurchases = purchases.filter((p: any) => p.status === 'active' && new Date(p.expiryDate) > new Date() && remainingSmsCount > 0);
   const activePackageIds = activePurchases.map((p: any) => typeof p.packageId === 'object' ? p.packageId?._id : p.packageId);
-  
+
   // Extract packages from the response
   const smsPackages = packagesResponse?.data || [];
-  
+
   // Extract campaigns from the response
   const campaigns = campaignsResponse?.data || [];
-  
+
   // Debug API response
-  console.log('CRM SMS Packages Response:', { packagesResponse, packages: smsPackages, isLoading, isError, fetchError });
-  console.log('CRM Campaigns Response:', { campaignsResponse, campaigns, isLoadingCampaigns, isErrorCampaigns, fetchCampaignsError });
-  
+
   const error = isError ? 'Failed to load SMS packages. Please try again.' : null;
 
   const handlePurchasePackage = async (packageId: string) => {
@@ -162,7 +159,7 @@ export default function MessageBlastPage() {
       toast.error('Please log in to purchase SMS packages');
       return;
     }
-    
+
     // Validate packageId
     if (!packageId) {
       toast.error('Invalid package selection');
@@ -176,13 +173,12 @@ export default function MessageBlastPage() {
     }
 
     const packagePrice = pkg.price;
-    
-    console.log('Attempting to purchase package:', packageId, 'Price:', packagePrice);
-    console.log('User object:', user);
-    
+
+
+
     // Set the specific package as purchasing
     setPurchasingPackageId(packageId);
-    
+
     try {
       // Step 1: Load Razorpay JS script
       const loaded = await loadRazorpayScript();
@@ -241,14 +237,12 @@ export default function MessageBlastPage() {
               if (!verifyData.success) throw new Error('Payment verification failed.');
 
               // Step 5: Finalize purchase inside backend
-              console.log('Sending purchase request with packageId:', packageId);
-              const result: any = await purchaseSmsPackage({ 
-                packageId, 
+              const result: any = await purchaseSmsPackage({
+                packageId,
                 paymentId: response.razorpay_payment_id,
                 paymentOrderId: response.razorpay_order_id
               }).unwrap();
-              console.log('Purchase response:', result);
-              
+
               if (result.success) {
                 // Show success message
                 toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
@@ -271,13 +265,13 @@ export default function MessageBlastPage() {
       });
     } catch (error: any) {
       console.error('Purchase/Payment error:', error);
-      
+
       if (error?.message === 'Payment cancelled by user') {
         toast.info('Payment cancelled.');
       } else {
         // More detailed error handling
         let errorMessage = 'Failed to purchase package. Please try again.';
-        
+
         if (error?.data?.message) {
           errorMessage = error.data.message;
         } else if (error?.message) {
@@ -289,7 +283,7 @@ export default function MessageBlastPage() {
         } else if (error?.status === 500) {
           errorMessage = 'Server error. Please try again later.';
         }
-        
+
         toast.error(errorMessage);
       }
     } finally {
@@ -381,9 +375,9 @@ export default function MessageBlastPage() {
                   <p className="font-medium">Error Loading SMS Packages</p>
                 </div>
                 <p className="text-sm mb-3">{(fetchError as any)?.data?.message || error}</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                   onClick={() => refetchPackages()}
                 >
@@ -448,9 +442,9 @@ export default function MessageBlastPage() {
                     </ul>
                   </CardContent>
                   <CardFooter>
-                    <Button 
-                      className="w-full" 
-                      size="sm" 
+                    <Button
+                      className="w-full"
+                      size="sm"
                       disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id || activePackageIds.includes(pkg._id)}
                       onClick={() => handlePurchasePackage(pkg._id)}
                     >
@@ -475,7 +469,7 @@ export default function MessageBlastPage() {
                 Create Campaign
               </Button>
             </div>
-            
+
             {!isAuthenticated ? (
               <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
                 <div className="p-6 text-amber-800 dark:text-amber-200">
@@ -503,9 +497,9 @@ export default function MessageBlastPage() {
                     <p className="font-medium">Error Loading Campaigns</p>
                   </div>
                   <p className="text-sm mb-3">{(fetchCampaignsError as any)?.data?.message || 'Failed to load campaigns'}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => refetchCampaigns()}
                   >
@@ -530,7 +524,7 @@ export default function MessageBlastPage() {
                           <h4 className="font-semibold text-lg">{campaign.name}</h4>
                           <div className="flex gap-2">
                             {campaign.type.map((type) => (
-                              <span 
+                              <span
                                 key={type}
                                 className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary border border-primary/20"
                               >
@@ -538,34 +532,33 @@ export default function MessageBlastPage() {
                               </span>
                             ))}
                           </div>
-                          <div className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            campaign.status === 'Active' 
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                              : campaign.status === 'Draft'
+                          <div className={`px-2 py-1 text-xs rounded-full font-medium ${campaign.status === 'Active'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                            : campaign.status === 'Draft'
                               ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                               : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                          }`}>
+                            }`}>
                             {campaign.status}
                           </div>
                         </div>
-                        
+
                         <p className="text-muted-foreground line-clamp-2">
                           {campaign.content}
                         </p>
-                        
+
                         <div className="flex flex-wrap items-center gap-4 text-sm">
                           <span className="flex items-center gap-1">
                             <span className="font-medium">Target:</span>
                             <span className="text-muted-foreground">{campaign.targetAudience}</span>
                           </span>
-                          
+
                           {campaign.budget > 0 && (
                             <span className="flex items-center gap-1">
                               <span className="font-medium">Budget:</span>
                               <span className="text-muted-foreground">₹{campaign.budget.toLocaleString()}</span>
                             </span>
                           )}
-                          
+
                           <span className="flex items-center gap-1">
                             <span className="font-medium">Created:</span>
                             <span className="text-muted-foreground">
@@ -573,7 +566,7 @@ export default function MessageBlastPage() {
                             </span>
                           </span>
                         </div>
-                        
+
                         {campaign.metrics.messagesSent > 0 && (
                           <div className="flex flex-wrap items-center gap-4 text-sm">
                             <span className="flex items-center gap-1">
@@ -581,12 +574,12 @@ export default function MessageBlastPage() {
                               <span className="font-medium">{campaign.metrics.messagesSent}</span>
                               <span className="text-muted-foreground">sent</span>
                             </span>
-                            
+
                             <span className="flex items-center gap-1">
                               <span className="font-medium">{campaign.metrics.deliveryRate.toFixed(1)}%</span>
                               <span className="text-muted-foreground">delivered</span>
                             </span>
-                            
+
                             <span className="flex items-center gap-1">
                               <span className="font-medium">{campaign.metrics.openRate.toFixed(1)}%</span>
                               <span className="text-muted-foreground">opened</span>
@@ -594,7 +587,7 @@ export default function MessageBlastPage() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => setSelectedCampaign(campaign)}>
                           View Details
@@ -611,9 +604,9 @@ export default function MessageBlastPage() {
                 ))}
               </div>
             )}
-            
-            <CreateCampaignModal 
-              open={isCreateModalOpen} 
+
+            <CreateCampaignModal
+              open={isCreateModalOpen}
               onOpenChange={setIsCreateModalOpen}
               onCampaignCreated={() => {
                 refetchCampaigns();

@@ -45,7 +45,6 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
   }));
 
   // Debug authentication state
-  console.log('CRM Auth State:', { isAuthenticated, token, open });
 
   // Fetch CRM SMS templates
   const {
@@ -83,28 +82,9 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
   const finalTemplates = templates.length > 0 ? templates : rawTemplates;
   const finalTestTemplates = testTemplates.length > 0 ? testTemplates : rawTestTemplates;
 
-  // Debug API response
-  console.log('Main API Response:', { templatesResponse, templates: finalTemplates, isLoading, isError, fetchError });
-  console.log('Test API Response:', { testTemplatesResponse, testTemplates: finalTestTemplates, isLoadingTest, isErrorTest, fetchErrorTest });
-  console.log('Final Templates array:', finalTemplates);
-  console.log('Final Test Templates array:', finalTestTemplates);
-  console.log('Final Templates length:', finalTemplates.length);
-  console.log('Final Test Templates length:', finalTestTemplates.length);
-  console.log('Auth state:', { isAuthenticated, token: token ? 'present' : 'missing' });
-  console.log('Raw fetch error:', fetchError);
-  console.log('Raw test fetch error:', fetchErrorTest);
 
-  // Check if we have data in different formats
-  console.log('Raw templates check:', {
-    'templatesResponse?.templates': templatesResponse?.templates,
-    'templatesResponse?.data': (templatesResponse as any)?.data,
-    'testTemplatesResponse?.templates': testTemplatesResponse?.templates,
-    'testTemplatesResponse?.data': (testTemplatesResponse as any)?.data
-  });
 
-  // Debug API URLs being called
-  console.log('Expected CRM API URL should be: http://localhost:3001/api/crm/sms-template');
-  console.log('Expected Test API URL should be: http://localhost:3001/api/crm/test-sms-templates');
+
 
   const error = isError ? 'Failed to load templates. Please try again.' : null;
 
@@ -202,11 +182,9 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
         status
       };
 
-      console.log('Creating campaign with data:', campaignData);
 
       const result = await createCrmCampaign(campaignData).unwrap();
 
-      console.log('Campaign created successfully:', result);
 
       if (status === 'Active') {
         toast.success('Campaign launched and messages sent successfully!');
@@ -438,15 +416,15 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                       <Card
                         key={template._id}
                         className={`p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedTemplate === template._id
-                            ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20'
-                            : 'hover:bg-muted/50 hover:border-primary/30'
+                          ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20'
+                          : 'hover:bg-muted/50 hover:border-primary/30'
                           }`}
                         onClick={() => handleTemplateSelect(template)}
                       >
                         <div className="flex items-start gap-4">
                           <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${selectedTemplate === template._id
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-primary/10 text-primary'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-primary/10 text-primary'
                             }`}>
                             <MessageSquare className="h-6 w-6" />
                           </div>
@@ -471,8 +449,8 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                                 {template.type}
                               </span>
                               <span className={`px-2 py-1 rounded-md font-medium ${template.status === 'Active'
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                                 }`}>
                                 {template.status}
                               </span>

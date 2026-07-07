@@ -114,16 +114,7 @@ const parseTimeString = (timeStr: string): [number, number] => {
 
     // Debug log for time parsing
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Parsed time:', {
-        input: timeStr,
-        cleanInput: cleanTime,
-        hasAM,
-        hasPM,
-        timePart,
-        hours,
-        minutes,
-        output: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-      });
+
     }
 
     return [hours, minutes];
@@ -690,7 +681,6 @@ export default function DailySchedulePage() {
     }
 
     const virtualStaff = Array.from(missingStaffMap.values());
-    console.log('Injecting virtual staff for missing assignments:', virtualStaff);
 
     return [anyProfessional, ...transformed, ...virtualStaff];
   }, [staffData, doctorStaffData, role, appointments]);
@@ -698,16 +688,13 @@ export default function DailySchedulePage() {
   // Debug: Log the response structure
   useEffect(() => {
     if (workingHoursData) {
-      console.log('Working Hours API Response:', workingHoursData);
-      console.log('Response structure:', JSON.stringify(workingHoursData, null, 2));
     }
     if (workingHoursError) {
       console.error('Working Hours API Error:', workingHoursError);
     }
 
     // Debug: Log staff data
-    console.log('Staff Data:', staffData);
-    console.log('Staff List (transformed):', staffList);
+
   }, [workingHoursData, workingHoursError, staffData, staffList]);
 
   // Get working hours for the current day from the response
@@ -720,7 +707,6 @@ export default function DailySchedulePage() {
     };
 
     if (!workingHoursData) {
-      console.log('No working hours data available, using defaults');
       return defaultHours;
     }
 
@@ -735,7 +721,6 @@ export default function DailySchedulePage() {
     }
 
     if (!Array.isArray(workingHoursArray)) {
-      console.log('Working hours is not an array, using defaults');
       return defaultHours;
     }
 
@@ -746,7 +731,6 @@ export default function DailySchedulePage() {
       (dayData: any) => dayData.day === targetDay
     );
 
-    console.log('Working hours for', targetDay, ':', found || 'Not found, using defaults');
 
     // For doctors, isOpen property indicates if the day is working
     if (role === 'doctor') {
@@ -891,7 +875,6 @@ export default function DailySchedulePage() {
         throw new Error('Cannot update appointment: Missing appointment ID');
       }
 
-      console.log('Updating appointment with data:', updatedAppointment);
 
       // Format the data for the API
       const updateData = {
@@ -906,13 +889,11 @@ export default function DailySchedulePage() {
         staffName: updatedAppointment.staffName || updatedAppointment.staff,
       };
 
-      console.log('Sending update request with data:', updateData);
 
       // For partial updates, we should ensure we're not missing required fields
       // If this is just a status update, make sure we include all required fields
       const result = await updateAppointment(updateData).unwrap();
 
-      console.log('Update successful, refreshing appointments...');
       await refetchAppointments();
 
       toast.success('Appointment updated successfully');
@@ -938,7 +919,6 @@ export default function DailySchedulePage() {
         throw new Error('Cannot reschedule appointment: Missing appointment ID');
       }
 
-      console.log('Rescheduling appointment with data:', appointmentData);
 
       // Format the data for the API
       const rescheduleData = {
@@ -952,12 +932,10 @@ export default function DailySchedulePage() {
         staffName: appointmentData.staffName || appointmentData.staff,
       };
 
-      console.log('Sending reschedule request with data:', rescheduleData);
 
       // For rescheduling, ensure all required fields are preserved
       const result = await updateAppointment(rescheduleData).unwrap();
 
-      console.log('Reschedule successful, refreshing appointments...');
       await refetchAppointments();
 
       toast.success('Appointment rescheduled successfully');
@@ -1087,16 +1065,7 @@ export default function DailySchedulePage() {
                   current = new Date(current.getTime() + slotDuration * 60000);
                 }
 
-                console.log('Generated time slots:', {
-                  date: selectedDate.toISOString().split('T')[0],
-                  startTime: startTime,
-                  endTime: endTime,
-                  isWorking,
-                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                  slotCount: slots.length,
-                  firstSlot: slots[0],
-                  lastSlot: slots[slots.length - 1] || 'No slots'
-                });
+
 
                 return slots;
 
@@ -1138,7 +1107,7 @@ export default function DailySchedulePage() {
           }
         }}
       >
-        <DialogContent 
+        <DialogContent
           className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}

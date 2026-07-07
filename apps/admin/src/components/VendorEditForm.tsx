@@ -519,7 +519,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.log('Profile image failed to load in VendorEditForm:', formData.profileImage);
                       // Set a fallback image on error
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
                     }}
@@ -1121,12 +1120,12 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess, onClo
                 (() => {
                   const now = new Date();
                   const end = new Date(formData.subscription.endDate);
-                  
+
                   // Use calendar days to avoid negative rounding issues
                   now.setHours(0, 0, 0, 0);
                   const endDateOnly = new Date(end);
                   endDateOnly.setHours(0, 0, 0, 0);
-                  
+
                   const diffTime = endDateOnly.getTime() - now.getTime();
                   const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
@@ -1293,10 +1292,10 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess, onClo
                 const amt = selectedRenewalPlan.discountedPrice && selectedRenewalPlan.discountedPrice > 0
                   ? selectedRenewalPlan.discountedPrice
                   : selectedRenewalPlan.price;
-                
-                const isStatusActive = formData.subscription?.status === 'Active' && 
+
+                const isStatusActive = formData.subscription?.status === 'Active' &&
                   (!formData.subscription?.endDate || new Date(formData.subscription.endDate) > new Date());
-                
+
                 if (amt > 0) {
                   return (
                     <span className="flex items-center gap-2">
@@ -1387,7 +1386,6 @@ const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
                 alt="Preview"
                 className="object-contain max-h-[80vh] mx-auto max-w-full"
                 onError={(e) => {
-                  console.log('Gallery image failed to load in VendorEditForm:', previewImage);
                   // Set a fallback image on error
                   (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
                 }}
@@ -1707,7 +1705,6 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
                   alt="Document Preview"
                   className="object-contain max-h-[80vh] mx-auto max-w-full"
                   onError={(e) => {
-                    console.log('Document image failed to load in VendorEditForm:', previewDocument.src);
                     // Set a fallback image on error
                     (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
                   }}

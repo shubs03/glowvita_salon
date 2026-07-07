@@ -90,7 +90,6 @@ type ViewMode = 'suppliers' | 'products';
 
 export default function MarketplacePage() {
   const { data: productsData, isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
-  console.log("Products Data:", productsData);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -125,13 +124,11 @@ export default function MarketplacePage() {
 
   // Derive unique suppliers from products - ensure no duplicates
   const suppliers = useMemo(() => {
-    console.log("Deriving suppliers from products:", productsArray.length, "products");
 
     // Group products by supplier identity (shopName + businessRegistrationNo)
     const supplierIdentityMap = new Map<string, Product[]>();
 
     productsArray.forEach((product: Product) => {
-      console.log("Processing product:", product.productName, "vendorId:", product.vendorId, "shopName:", product.supplierName);
 
       // Create a unique identity key for the supplier
       const identityKey = `${product.supplierName || 'Unknown'}_${product.supplierBusinessRegistrationNo || 'no-reg'}`;
@@ -142,7 +139,6 @@ export default function MarketplacePage() {
       supplierIdentityMap.get(identityKey)!.push(product);
     });
 
-    console.log("Grouped by identity:", Array.from(supplierIdentityMap.keys()));
 
     // Create supplier objects from grouped products
     const suppliers: Supplier[] = [];
@@ -169,9 +165,7 @@ export default function MarketplacePage() {
       });
     });
 
-    console.log("Derived suppliers:", suppliers.length, "suppliers");
     suppliers.forEach(supplier => {
-      console.log("Supplier:", supplier.shopName, "ID:", supplier._id, "Products:", supplier.products?.length);
     });
     return suppliers;
   }, [productsArray]);
@@ -413,7 +407,7 @@ export default function MarketplacePage() {
               sequence: ['block.upi', 'block.card', 'block.netbanking'],
             },
           },
-          modal: { 
+          modal: {
             ondismiss: () => {
               setIsBuyNowModalOpen(true);
               reject(new Error('Payment cancelled by user'));

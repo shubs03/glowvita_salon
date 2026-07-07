@@ -28,7 +28,6 @@ export const POST = authMiddlewareCrm(async (req) => {
     const { planId, userType, amount } = await req.json();
     const userId = req.user.userId || req.user._id;
 
-    console.log('Renew request:', { planId, userType, userId });
 
     if (!planId) {
       return NextResponse.json({
@@ -79,7 +78,6 @@ export const POST = authMiddlewareCrm(async (req) => {
       try {
         const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
         const referralResult = await checkAndCreditSubscriptionReferral(userId, newPlan);
-        console.log('[Referral Bonus] Subscription renew referral result:', referralResult);
       } catch (err) {
         console.error("[Referral Bonus] Check failed on renewal:", err);
       }

@@ -26,9 +26,8 @@ class NotificationManager {
         this.messaging = getMessaging(app);
 
         const triggerSound = (payload) => {
-          console.log('[NotificationManager] SIGNAL (CRM)!', payload);
           this.playNotificationSound();
-          
+
           // BROADCAST to all active components in CRM
           this.listeners.forEach(callback => {
             try { callback(payload); } catch (e) { }
@@ -53,7 +52,6 @@ class NotificationManager {
           }
           if (this.audioContext && this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
-            console.log('[Audio] CRM System Ready');
           }
         };
 
@@ -72,7 +70,6 @@ class NotificationManager {
   }
 
   async playNotificationSound() {
-    console.log('[Sound] Playing (CRM) beep...');
     try {
       if (!this.audioContext) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -80,7 +77,7 @@ class NotificationManager {
         this.audioContext = new AudioCtx();
       }
       if (this.audioContext.state === 'suspended') await this.audioContext.resume();
-      
+
       const ctx = this.audioContext;
       const now = ctx.currentTime;
       const osc1 = ctx.createOscillator();

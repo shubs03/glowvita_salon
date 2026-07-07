@@ -56,7 +56,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
         };
 
         const regionFilter = buildRegionFilter();
-        console.log('[Settlements] Raw Region Filter:', JSON.stringify(regionFilter));
 
         // Calculate date range
         let startDate, endDate;
@@ -97,7 +96,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
         // 1. Get ALL vendors matching region to initialize the list
         // This ensures we show vendors with balances even if they have no new appointments
         const vendors = await VendorModel.find(regionFilter).select('businessName ownerName contactNumber email regionId');
-        console.log(`[Settlements] Found ${vendors.length} vendors in region`);
 
         const vendorIds = vendors.map(vendor => vendor._id);
 
@@ -158,12 +156,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
                         }
                     },
                     vendorOwesAdmin: {
-                        $sum: { 
+                        $sum: {
                             $cond: [
-                                { $eq: ["$paymentMethod", "Pay at Salon"] }, 
-                                { $add: [{ $ifNull: ["$platformFee", 0] }, { $ifNull: ["$serviceTax", 0] }] }, 
+                                { $eq: ["$paymentMethod", "Pay at Salon"] },
+                                { $add: [{ $ifNull: ["$platformFee", 0] }, { $ifNull: ["$serviceTax", 0] }] },
                                 0
-                            ] 
+                            ]
                         }
                     }
                 }
@@ -172,7 +170,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
         const openingPaymentsArray = await VendorSettlementPaymentModel.aggregate([
             {
-                $match: { 
+                $match: {
                     paymentDate: { $lt: startDate },
                     verified: { $ne: false }
                 }
@@ -527,12 +525,12 @@ export const POST = authMiddlewareAdmin(async (req) => {
             createdByType: 'admin',
             verified: true
         });
-        
+
         // Also ensure verifiedAt and verifiedBy are set since it's already verified
         if (paymentRecord.verified) {
-           paymentRecord.verifiedAt = new Date();
-           paymentRecord.verifiedBy = req.user.userId;
-           await paymentRecord.save();
+            paymentRecord.verifiedAt = new Date();
+            paymentRecord.verifiedBy = req.user.userId;
+            await paymentRecord.save();
         }
 
         // Trigger Notification for settlement
@@ -540,8 +538,8 @@ export const POST = authMiddlewareAdmin(async (req) => {
             try {
                 // If it's a payment to vendor, notify the vendor
                 if (type === "Payment to Vendor") {
-                     const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
-                     await NotificationService.sendSettlementAlert(vendorId, 'vendor', amount, 'processed');
+                    const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
+                    await NotificationService.sendSettlementAlert(vendorId, 'vendor', amount, 'processed');
                 }
             } catch (err) {
                 console.error('Settlement Notification Error:', err);

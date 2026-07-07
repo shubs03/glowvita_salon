@@ -6,40 +6,36 @@ import { authMiddlewareCrm } from "../../../../../middlewareCrm.js";
 export const GET = authMiddlewareCrm(async (req) => {
   try {
     await _db();
-    
+
     const userRole = (req.user.role || '').toLowerCase();
     const effectiveUserType = userRole === 'staff' ? 'vendor' : userRole;
     let userRegion = req.user.regionId ? req.user.regionId.toString() : null;
 
-    console.log(`[CRM Plans] Initial attempt. User: ${req.user.userId}, Role: ${userRole}, Region: ${userRegion}`);
 
     // Fallback: If regionId missing from token, try to fetch from User model
     if (!userRegion) {
       try {
         const userId = req.user.userId || req.user.id;
-        console.log(`[CRM Plans] Region missing in token, falling back to database for userId: ${userId}`);
-        
+
         let Model;
         const normalizedRole = effectiveUserType.toLowerCase();
-        
+
         if (normalizedRole === 'vendor') {
-           const { default: Vendor } = await import("@repo/lib/models/Vendor/Vendor.model");
-           Model = Vendor;
+          const { default: Vendor } = await import("@repo/lib/models/Vendor/Vendor.model");
+          Model = Vendor;
         } else if (normalizedRole === 'doctor') {
-           const { default: Doctor } = await import("@repo/lib/models/Vendor/Docters.model");
-           Model = Doctor;
+          const { default: Doctor } = await import("@repo/lib/models/Vendor/Docters.model");
+          Model = Doctor;
         } else if (normalizedRole === 'supplier') {
-           const { default: Supplier } = await import("@repo/lib/models/Vendor/Supplier.model");
-           Model = Supplier;
+          const { default: Supplier } = await import("@repo/lib/models/Vendor/Supplier.model");
+          Model = Supplier;
         }
-        
+
         if (Model && userId) {
           const userDoc = await Model.findById(userId).select('regionId').lean();
           if (userDoc?.regionId) {
             userRegion = userDoc.regionId.toString();
-            console.log(`[CRM Plans] Found region in database: ${userRegion}`);
           } else {
-            console.log(`[CRM Plans] No regionId found in database for user ${userId}`);
           }
         }
       } catch (err) {
@@ -72,11 +68,9 @@ export const GET = authMiddlewareCrm(async (req) => {
       ]
     };
 
-    console.log("[CRM Plans] Executing Mongo Query:", JSON.stringify(query));
 
     const plans = await SubscriptionPlan.find(query).sort({ regionId: -1, createdAt: -1 }).lean();
-    
-    console.log(`[CRM Plans] Found ${plans.length} candidate plans in DB`);
+
 
     // Filter global plans disabled for this region
     // Matches logic in apps/web/src/app/api/all-offers/route.js
@@ -85,14 +79,12 @@ export const GET = authMiddlewareCrm(async (req) => {
       if (!plan.regionId && userRegion) {
         const disabledList = (plan.disabledRegions || []).map(r => r.toString());
         if (disabledList.includes(userRegion)) {
-          console.log(`[CRM Plans] Skipped global plan "${plan.name}" (disabled for region ${userRegion})`);
           return false;
         }
       }
       return true;
     });
 
-    console.log(`[CRM Plans] Returning ${finalPlans.length} plans to client. Region: ${userRegion}`);
     return NextResponse.json(finalPlans, { status: 200 });
   } catch (error) {
     console.error("Error fetching subscription plans (CRM):", error);

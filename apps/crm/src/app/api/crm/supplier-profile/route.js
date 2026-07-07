@@ -13,8 +13,6 @@ export const GET = authMiddlewareCrm(async (req) => {
   try {
     const supplierId = req.user.userId || req.user._id;
 
-    console.log("Fetching supplier profile for ID:", supplierId);
-    console.log("User from token:", req.user);
 
     if (!supplierId) {
       return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
@@ -22,7 +20,6 @@ export const GET = authMiddlewareCrm(async (req) => {
 
     const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo gstNo profileImage gallery documents bankDetails status referralCode licenseFiles subscription smsBalance taxes minOrderValue');
 
-    console.log("Supplier data from DB:", supplier);
 
     if (!supplier) {
       return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
@@ -96,7 +93,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const supplierId = req.user.userId || req.user._id;
     const body = await req.json();
 
-    console.log('Updating supplier profile for ID:', supplierId);
 
     // Find the supplier with populated subscription data
     const supplier = await SupplierModel.findById(supplierId).populate('subscription.plan');
@@ -226,7 +222,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
     // Handle subscription validation issues gracefully (similar to vendor API)
     if (!supplier.subscription || !supplier.subscription.plan || !supplier.subscription.endDate) {
-      console.log('Supplier has incomplete subscription data, using validateBeforeSave: false');
       try {
         const updatedSupplier = await supplier.save({ validateBeforeSave: false });
         const supplierResponse = updatedSupplier.toObject();

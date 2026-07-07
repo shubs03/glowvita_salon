@@ -338,7 +338,8 @@ export function MarketingHeader({
                 ) : (
                   <Button
                     variant="ghost"
-                    className="hover:bg-primary/10 text-md px-3"
+                    className="text-md px-4 py-2 rounded-lg text-white hover:opacity-90 transition-all"
+                    style={{ backgroundColor: '#000000' }}
                     asChild
                   >
                     <Link href="/client-login">Login</Link>
@@ -437,8 +438,9 @@ export function MarketingHeader({
                   ) : (
                     <>
                       <Button
-                        variant="outline"
-                        className="w-full h-12 justify-center"
+                        variant="ghost"
+                        className="w-full h-12 justify-center rounded-lg text-white hover:opacity-90 transition-all"
+                        style={{ backgroundColor: '#000000' }}
                         asChild
                       >
                         <Link href="/client-login">Login</Link>

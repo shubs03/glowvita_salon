@@ -29,7 +29,6 @@ export const POST = authMiddlewareCrm(async (req) => {
     const { planId, userType } = await req.json();
     const userId = req.user.userId || req.user._id;
 
-    console.log('Change Plan Request:', { planId, userType, userId });
 
     if (!planId) {
       return NextResponse.json({
@@ -81,7 +80,6 @@ export const POST = authMiddlewareCrm(async (req) => {
       try {
         const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
         const referralResult = await checkAndCreditSubscriptionReferral(userId, newPlan);
-        console.log('[Referral Bonus] Subscription change referral result:', referralResult);
       } catch (err) {
         console.error("[Referral Bonus] Check failed on subscription change:", err);
       }

@@ -223,14 +223,11 @@ export default function NewAppointmentForm({
     }
 
     if (workingHoursResponse) {
-      console.log('📅 Raw API Response:', workingHoursResponse);
 
       // Extract the actual working hours data
       const workingHoursData = workingHoursResponse.data || workingHoursResponse;
-      console.log('📊 Processed working hours data:', workingHoursData);
 
       if (workingHoursData && typeof workingHoursData === 'object') {
-        console.log('📋 Raw working hours data:', workingHoursData);
 
         // Initialize with default values (closed)
         const processedHours: Record<string, any> = {
@@ -270,7 +267,6 @@ export default function NewAppointmentForm({
 
         // Check if workingHours exists in the data
         if (workingHoursData.workingHours && typeof workingHoursData.workingHours === 'object') {
-          console.log('📅 Processing working hours object format');
 
           const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -307,13 +303,11 @@ export default function NewAppointmentForm({
                 closeTime: processedHours[day].closeTime
               });
             } else {
-              console.log(`ℹ️ No data for ${day}, using defaults (closed)`);
             }
           });
         }
         // Fallback: Check if workingHours is an array (alternative format)
         else if (Array.isArray(workingHoursData.workingHours)) {
-          console.log('📅 Processing working hours array format');
 
           workingHoursData.workingHours.forEach((dayData: any) => {
             if (!dayData || !dayData.day) return;
@@ -351,7 +345,6 @@ export default function NewAppointmentForm({
           });
         }
 
-        console.log('🏁 Final working hours:', processedHours);
         setWorkingHours(processedHours);
       } else {
         console.warn('⚠️ Unexpected working hours format. Using default schedule.');
@@ -369,7 +362,6 @@ export default function NewAppointmentForm({
         setWorkingHours(defaultHours);
       }
     } else if (isLoadingWorkingHours) {
-      console.log('⏳ Loading working hours...');
     } else {
       console.warn('⚠️ No working hours data received from API. Using default schedule.');
       // Set default working hours if no data is received
@@ -410,7 +402,6 @@ export default function NewAppointmentForm({
 
   // Update the staff data transformation
   const staffData: StaffMember[] = React.useMemo(() => {
-    console.log('Raw staff response:', staffResponse);
 
     // Handle different response structures from the API
     let rawStaff = [];
@@ -428,7 +419,6 @@ export default function NewAppointmentForm({
       }
     }
 
-    console.log('Processed staff data:', rawStaff);
 
     return rawStaff.map((staff: any) => ({
       _id: staff._id || staff.id,
@@ -915,7 +905,6 @@ export default function NewAppointmentForm({
 
     // Check if the business is closed on this day
     if (!daySchedule || !daySchedule.isOpen) {
-      console.log('Business is closed on', dayName);
       return false;
     }
 
@@ -1048,7 +1037,6 @@ export default function NewAppointmentForm({
       });
 
       if (isBlocked) {
-        console.log('⛔ Time slot is blocked');
         return true;
       }
     }
@@ -2866,7 +2854,7 @@ export default function NewAppointmentForm({
                 className="resize-none h-20"
               />
             </div>
-            
+
             {/* Package selector is still needed here if they want to switch packages */}
             {(isEditing || isRescheduling) && (
               <div className="space-y-2 mt-4">

@@ -75,14 +75,6 @@ export async function POST(request) {
             jobName = 'autoCancellation'
         } = body;
 
-        console.log('Manual job trigger requested:', {
-            jobName,
-            gracePeriodMinutes,
-            dryRun,
-            notifyClients,
-            notifyVendors
-        });
-
         let result;
 
         if (jobName === 'autoCancellation') {

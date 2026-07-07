@@ -1,98 +1,125 @@
 import React from 'react';
-import { Star, MapPin, Zap, MessageSquare, ClipboardList } from 'lucide-react';
+
+const ICONS = {
+  star: "/images/star 7.png",
+  pin: "/images/placeholder 7.png",
+  bolt: "/images/storm 2.png",
+  chat: "/images/speech-bubble 1.png",
+  doc: "/images/file 1.png",
+  headset: "/images/customer-service (5) 1.png",
+  qbubble: "/images/9088d72b-b28a-4c94-989b-1d59377b45f5 1.png",
+};
+
+interface Feature {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface CardProps {
+  feature: Feature;
+  stripeColor: string;
+}
 
 const WhyChooseUs = () => {
-  const features = [
+  const row1Features: Feature[] = [
     {
-      icon: Star,
+      icon: ICONS.star,
       title: 'Trusted & Verified Salons',
       description: 'Customers get access to high-quality, reliable salons they can book with confidence.',
     },
     {
-      icon: MapPin,
+      icon: ICONS.pin,
       title: 'Find Salons Near You',
       description: 'Discover nearby salons instantly with location-based search.',
     },
     {
-      icon: Zap,
+      icon: ICONS.bolt,
       title: 'Fast & Easy Booking',
       description: 'A smooth experience that helps users find and book services in just a few taps.',
     },
+  ];
+
+  const row2Features: Feature[] = [
     {
-      icon: MessageSquare,
+      icon: ICONS.chat,
       title: 'Real Reviews & Ratings',
       description: 'Users can make informed choices based on genuine feedback from other customers.',
     },
     {
-      icon: ClipboardList,
+      icon: ICONS.doc,
       title: 'Detailed Service Information',
       description: 'Everything you need to know, clearly explained.',
-    }
+    },
+    {
+      icon: ICONS.headset,
+      title: 'Dedicated Support',
+      description: 'Our concierge team is always available to assist with your bookings & Stress free experience.',
+    },
   ];
 
-  return (
-    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
-      {/* Section Header */}
-      <div className="mb-16">
-        <div className="flex items-center gap-4 mb-4">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-            Why Customers Choose GlowVita ?
-          </h2>
-        </div>
-        <p className="text-muted-foreground max-w-2xl">
-          Discover what makes GlowVita the preferred choice for beauty and wellness enthusiasts.
+  const Card = ({ feature, stripeColor }: CardProps) => (
+    <div
+      className="relative flex items-start gap-4 bg-white border border-gray-200 rounded-2xl p-5 overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+    >
+      {/* colored accent block - full height, but only wide enough to cover about half the icon */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-9 rounded-l-2xl"
+        style={{ backgroundColor: stripeColor }}
+      />
+      <img
+        src={feature.icon}
+        alt={feature.title}
+        className="relative w-8 h-8 flex-shrink-0 mt-0.5"
+      />
+      <div className="relative">
+        <h3 className="font-bold text-gray-900 text-base leading-tight mb-1">
+          {feature.title}
+        </h3>
+        <p className="text-gray-500 text-sm leading-relaxed">
+          {feature.description}
         </p>
       </div>
+    </div>
+  );
 
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* First Row - 3 Cards */}
-        {features.slice(0, 3).map((feature, index) => {
-          const Icon = feature.icon;
-          return (
-            <div
-              key={index}
-              className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50"
-            >
-              <div className="flex items-center gap-4">
-                <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
-                  <Icon className="w-6 h-6" strokeWidth={2.5} />
-                </div>
-                <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
-                  {feature.title}
-                </h3>
-              </div>
-              <p className="text-muted-foreground text-sm leading-relaxed pl-16">
-                {feature.description}
-              </p>
-            </div>
-          );
-        })}
+  return (
+    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <img
+          src={ICONS.qbubble}
+          alt="Question bubbles"
+          className="w-12 h-12 flex-shrink-0 object-contain"
+        />
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
+          style={{ color: "#252B42" }}
+        >
+          Why Customers Choose GlowVita ?
+          <span
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
+          />
+        </h2>
+      </div>
 
-        {/* Second Row - 2 Cards Centered */}
-        <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6 lg:px-32">
-          {features.slice(3, 5).map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={index + 3}
-                className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
-                    <Icon className="w-6 h-6" strokeWidth={2.5} />
-                  </div>
-                  <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
-                    {feature.title}
-                  </h3>
-                </div>
-                <p className="text-muted-foreground text-sm leading-relaxed pl-16">
-                  {feature.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+      {/* Row 1 - #FEF0ED */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+        {row1Features.map((feature, index) => (
+          <Card key={index} feature={feature} stripeColor="#FEF0ED" />
+        ))}
+      </div>
+
+      {/* Row 2 - #EBF3FD */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {row2Features.map((feature, index) => (
+          <Card key={index} feature={feature} stripeColor="#EBF3FD" />
+        ))}
       </div>
     </section>
   );

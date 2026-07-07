@@ -52,10 +52,8 @@ const getCustomDateRanges = (startDateStr, endDateStr) => {
 // Main handler function for the metrics endpoint
 async function getVendorMetricsHandler(request) {
   try {
-    console.log("Full user object:", JSON.stringify(request.user, null, 2));
     // Use userId and convert to string based on other routes in the app
     const vendorId = (request.user.vendorId || request.user.userId || request.user.id).toString();
-    console.log("Fetching metrics for vendor ID:", vendorId);
 
     // Get filter parameters from query parameters
     const url = new URL(request.url);
@@ -63,8 +61,7 @@ async function getVendorMetricsHandler(request) {
     const startDateParam = url.searchParams.get('startDate');
     const endDateParam = url.searchParams.get('endDate');
 
-    console.log("Filter period:", period);
-    console.log("Custom date range:", startDateParam, "to", endDateParam);
+
 
     // Determine date ranges based on parameters
     let startDate, endDate;
@@ -73,25 +70,20 @@ async function getVendorMetricsHandler(request) {
       const customDates = getCustomDateRanges(startDateParam, endDateParam);
       startDate = customDates.startDate;
       endDate = customDates.endDate;
-      console.log("Using custom date range:", startDate, "to", endDate);
     } else {
       // Use preset period
       const presetDates = getDateRanges(period);
       startDate = presetDates.startDate;
       endDate = presetDates.endDate;
-      console.log("Using preset date range:", startDate, "to", endDate);
     }
 
     // Also log the vendorId type to check if it's an ObjectId
-    console.log("Vendor ID type:", typeof vendorId);
 
     // Debug: Check if we can find any appointments at all
     const totalAppointmentCount = await AppointmentModel.countDocuments({});
-    console.log("Total appointments in database:", totalAppointmentCount);
 
     // Try querying with the vendorId as a string first
     let vendorAppointmentCount = await AppointmentModel.countDocuments({ vendorId: vendorId });
-    console.log("Total appointments for this vendor (string query):", vendorAppointmentCount);
 
     // If that doesn't work, try converting to ObjectId
     if (vendorAppointmentCount === 0) {
@@ -99,19 +91,13 @@ async function getVendorMetricsHandler(request) {
         const mongoose = require('mongoose');
         const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
         vendorAppointmentCount = await AppointmentModel.countDocuments({ vendorId: vendorObjectId });
-        console.log("Total appointments for this vendor (ObjectId query):", vendorAppointmentCount);
       } catch (objectIdError) {
-        console.log("Could not convert vendorId to ObjectId:", objectIdError.message);
       }
     }
 
     // Debug: Check if vendorId is correct by finding appointments without vendorId filter
     const sampleAllAppointments = await AppointmentModel.find({}, { vendorId: 1, status: 1, paymentStatus: 1 }).limit(5);
-    console.log("Sample appointments from all vendors:", JSON.stringify(sampleAllAppointments.map(a => ({
-      vendorId: a.vendorId,
-      status: a.status,
-      paymentStatus: a.paymentStatus
-    })), null, 2));
+
 
     // Debug: Check a few sample appointments to understand the data structure
     // Try with string vendorId first
@@ -124,20 +110,8 @@ async function getVendorMetricsHandler(request) {
         const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
         sampleAppointments = await AppointmentModel.find({ vendorId: vendorObjectId }).limit(5);
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for sample appointments:", error.message);
       }
     }
-
-    console.log("Sample appointments:", JSON.stringify(sampleAppointments.map(a => ({
-      id: a._id,
-      status: a.status,
-      paymentStatus: a.paymentStatus,
-      finalAmount: a.finalAmount,
-      totalAmount: a.totalAmount,
-      amountPaid: a.amountPaid,
-      date: a.date,
-      createdAt: a.createdAt
-    })), null, 2));
 
     // 1. Total Revenue from Services (from ALL completed appointments within date range)
     // Use the same logic as the sales by service report - only status: 'completed'
@@ -166,10 +140,8 @@ async function getVendorMetricsHandler(request) {
           status: 'completed'
         });
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for completed status query:", error.message);
       }
     }
-    console.log("Appointments with status 'completed':", completedByStatus);
 
     // Calculate service revenue using the same approach as sales by service report
     // Need to handle both single-service and multi-service appointments correctly
@@ -268,17 +240,14 @@ async function getVendorMetricsHandler(request) {
           }
         ]);
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for aggregation query:", error.message);
       }
     }
 
-    console.log("Completed appointments aggregation result:", JSON.stringify(completedAppointmentsAggregation, null, 2));
 
     const totalServiceRevenue = completedAppointmentsAggregation.length > 0 ? completedAppointmentsAggregation[0].totalServiceRevenue : 0;
     const completedAppointmentsCount = completedAppointmentsAggregation.length > 0 ? completedAppointmentsAggregation[0].count : 0;
 
-    console.log("Total service revenue (completed appointments):", totalServiceRevenue);
-    console.log("Completed appointments count:", completedAppointmentsCount);
+
 
     // Calculate revenue from delivered product orders
     // Use the same approach as the sales by product report to ensure consistency
@@ -328,15 +297,13 @@ async function getVendorMetricsHandler(request) {
           }
         ]);
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for delivered product orders query:", error.message);
       }
     }
 
     const deliveredProductRevenue = deliveredProductOrdersAggregation.length > 0 ? deliveredProductOrdersAggregation[0].totalProductRevenue : 0;
     const deliveredProductOrdersCount = deliveredProductOrdersAggregation.length > 0 ? deliveredProductOrdersAggregation[0].count : 0;
 
-    console.log("Delivered product revenue:", deliveredProductRevenue);
-    console.log("Delivered product orders count:", deliveredProductOrdersCount);
+
 
     // 7. Total Expense (sum of all expenses within date range)
     let totalExpense = 0;
@@ -381,12 +348,10 @@ async function getVendorMetricsHandler(request) {
             }
           ]);
         } catch (error) {
-          console.log("Error converting vendorId to ObjectId for expense query:", error.message);
         }
       }
 
       totalExpense = expenseAggregation.length > 0 ? expenseAggregation[0].totalAmount : 0;
-      console.log("Total Expense:", totalExpense);
     } catch (error) {
       console.error("Error calculating total expense:", error);
     }
@@ -435,12 +400,10 @@ async function getVendorMetricsHandler(request) {
             }
           ]);
         } catch (error) {
-          console.log("Error converting vendorId to ObjectId for billing query:", error.message);
         }
       }
 
       totalCounterSale = billingAggregation.length > 0 ? billingAggregation[0].totalAmount : 0;
-      console.log("Total Counter Sale:", totalCounterSale);
     } catch (error) {
       console.error("Error calculating total counter sale:", error);
     }
@@ -448,12 +411,7 @@ async function getVendorMetricsHandler(request) {
     // Calculate combined total revenue (gross sales from services + gross sales from products + counter sales - expenses)
     // The user wants: (amount + addOnsAmount + deliveredProductRevenue + totalCounterSale) - totalExpense
     const combinedTotalRevenue = (totalServiceRevenue + deliveredProductRevenue + totalCounterSale) - totalExpense;
-    console.log("Combined total revenue (appointments + products + counter - expenses):", combinedTotalRevenue);
-    console.log("Gross sales breakdown:");
-    console.log("- Service gross sales (completed appointments including add-ons):", totalServiceRevenue);
-    console.log("- Product gross sales (delivered products):", deliveredProductRevenue);
-    console.log("- Counter sales:", totalCounterSale);
-    console.log("- Expenses (to be subtracted):", totalExpense);
+
 
     // Also check what the actual status values are in the database
     const statusDistribution = await AppointmentModel.aggregate([
@@ -470,7 +428,6 @@ async function getVendorMetricsHandler(request) {
         }
       }
     ]);
-    console.log("Status distribution:", JSON.stringify(statusDistribution, null, 2));
 
     const paymentStatusDistribution = await AppointmentModel.aggregate([
       {
@@ -486,7 +443,6 @@ async function getVendorMetricsHandler(request) {
         }
       }
     ]);
-    console.log("Payment status distribution:", JSON.stringify(paymentStatusDistribution, null, 2));
 
     // 2. Total Bookings (total number of ALL appointments within date range)
     // Try with string vendorId first
@@ -505,11 +461,9 @@ async function getVendorMetricsHandler(request) {
           date: { $gte: startDate, $lte: endDate }
         });
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for total bookings query:", error.message);
       }
     }
 
-    console.log("Total bookings (all appointments):", totalBookings);
 
     // 3. Booking Hours (total hours booked from ALL appointments within date range)
     // Try with string vendorId first
@@ -528,27 +482,20 @@ async function getVendorMetricsHandler(request) {
           date: { $gte: startDate, $lte: endDate }
         }, { duration: 1 });
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for booking hours query:", error.message);
       }
     }
 
-    console.log("Appointments with duration count:", appointmentsWithDuration.length);
 
     // Calculate total booking hours
     const totalDurationMinutes = appointmentsWithDuration.reduce((sum, appointment) => sum + (appointment.duration || 0), 0);
     const bookingHours = totalDurationMinutes / 60;
 
-    console.log("Booking hours (all appointments):", bookingHours);
 
     // 4. Selling Services Revenue (revenue from completed appointments only, excluding product revenue)
     const sellingServicesRevenue = totalServiceRevenue; // Use only appointment revenue for selling services revenue
-    console.log("Selling services revenue (appointments only):", sellingServicesRevenue);
 
     // Log breakdown of revenue sources
-    console.log("Revenue breakdown:");
-    console.log("- Appointment revenue:", totalServiceRevenue);
-    console.log("- Product revenue:", deliveredProductRevenue);
-    console.log("- Combined total revenue:", combinedTotalRevenue);
+
 
     // Check if we have appointments with service items (multi-service appointments)
     // Try with string vendorId first
@@ -569,11 +516,9 @@ async function getVendorMetricsHandler(request) {
           isMultiService: true
         });
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for multi-service query:", error.message);
       }
     }
 
-    console.log("Multi-service appointments count:", multiServiceAppointments);
 
     // 5. Cancelled Appointments (count + revenue loss from ALL cancelled appointments within date range)
     // Try with string vendorId first
@@ -616,18 +561,15 @@ async function getVendorMetricsHandler(request) {
           }
         ]);
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for cancelled appointments query:", error.message);
       }
     }
 
-    console.log("Cancelled appointments aggregation result:", JSON.stringify(cancelledAppointmentsData, null, 2));
 
     const cancelledAppointments = {
       count: cancelledAppointmentsData.length > 0 ? cancelledAppointmentsData[0].count : 0,
       revenueLoss: cancelledAppointmentsData.length > 0 ? cancelledAppointmentsData[0].revenueLoss : 0
     };
 
-    console.log("Cancelled appointments (all):", JSON.stringify(cancelledAppointments, null, 2));
 
     // 6. Upcoming Appointments (count of scheduled/confirmed appointments for the next 7 days)
     const nextWeek = new Date();
@@ -641,8 +583,8 @@ async function getVendorMetricsHandler(request) {
     let upcomingAppointments = 0;
     try {
       const mongoose = require('mongoose');
-      const vendorObjectId = mongoose.Types.ObjectId.isValid(vendorId) 
-        ? new mongoose.Types.ObjectId(vendorId) 
+      const vendorObjectId = mongoose.Types.ObjectId.isValid(vendorId)
+        ? new mongoose.Types.ObjectId(vendorId)
         : null;
 
       const now = new Date();
@@ -665,7 +607,6 @@ async function getVendorMetricsHandler(request) {
       });
     }
 
-    console.log("Upcoming appointments (next 7 days):", upcomingAppointments);
 
     // Calculate Total Business: sum of finalAmount for completed appointments
     // For multi-service appointments, we count finalAmount only once per appointment
@@ -721,7 +662,6 @@ async function getVendorMetricsHandler(request) {
           }
         ]);
       } catch (error) {
-        console.log("Error converting vendorId to ObjectId for total business query:", error.message);
       }
     }
 
@@ -742,7 +682,6 @@ async function getVendorMetricsHandler(request) {
       totalCounterSale: totalCounterSale // Added total counter sale
     };
 
-    console.log("Final metrics:", JSON.stringify(metrics, null, 2));
 
     return NextResponse.json({
       success: true,

@@ -42,12 +42,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     try {
         await _db();
-        console.log('Database connected successfully');
 
         // Test database connection
         try {
             const testResult = await UserModel.findOne({}).select('_id').lean();
-            console.log('Database connection test successful, sample result:', testResult);
         } catch (testError) {
             console.error('Database connection test failed:', testError);
             return NextResponse.json({
@@ -66,8 +64,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
 
     try {
-        console.log('=== ADMIN CUSTOMERS API REQUEST ===');
-        console.log('Request URL:', req.url);
+
 
         const url = new URL(req.url);
         let page = parseInt(url.searchParams.get('page')) || 1;
@@ -78,12 +75,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
         let vendorId = url.searchParams.get('vendorId') || '';
         const regionId = url.searchParams.get('regionId');
 
-        console.log('Parsed parameters:', { page, limit, search, status, source, vendorId, regionId });
 
         // Build region query for consistency across all models
         const { getRegionQuery } = await import("@repo/lib/utils/regionQuery");
         const regionQuery = getRegionQuery(req.user, regionId && regionId !== 'all' ? regionId : null);
-        console.log('Applied region filter:', JSON.stringify(regionQuery));
 
         // Validate parameters
         if (page < 1) page = 1;
@@ -92,23 +87,18 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
         // Validate vendorId if provided
         if (vendorId && vendorId.length !== 24) {
-            console.log('Invalid vendorId provided, ignoring:', vendorId);
             vendorId = '';
         }
 
         // Test if models are working
         try {
             const userModelCount = await UserModel.countDocuments({});
-            console.log('User model count:', userModelCount);
 
             const appointmentModelCount = await AppointmentModel.countDocuments({});
-            console.log('Appointment model count:', appointmentModelCount);
 
             const clientModelCount = await ClientModel.countDocuments({});
-            console.log('Client model count:', clientModelCount);
 
             const vendorModelCount = await VendorModel.countDocuments({});
-            console.log('Vendor model count:', vendorModelCount);
         } catch (modelTestError) {
             console.error('Model test failed:', modelTestError);
             return NextResponse.json({
@@ -172,7 +162,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
             // If we only want offline clients, return them
             if (source === 'offline') {
-                console.log('Returning offline clients only:', offlineClients.length);
                 return NextResponse.json({
                     success: true,
                     data: offlineClients,
@@ -191,7 +180,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
             totalOffline = total;
 
             // Debug logging
-            console.log('Offline clients found:', offlineClients.length);
         }
 
         // Fetch online clients (all users from user table)
@@ -219,7 +207,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 appointments = await AppointmentModel.find(appointmentQuery)
                     .select('client vendorId')
                     .lean();
-                console.log('Appointments found:', appointments.length);
             } catch (appointmentError) {
                 console.error('Error fetching appointments:', appointmentError);
                 appointments = [];
@@ -247,21 +234,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 }
             }
             // For 'all' source, we don't add any ID filter, so we get all users
-            console.log('Final user query for execution:', JSON.stringify(userQuery));
 
-            // Debug logging
-            console.log('User IDs found from appointments:', userIds.length);
-            console.log('Source filter:', source);
-            console.log('User query:', JSON.stringify(userQuery));
-            console.log('Vendor ID filter:', vendorId);
 
             const skip = (page - 1) * limit;
 
             // Debug logging
-            console.log('Final user query being executed:', JSON.stringify(userQuery));
 
             // Fetch online clients (users who booked appointments) with booking count
-            console.log('Executing user query:', JSON.stringify(userQuery));
             let onlineClients = [];
             try {
                 onlineClients = await UserModel.find(userQuery)
@@ -270,7 +249,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     .limit(limit)
                     .select('firstName lastName emailAddress mobileNo createdAt updatedAt')
                     .lean();
-                console.log('Successfully fetched online clients:', onlineClients.length);
             } catch (userError) {
                 console.error('Error fetching users:', userError);
                 // Return empty array if there's an error
@@ -280,13 +258,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
             let onlineTotal = 0;
             try {
                 onlineTotal = await UserModel.countDocuments(userQuery);
-                console.log('Online clients total count:', onlineTotal);
 
                 // Debugging for "empty" results when region is filtered
                 if (onlineTotal === 0 && regionQuery.regionId) {
                     const sample = await UserModel.findOne({}).select('regionId firstName').lean();
-                    console.log('[DEBUG] No online users found for region filter:', JSON.stringify(regionQuery));
-                    console.log('[DEBUG] Sample user in DB:', sample ? { ...sample, regionId: sample.regionId?.toString() } : 'No users at all');
                 }
             } catch (countError) {
                 console.error('Error counting users:', countError);
@@ -326,7 +301,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
             }
 
             // Debug logging
-            console.log('Online clients found:', onlineClients.length);
 
             // Transform online clients to match the expected structure
             const transformedOnlineClients = onlineClients.map(user => ({
@@ -384,7 +358,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
             // If we only want online clients, return them
             if (source === 'online') {
-                console.log('Returning online clients only:', onlineClientsWithVendors.length);
                 return NextResponse.json({
                     success: true,
                     data: onlineClientsWithVendors,
@@ -408,15 +381,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 );
 
                 // Debug logging
-                console.log('Combined clients (all sources):', uniqueClients.length);
-                console.log('All clients (offline):', allClients.length);
-                console.log('Online clients with vendors:', onlineClientsWithVendors.length);
+
 
                 // For pagination with 'all' source, we'll use a simple approach
                 // In a real application, you'd want more sophisticated pagination
                 const paginatedClients = uniqueClients.slice((page - 1) * limit, page * limit);
 
-                console.log('Final response data length:', paginatedClients.length);
 
                 const response = {
                     success: true,
@@ -429,13 +399,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     }
                 };
 
-                console.log('=== FINAL RESPONSE ===', JSON.stringify(response, null, 2));
 
                 return NextResponse.json(response, { status: 200 });
             }
         }
 
-        console.log('Invalid source parameter:', source);
         return NextResponse.json({
             success: false,
             message: "Invalid source parameter"

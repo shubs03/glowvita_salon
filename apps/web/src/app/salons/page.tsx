@@ -3,7 +3,6 @@ import HeroSection from './components/HeroSection';
 import WhereToGo from '@/components/landing/WhereToDo';
 import RecentlyJoinedSalon from './components/RecentlyJoinedSalon';
 import DownloadApp from '@/components/landing/DownloadApp';
-import CTASection from './components/CTASection';
 
 const SalonsPage = () => {
   return (
@@ -14,7 +13,6 @@ const SalonsPage = () => {
         <WhereToGo maxSalons={Infinity} showViewAllButton={false} />
       </Suspense>
       <DownloadApp />
-      <CTASection />
     </div>
   );
 };

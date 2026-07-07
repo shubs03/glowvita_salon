@@ -29,7 +29,6 @@ async function verifyJwt(token) {
     }
 
     if (!secret) {
-      console.log("CRM JWT Verification Error in Middleware: No secret for role", role);
       return null;
     }
 
@@ -37,7 +36,6 @@ async function verifyJwt(token) {
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
-    console.log("CRM JWT Verification Error in Middleware:", error.code);
     return null;
   }
 }
@@ -46,7 +44,7 @@ async function verifyJwt(token) {
 export function authMiddlewareCrm(handler, allowedRoles = []) {
   return async (request, context) => {
     let token = request.cookies.get('crm_access_token')?.value;
-    
+
     // Fallback to Authorization header if cookie is missing
     if (!token) {
       const authHeader = request.headers.get('authorization');

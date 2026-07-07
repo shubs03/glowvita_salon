@@ -160,7 +160,8 @@ interface DoctorProfile {
   password?: string;
   createdAt?: string;
   updatedAt?: string;
-  // New working hours fields
+
+  // New working hours fields
   physicalConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
   videoConsultationEnabled?: boolean;
   videoConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
@@ -197,7 +198,6 @@ export default function ProfilePage() {
   const [apiUpdateSupplier] = useUpdateSupplierProfileMutation();
   const [apiUpdateDoctor] = useUpdateDoctorProfileMutation();
 
-  console.log("Doctor Data:", doctorData);
 
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, refetch: refetchWorkingHours } = useGetWorkingHoursQuery(undefined, {
     skip: !user?._id || role !== 'vendor'
@@ -219,7 +219,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (vendorData?.data) {
-      console.log("Vendor data received:", vendorData.data);
       // Ensure bankDetails is properly initialized
       const vendorWithBankDetails = {
         ...vendorData.data,
@@ -233,7 +232,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (supplierData) {
-      console.log("Supplier data received:", supplierData);
       // Access the actual supplier data from the response
       const supplierInfo = supplierData.data || supplierData;
       setLocalSupplier({
@@ -268,7 +266,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (doctorData?.data) {
-      console.log("Doctor data received:", doctorData.data);
       setLocalDoctor({
         _id: doctorData.data._id,
         name: doctorData.data.name || '',
@@ -673,24 +670,24 @@ export default function ProfilePage() {
 
           <TabsContent value="notifications">
             {role === 'vendor' && localVendor && (
-              <NotificationsTab 
-                profile={localVendor} 
-                setProfile={setLocalVendor} 
-                updateMutation={apiUpdateVendor} 
+              <NotificationsTab
+                profile={localVendor}
+                setProfile={setLocalVendor}
+                updateMutation={apiUpdateVendor}
               />
             )}
             {role === 'supplier' && localSupplier && (
-              <NotificationsTab 
-                profile={localSupplier} 
-                setProfile={setLocalSupplier} 
-                updateMutation={apiUpdateSupplier} 
+              <NotificationsTab
+                profile={localSupplier}
+                setProfile={setLocalSupplier}
+                updateMutation={apiUpdateSupplier}
               />
             )}
             {role === 'doctor' && localDoctor && (
-              <NotificationsTab 
-                profile={localDoctor} 
-                setProfile={setLocalDoctor} 
-                updateMutation={apiUpdateDoctor} 
+              <NotificationsTab
+                profile={localDoctor}
+                setProfile={setLocalDoctor}
+                updateMutation={apiUpdateDoctor}
               />
             )}
           </TabsContent>

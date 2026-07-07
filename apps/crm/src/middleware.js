@@ -30,7 +30,7 @@ async function verifyJwt(token) {
     }
 
     if (!secret) {
-      console.log("CRM JWT Verification Error in Middleware: No secret for role", role);
+
       return null;
     }
 
@@ -38,7 +38,7 @@ async function verifyJwt(token) {
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
-    console.log("CRM JWT Verification Error in Middleware:", error.code);
+
     return null;
   }
 }
@@ -87,7 +87,7 @@ export async function middleware(request) {
     }
 
     // For other verification errors, try once more before clearing
-    console.log("Token verification failed but not clearing cookie");
+
     return NextResponse.redirect(new URL('/not-found', request.url));
   }
 

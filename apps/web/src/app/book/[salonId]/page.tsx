@@ -161,6 +161,45 @@ function BookingPageContent() {
     duration: number;
   }>>([]);
 
+  // Load selected service or wedding package from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedPackage = sessionStorage.getItem("selectedWeddingPackage");
+      const storedService = sessionStorage.getItem("selectedService");
+
+      if (storedPackage) {
+        try {
+          const parsedPackage = JSON.parse(storedPackage);
+          if (parsedPackage && !parsedPackage.services && parsedPackage.servicesList) {
+            parsedPackage.services = parsedPackage.servicesList;
+          }
+          console.log("Initializing booking page with wedding package:", parsedPackage);
+          setSelectedWeddingPackage(parsedPackage);
+          setSelectedServices([]);
+          setSelectedService(null);
+          setServiceStaffAssignments([]);
+          // Clear sessionStorage so it doesn't persist on refresh
+          sessionStorage.removeItem("selectedWeddingPackage");
+        } catch (e) {
+          console.error("Failed to parse selectedWeddingPackage from sessionStorage:", e);
+        }
+      } else if (storedService) {
+        try {
+          const parsedService = JSON.parse(storedService);
+          console.log("Initializing booking page with service:", parsedService);
+          setSelectedServices([parsedService]);
+          setSelectedService(parsedService);
+          setSelectedWeddingPackage(null);
+          setServiceStaffAssignments([{ service: parsedService, staff: null }]);
+          // Clear sessionStorage
+          sessionStorage.removeItem("selectedService");
+        } catch (e) {
+          console.error("Failed to parse selectedService from sessionStorage:", e);
+        }
+      }
+    }
+  }, []);
+
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [serviceLocation, setServiceLocation] = useState<HomeServiceLocation | null>(null);
   const [showMapSelector, setShowMapSelector] = useState(false);
@@ -1269,7 +1308,13 @@ function BookingPageContent() {
             if (bookingData.weddingVenueType) setWeddingVenueType(bookingData.weddingVenueType);
             if (bookingData.weddingPackageMode) setWeddingPackageMode(bookingData.weddingPackageMode);
             if (bookingData.customizedPackageServices) setCustomizedPackageServices(bookingData.customizedPackageServices);
-            if (bookingData.selectedWeddingPackage) setSelectedWeddingPackage(bookingData.selectedWeddingPackage);
+            if (bookingData.selectedWeddingPackage) {
+              const pkg = bookingData.selectedWeddingPackage;
+              if (pkg && !pkg.services && pkg.servicesList) {
+                pkg.services = pkg.servicesList;
+              }
+              setSelectedWeddingPackage(pkg);
+            }
             if (bookingData.paymentMethod) setPaymentMethod(bookingData.paymentMethod);
 
             // Clear the pending booking data
@@ -3614,6 +3659,7 @@ function BookingPageContent() {
               weddingPackageMode={weddingPackageMode}
               bookingMode={bookingMode}
               setBookingMode={handleBookingModeChange}
+              initialViewMode={selectedWeddingPackage ? 'packages' : 'services'}
             />
           );
         case 2:
@@ -3787,7 +3833,7 @@ function BookingPageContent() {
           if (selectedWeddingPackage) {
             // Wedding package
             const weddingPkg = selectedWeddingPackage as any;
-            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : weddingPkg.services;
+            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : (weddingPkg.services || weddingPkg.servicesList || []);
             totalDuration = weddingPkg.duration || packageServices.reduce((total: number, service: any) => {
               const dur = service.duration || service.serviceDuration || 0;
               const duration = convertDurationToMinutes(dur);
@@ -4052,7 +4098,7 @@ function BookingPageContent() {
 
             // Prepare wedding package data for time slot
             const weddingPkg = selectedWeddingPackage as any;
-            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : weddingPkg.services;
+            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : (weddingPkg.services || weddingPkg.servicesList || []);
 
             // [NEW] Normalize services to ensure they have 'id' property and prepare assignments
             const normalizedPackageServices = packageServices.map((s: any) => ({
@@ -4269,18 +4315,58 @@ function BookingPageContent() {
     calculatePrices();
   }, [selectedServices, selectedWeddingPackage, weddingPackageMode, customizedPackageServices, offer, taxFeeSettings]);
 
-  // Check for pre-selected service from salon details page
+  // Check for pre-selected service or wedding package from salon details page
   useEffect(() => {
-    console.log('Pre-selected service useEffect running with:', {
+    console.log('Pre-selected service/package useEffect running with:', {
       hasWindow: typeof window !== 'undefined',
       servicesLength: services?.length,
+      weddingPackagesLength: weddingPackages?.length,
       isLoading,
       hasStoredService: typeof window !== 'undefined' ? sessionStorage.getItem('selectedService') : null,
+      hasStoredWeddingPackage: typeof window !== 'undefined' ? !!sessionStorage.getItem('selectedWeddingPackage') : false,
       currentStep
     });
 
     if (typeof window !== 'undefined' && services && services.length > 0 && !isLoading) {
       const storedService = sessionStorage.getItem('selectedService');
+      const storedWeddingPackage = sessionStorage.getItem('selectedWeddingPackage');
+
+      // ── Wedding Package pre-selection (takes priority if present) ──────────
+      if (storedWeddingPackage && !storedService) {
+        try {
+          const pkgData = JSON.parse(storedWeddingPackage);
+          console.log('Found pre-selected wedding package in sessionStorage:', pkgData);
+
+          // Try to find the matching package in the loaded weddingPackages list
+          const matchedPkg = weddingPackages?.find((p: any) =>
+            p.id === (pkgData.id || pkgData._id) ||
+            p._id === (pkgData.id || pkgData._id) ||
+            p.name === pkgData.name
+          );
+
+          if (matchedPkg) {
+            console.log('Found matching wedding package in loaded packages:', matchedPkg);
+            handleSelectWeddingPackage(matchedPkg as any);
+          } else {
+            // Fall back to the stored data directly — it already has all required fields
+            console.warn('Could not find matching wedding package, using stored data directly');
+            handleSelectWeddingPackage(pkgData as any);
+          }
+
+          // Ensure we're on step 1 (package decision modal)
+          if (currentStep !== 1) {
+            setCurrentStep(1);
+          }
+
+          // Clean up
+          sessionStorage.removeItem('selectedWeddingPackage');
+        } catch (error) {
+          console.error('Error parsing selected wedding package from sessionStorage:', error);
+          sessionStorage.removeItem('selectedWeddingPackage');
+        }
+        return; // Don't process selectedService when a package was stored
+      }
+
       console.log('Checking for stored service:', storedService);
 
       if (storedService) {
@@ -4348,7 +4434,7 @@ function BookingPageContent() {
         }
       }
     }
-  }, [salonId, services, isLoading, currentStep]); // Run when salonId, services, isLoading, or currentStep change
+  }, [salonId, services, weddingPackages, isLoading, currentStep]); // Run when salonId, services, weddingPackages, isLoading, or currentStep change
 
   // Additional useEffect to handle service selection when services are first loaded
   useEffect(() => {

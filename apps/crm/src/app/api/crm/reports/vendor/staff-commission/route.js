@@ -234,7 +234,6 @@ export const GET = authMiddlewareCrm(async (req) => {
         });
 
         // Debug log to help trace if it's still empty
-        console.log(`Report Generated | Vendor: ${vendorId} | Staff Found: ${allStaff.length} | Transaction Aggregation Groups: ${transactionStats.length}`);
 
         return NextResponse.json(reportData, { status: 200 });
 

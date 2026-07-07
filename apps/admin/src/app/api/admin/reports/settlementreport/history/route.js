@@ -27,7 +27,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const regionId = searchParams.get('regionId');
         const type = searchParams.get('type'); // 'Payment to Vendor' or 'Payment to Admin'
 
-        console.log("Settlement Payment History Report Filter parameters:", { startDateParam, endDateParam, vendorName, type });
 
         // Build main filter
         let filter = {};
