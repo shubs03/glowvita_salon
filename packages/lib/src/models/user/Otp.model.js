@@ -1,12 +1,21 @@
 import mongoose from "mongoose";
 
 const otpSchema = new mongoose.Schema({
-  email: {
+  // The email or phone number this OTP was sent to
+  identifier: {
     type: String,
     required: true,
     trim: true,
     lowercase: true,
+    index: true,
   },
+  // Distinguishes between email and phone OTPs
+  type: {
+    type: String,
+    enum: ["email", "phone"],
+    required: true,
+  },
+  // Stored as a bcrypt hash — never in plaintext
   otp: {
     type: String,
     required: true,
@@ -14,17 +23,24 @@ const otpSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    index: { expires: '10m' } // Automatically delete document after 10 minutes
+  },
+  // Track failed attempts for brute-force protection (max 5)
+  failedAttempts: {
+    type: Number,
+    default: 0,
   },
   verified: {
     type: Boolean,
-    default: false
+    default: false,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
+
+// TTL index: MongoDB automatically deletes documents when expiresAt is reached
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const OtpModel = mongoose.models.Otp || mongoose.model("Otp", otpSchema);
 

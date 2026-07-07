@@ -277,6 +277,7 @@ export async function POST(req) {
       profileImage: profileImage || null,
       website: website || null,
       regionId, // <--- Assigned Region
+      isPhoneVerified: true,
       subscription: {
         plan: trialPlan._id,
         status: 'Active',

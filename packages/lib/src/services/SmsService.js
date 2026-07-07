@@ -1,16 +1,127 @@
-/**
- * SmsService
- * Handles transactional and promotional SMS alerts.
- * Connects to gateways like MSG91, Twilio, etc.
- */
+import { BESTSMS_AUTH_KEY, BESTSMS_SENDER, BESTSMS_DLT_TE_ID } from "@repo/config/config";
+
+function getApiCountryCode(phone) {
+  if (!phone) return 0;
+  const cleanPhone = String(phone).replace(/^\+/, '');
+  if (cleanPhone.startsWith('91')) {
+    return 91;
+  }
+  if (cleanPhone.startsWith('1')) {
+    return 1;
+  }
+  return 0;
+}
+
+function isResponseSuccess(text) {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+
+  try {
+    const json = JSON.parse(trimmed);
+    if (json.type === 'success' || json.success === true || json.status === 'success' || json.responseCode === 'success') {
+      return true;
+    }
+  } catch (e) {
+    // Ignore JSON parsing errors for plain text responses
+  }
+
+  const lower = trimmed.toLowerCase();
+
+  // Explicit failure keywords commonly returned by Indian SMS Gateways
+  const errorKeywords = [
+    'error', 'fail', 'invalid', 'missing', 'authkey', 'insufficient', 'blocked', 'parameters', 'restricted'
+  ];
+  const hasError = errorKeywords.some(keyword => lower.includes(keyword));
+  if (hasError) return false;
+
+  // Explicit success keywords or match alphanumeric message IDs
+  if (
+    lower.startsWith('submit') ||
+    lower.includes('success') ||
+    lower.includes('sent') ||
+    lower.includes('ok') ||
+    /^[a-f0-9]{24}$/i.test(trimmed) ||       // 24-char hex ID
+    /^\d+$/.test(trimmed) ||                  // numeric ID
+    /^[a-f0-9-]+$/i.test(trimmed)             // UUID/dash format ID
+  ) {
+    return true;
+  }
+
+  // Fallback: If it's a short alphanumeric string (less than 50 chars) without spaces or standard error signs, it's likely a transaction ID.
+  if (trimmed.length < 50 && !trimmed.includes(' ') && /^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+}
+
+
 class SmsService {
   constructor() {
-    this.apiKey = process.env.SMS_GATEWAY_KEY;
-    this.senderId = process.env.SMS_SENDER_ID || 'GLOWVT';
+    this.apiKey = BESTSMS_AUTH_KEY;
+    this.senderId = BESTSMS_SENDER || 'GLOWVT';
+    this.dltTeId = BESTSMS_DLT_TE_ID;
   }
 
   /**
-   * Send a raw SMS
+   * Send an OTP via SMS using the BestSMS OTP API.
+   * Falls back to console logging if BESTSMS_AUTH_KEY is not configured (dev mode).
+   *
+   * @param {string} internationalNumber - Full E.164 number WITHOUT leading + (e.g. "919637989591")
+   *                                       Built by the caller using buildE164() from phoneUtils.js
+   * @param {string} otp - 6-digit OTP code (plaintext)
+   * @returns {{ success: boolean, mock?: boolean, error?: string }}
+   */
+  async sendOtp(internationalNumber, otp) {
+    // Safe partial log — shows country code + first 2 digits + masked remainder
+    const safeLog = internationalNumber.length > 4
+      ? `${internationalNumber.slice(0, 4)}${'X'.repeat(internationalNumber.length - 4)}`
+      : internationalNumber;
+
+    if (!this.apiKey) {
+      console.warn(`[SMS OTP MOCK] Would send OTP to: ${safeLog} (Set BESTSMS_AUTH_KEY to enable real SMS delivery)`);
+      return { success: true, mock: true };
+    }
+
+    try {
+      const message = `Dear Customer, Your verification code for using GlowVita is ${otp}. Thank you. Call support if required 
+-Nashik First`;
+      const params = new URLSearchParams({
+        authkey: this.apiKey,
+        mobiles: internationalNumber, // already fully formatted by caller
+        sender: this.senderId,
+        route: 4,
+        country: getApiCountryCode(internationalNumber),
+        DLT_TE_ID: this.dltTeId,
+        message,
+      });
+
+      console.log(`[SMS OTP] Dispatching OTP to: ${safeLog}`);
+      const url = `http://control.bestsms.co.in/api/sendhttp.php?${params.toString()}`;
+      const response = await fetch(url, { method: 'GET' });
+      const text = await response.text();
+      console.log("url", url)
+
+      console.log("SMS API BESTSMS RESPONSE", text)
+
+      const isSuccess = isResponseSuccess(text);
+
+      if (response.ok && isSuccess) {
+        console.log(`[SMS OTP] Successfully dispatched to: ${safeLog}`);
+        return { success: true, response: text };
+      } else {
+        console.error(`[SMS OTP] BestSMS API error for ${safeLog}:`, text);
+        return { success: false, error: text || 'SMS gateway error' };
+      }
+    } catch (error) {
+      console.error('[SMS OTP] sendOtp network error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Send a raw transactional SMS
    * @param {string} mobileNo - Recipient's 10-digit number
    * @param {string} message - Content
    */
@@ -21,22 +132,30 @@ class SmsService {
     }
 
     try {
-      // Implementation depends on the provider. Using a generic fetch/axios pattern.
-      // Example for MSG91:
-      /*
-      const response = await fetch('https://api.msg91.com/api/v5/otp', {
-          method: 'POST',
-          headers: { 'authkey': this.apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              template_id: "...",
-              mobile: `91${mobileNo}`,
-              authkey: this.apiKey,
-              // ...vars
-          })
-      });
-      */
       console.log(`Sending SMS to ${mobileNo}...`);
-      return { success: true };
+      const params = new URLSearchParams({
+        authkey: this.apiKey,
+        mobiles: mobileNo,
+        sender: this.senderId,
+        route: 4,
+        country: getApiCountryCode(mobileNo),
+        DLT_TE_ID: this.dltTeId,
+        message,
+      });
+
+      const url = `http://control.bestsms.co.in/api/sendhttp.php?${params.toString()}`;
+      const response = await fetch(url, { method: 'GET' });
+      const text = await response.text();
+      console.log("SMS API BESTSMS RESPONSE", text);
+
+      const isSuccess = isResponseSuccess(text);
+
+      if (response.ok && isSuccess) {
+        return { success: true, response: text };
+      } else {
+        console.error(`[SMS] BestSMS API error for ${mobileNo}:`, text);
+        return { success: false, error: text || 'SMS gateway error' };
+      }
     } catch (error) {
       console.error('SmsService Error:', error);
       return { success: false, error: error.message };
@@ -89,7 +208,6 @@ class SmsService {
       error: errors.length > 0 ? errors.join('; ') : undefined
     };
   }
-
 
   /**
    * Send Appointment SMS

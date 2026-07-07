@@ -30,3 +30,4 @@ export * from "./header";
 export * from "./footer";
 export * from "./alert";
 export * from "./tooltip";
+export * from "./phone-input";

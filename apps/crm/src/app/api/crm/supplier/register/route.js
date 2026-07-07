@@ -111,6 +111,7 @@ export async function POST(req) {
             location: finalLocation ? { type: 'Point', coordinates: [finalLocation.lng, finalLocation.lat] } : undefined,
             referralCode: await generateReferralCode(supplierData.shopName),
             regionId,
+            isPhoneVerified: true,
             status: 'Pending', // Suppliers might need approval
             subscription: {
                 plan: trialPlan?._id,

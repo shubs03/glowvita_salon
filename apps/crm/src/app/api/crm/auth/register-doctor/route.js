@@ -127,6 +127,7 @@ export async function POST(req) {
       videoConsultation: videoConsultation !== undefined ? videoConsultation : true,
       referralCode,
       regionId,
+      isPhoneVerified: true,
       subscription: {
         plan: trialPlan._id,
         status: "Active",

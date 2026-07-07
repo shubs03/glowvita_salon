@@ -198,6 +198,10 @@ const supplierSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  isPhoneVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 
