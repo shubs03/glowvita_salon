@@ -3659,7 +3659,7 @@ function BookingPageContent() {
               weddingPackageMode={weddingPackageMode}
               bookingMode={bookingMode}
               setBookingMode={handleBookingModeChange}
-              initialViewMode={selectedWeddingPackage ? 'packages' : 'services'}
+              initialViewMode={selectedWeddingPackage || searchParams?.get('tab') === 'packages' ? 'packages' : 'services'}
             />
           );
         case 2:

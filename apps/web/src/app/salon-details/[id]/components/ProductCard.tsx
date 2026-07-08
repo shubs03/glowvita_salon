@@ -129,7 +129,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <Card
       className={cn(
-        "group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl transition-shadow flex flex-col text-left relative",
+        "group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl border border-gray-200 bg-white transition-shadow flex flex-col text-left relative",
         isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
       )}
       onClick={() => {
@@ -150,30 +150,30 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-ai-hint={product.hint}
         />
-
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/70 text-gray-600 hover:text-red-500 hover:bg-white shadow-sm backdrop-blur-md transition-all duration-300 z-10"
-          onClick={handleWishlistToggle}
-          disabled={isLoading}
-        >
-          <Heart
-            className={cn("h-4 w-4 transition-all", isLiked && "fill-red-500 text-red-500")}
-          />
-        </Button>
       </div>
       <div className="p-3 flex flex-col flex-grow">
-        <p className="text-xs font-bold text-primary mb-1">
-          {product.category}
-        </p>
+        <div className="flex justify-between items-center mb-1">
+          <p className="text-xs font-bold text-primary">
+            {product.category}
+          </p>
+          <div className="flex items-center gap-1" style={{ color: "#BA7894" }}>
+            <img src="/images/Vector (2).png" alt="star" className="w-3 h-3 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+            <Star className="w-3 h-3 hidden" fill="#BA7894" stroke="#BA7894" />
+            <span className="text-xs font-semibold">
+              {product.rating || "0.0"}
+            </span>
+          </div>
+        </div>
+
         <h4 className="text-sm font-semibold flex-grow mb-2">
           {product.name}
         </h4>
-        <p className="text-xs text-muted-foreground line-clamp-2">
+        
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
           {product.description}
         </p>
-        <div className="flex flex-col gap-0.5 mt-auto">
+        
+        <div className="flex flex-col gap-0.5 mt-auto mb-2">
           {product.salePrice > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-bold text-primary">
@@ -191,35 +191,43 @@ const ProductCard: React.FC<ProductCardProps> = ({
               ₹{product.price.toFixed(2)}
             </p>
           )}
-          <div className="flex items-center gap-1 text-primary">
-            <Star className="h-3 w-3 text-yellow-400 fill-current" />
-            <span className="text-xs text-muted-foreground font-medium">
-              {product.rating}
-            </span>
-          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 mt-2">
-          <div className="flex justify-between w-full">
-            <Button
-              size="sm"
-              variant="outline"
-              className={`w-full hover:border-none rounded-none rounded-tr-xl rounded-bl-xl text-xs lg:mr-3 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
-              onClick={handleBuyNow}
-              disabled={isSubscriptionExpired}
-            >
-              {isSubscriptionExpired ? 'Unavailable' : 'Buy Now'}
-            </Button>
+        <div className="flex items-center justify-between mt-2 gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className={`rounded-none rounded-tr-xl rounded-bl-xl text-xs px-6 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
+            onClick={handleBuyNow}
+            disabled={isSubscriptionExpired}
+          >
+            {isSubscriptionExpired ? 'Unavailable' : 'Buy Now'}
+          </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              className={`w-fit border-none text-xs rounded-none rounded-tr-2xl rounded-bl-2xl ${isSubscriptionExpired ? 'opacity-50' : ''}`}
+          <div className="flex items-center gap-2">
+            <button
+              className={`flex items-center justify-center w-7 h-7 hover:text-red-500 transition-opacity ${isLoading ? 'opacity-50' : ''}`}
+              onClick={handleWishlistToggle}
+              disabled={isLoading}
+            >
+              {isLiked ? (
+                <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+              ) : (
+                <>
+                  <img src="/images/heart 3 (1).png" alt="heart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                  <Heart className="w-4 h-4 hidden text-gray-500" />
+                </>
+              )}
+            </button>
+
+            <button
+              className={`flex items-center justify-center w-7 h-7 hover:opacity-70 transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleAddToCart}
               disabled={isSubscriptionExpired}
             >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
+              <img src="/images/add-to-cart (1) 1.png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+              <ShoppingCart className="h-4 w-4 hidden text-gray-500" />
+            </button>
           </div>
         </div>
 

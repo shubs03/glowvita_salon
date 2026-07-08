@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { ChevronDown } from "lucide-react";
@@ -55,26 +56,18 @@ const FilterDropdown = ({
 
   return (
     <div className="relative">
-      <Button
-        variant="outline"
-        size="sm"
-        className="rounded-lg filter-button h-9"
+      <button
+        className="flex items-center gap-1 text-sm text-gray-700 hover:text-black font-medium"
         onClick={() => {
           setShowDropdown(!showDropdown);
           if (showDropdown) setActiveSub('none');
         }}
       >
-        <span className="flex items-center gap-1">
-          Filter: <span className="text-primary font-semibold capitalize">
-            {filterBy === 'all' ? 'All' :
-              filterBy.startsWith('category:') ? filterBy.split(':')[1] :
-                filterBy.startsWith('price:') ? filterBy.split(':')[1].replace('-', ' ') :
-                  filterBy.startsWith('rating:') ? `${filterBy.split(':')[1]}+ Stars` :
-                    filterBy === 'availability' ? '' : 'All'}
-          </span>
+        <span>
+          Filter By
         </span>
-        <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-      </Button>
+        <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+      </button>
 
       {showDropdown && (
         <div className="absolute z-20 mt-1 flex filter-dropdown-wrapper">
@@ -239,15 +232,15 @@ const SortDropdown = ({
 }) => {
   return (
     <div className="relative">
-      <Button
-        variant="outline"
-        size="sm"
-        className="rounded-lg sort-button h-9"
+      <button
+        className="flex items-center gap-1 text-sm text-gray-700 hover:text-black font-medium"
         onClick={() => setShowDropdown(!showDropdown)}
       >
-        Sort By
-        <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-      </Button>
+        <span>
+          Sort By
+        </span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+      </button>
 
       {showDropdown && (
         <div className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 min-w-max sort-dropdown">
@@ -312,6 +305,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
   onBuyNow,
   onAddToCart,
 }) => {
+  const router = useRouter();
   const [filterBy, setFilterBy] = useState<string>('all'); // Options: 'all', 'category', 'price', 'rating', 'availability'
   const [sortBy, setSortBy] = useState<string>('name'); // Options: 'name', 'price-low', 'price-high', 'rating', 'newest'
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -452,18 +446,27 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
 
       {/* Section Header */}
       <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-          Products We Use & Sell
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+          style={{ color: "#252B42" }}
+        >
+          The Products We Use & Recommend
+          <span
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
+          />
         </h2>
-        <p className="text-muted-foreground mt-3 text-sm">
-          High-quality products available for purchase at our salon,
-          Don't miss out on our high-quality products!
+        <p className="text-sm md:text-base text-black mb-6">
+          High-quality products available for purchase.
         </p>
       </div>
 
       {/* Filter and Sort Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#EBF3FD] py-4 px-6 rounded mb-8 gap-4">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-48">
           <FilterDropdown
             showDropdown={showFilterDropdown}
             setShowDropdown={setShowFilterDropdown}
@@ -479,17 +482,16 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
             setSortBy={setSortBy}
           />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-lg"
+        <button
+          className="text-sm text-gray-600 hover:text-gray-900 underline underline-offset-4 font-medium transition-colors"
           onClick={() => {
             setFilterBy('all');
             setSortBy('name');
+            router.push('/all-products');
           }}
         >
           View All Products
-        </Button>
+        </button>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

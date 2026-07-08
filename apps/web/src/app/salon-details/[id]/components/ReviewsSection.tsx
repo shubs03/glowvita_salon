@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Star, ArrowRight } from "lucide-react";
+import { Star, ArrowRight, Edit } from "lucide-react";
 import { ReviewForm } from '@/components/ReviewForm';
 import { Skeleton } from "@repo/ui/skeleton";
 
@@ -67,7 +67,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
   // Calculate review metrics
   const salonReviews = reviewsData?.reviews || [];
-  
+
   const reviewMetrics = React.useMemo(() => {
     if (salonReviews.length === 0) {
       return { averageRating: 0, totalReviews: 0 };
@@ -89,113 +89,116 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
   return (
     <section id="reviews">
-      <h2 className="text-4xl font-bold mb-2">Reviews</h2>
-      <p className="text-muted-foreground mb-6">
-        What our clients are saying about us.
-      </p>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="text-4xl font-bold">
-              {reviewMetrics.averageRating || 0}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+        <div>
+          <h2
+            className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+            style={{ color: "#252B42" }}
+          >
+            Client Feedback
+            <span
+              className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+              style={{
+                background:
+                  "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+              }}
+            />
+          </h2>
+          <p className="text-sm md:text-base text-black mt-1">
+            Discover genuine experiences from clients who trust us for their beauty and wellness needs.
+          </p>
+        </div>
+        {!showReviewForm && (
+          <button
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+            onClick={() => setShowReviewForm(true)}
+          >
+            <img src="/images/pencil 1.png" alt="pencil" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            Write a Review
+          </button>
+        )}
+      </div>
+
+      {showReviewForm && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <ReviewForm
+              entityId={vendorData?._id || ''}
+              entityType="salon"
+              onSubmitSuccess={handleReviewSubmitSuccess}
+            />
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={() => setShowReviewForm(false)}
+            >
+              Cancel
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-4">
+        {isLoading ? (
+          [1, 2, 3].map((i) => (
+            <div key={i} className="border border-gray-300 rounded-[2rem] p-6 shadow-sm bg-white">
+              <ReviewSkeleton />
             </div>
-            <div>
-              <StarRating rating={reviewMetrics.averageRating || 0} />
-              <p className="text-sm text-muted-foreground">
-                Based on {reviewMetrics.totalReviews || 0} reviews
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="border-t pt-4">
-                  <ReviewSkeleton />
-                </div>
-              ))}
-            </div>
-          ) : salonReviews.length > 0 ? (
-            salonReviews.map((review: Review) => (
-              <div key={review._id} className="border-t pt-4">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                      {review.userName?.charAt(0) || "U"}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">
-                        {review.userName || "Anonymous"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(review.createdAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          }
-                        )}
-                      </p>
+          ))
+        ) : salonReviews.length > 0 ? (
+          salonReviews.map((review: Review) => (
+            <div key={review._id} className="border border-gray-200 border-t-[3px] border-t-[#422A3C] rounded-2xl p-4 shadow-sm bg-white flex flex-col gap-2">
+              <div className="flex w-full justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center text-primary font-bold shadow-inner">
+                    {review.userName ? (
+                      <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(review.userName)}&background=random`} alt={review.userName} className="w-full h-full object-cover" />
+                    ) : (
+                      "U"
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">
+                      {review.userName || "Anonymous"}
+                    </p>
+                    <div className="bg-gray-100 rounded text-[10px] text-gray-500 px-2 py-0.5 mt-0.5 inline-block">
+                      {new Date(review.createdAt).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )}
                     </div>
                   </div>
+                </div>
+
+                <div className="flex items-center pt-1">
                   <StarRating rating={review.rating || 0} />
                 </div>
+              </div>
+
+              <div className="w-full pl-[60px]">
                 {(review.entityLabel || review.entityType === "service") && (
-                  <p className="text-xs text-primary font-medium mb-2">
+                  <p className="text-xs text-primary font-medium mb-1">
                     {review.entityLabel || (review.serviceName ? `Service review • ${review.serviceName}` : "Service review")}
                   </p>
                 )}
-                <p className="text-sm text-muted-foreground italic">
-                  "{review.comment || "No review text available"}"
-                </p>
-              </div>
-            ))
-          ) : (
-            // Show placeholder when no reviews available
-            <div className="text-center py-12">
-              <div className="bg-secondary/20 rounded-lg p-8">
-                <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  No reviews yet
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Be the first to leave a review!
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {review.comment || "No review text available"}
                 </p>
               </div>
             </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          {showReviewForm ? (
-            <div className="w-full">
-              <ReviewForm
-                entityId={vendorData?._id || ''}
-                entityType="salon"
-                onSubmitSuccess={handleReviewSubmitSuccess}
-              />
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => setShowReviewForm(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowReviewForm(true)}
-            >
-              {salonReviews.length > 0
-                ? "Write a Review"
-                : "Write a Review"}
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
+          ))
+        ) : (
+          <div className="text-center py-12 border border-gray-200 rounded-[2rem] bg-white">
+            <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No reviews yet</p>
+            <p className="text-sm text-muted-foreground mt-2">Be the first to leave a review!</p>
+          </div>
+        )}
+      </div>
     </section>
   );
 };
