@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, Sparkles, Navigation, Package, Scissors } from 'lucide-react';
-import { 
-  useGetPublicProductsQuery, 
-  useGetAdminProductCategoriesQuery 
+import {
+  useGetPublicProductsQuery,
+  useGetAdminProductCategoriesQuery
 } from '@repo/store/api';
 import { useRouter } from "next/navigation";
 import { useLoadScript } from "@react-google-maps/api";
@@ -131,7 +131,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
     const params = new URLSearchParams();
 
     if (productInput) params.append("productName", productInput);
-    
+
     let finalLat = selectedLat;
     let finalLng = selectedLng;
 
@@ -153,14 +153,15 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
   const products = productsApiData?.products || [];
   const uniqueVendors = products.length > 0 ? new Set(products.map((p: any) => p.vendorId)).size : 0;
   const totalProducts = products.length;
-  const averageRating = (products.length > 0)
-    ? (products.reduce((acc: any, p: any) => acc + (p.rating || 0), 0) / products.length).toFixed(1)
-    : "0.0";
+  const ratedProducts = products.filter((p: any) => Number(p.rating) > 0);
+  const averageRating = ratedProducts.length > 0
+    ? (ratedProducts.reduce((acc: any, p: any) => acc + Number(p.rating), 0) / ratedProducts.length).toFixed(1)
+    : "0";
 
   const marqueeCategories = useMemo(() => {
     // Determine the array of categories based on response structure
-    const categoriesArray = Array.isArray(categoriesData) 
-      ? categoriesData 
+    const categoriesArray = Array.isArray(categoriesData)
+      ? categoriesData
       : categoriesData?.data && Array.isArray(categoriesData.data)
         ? categoriesData.data
         : [];
@@ -174,11 +175,24 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
 
   return (
     <section className="relative w-full min-h-[500px] h-auto lg:h-[700px] overflow-hidden bg-background">
-      {/* Background Image with Gradient Overlay */}
+      {/* Solid dark maroon base */}
+      <div className="absolute inset-0" style={{ backgroundColor: "#130C11" }} />
+
+      {/* Right-side panel for the image */}
+      <div className="absolute top-0 right-0 h-full w-full lg:w-[50%]">
+        <img
+          src="/images/product-hero-bg.png"
+          alt="Products"
+          className="h-full w-full pointer-events-none select-none"
+          style={{ objectFit: "cover", objectPosition: "center right" }}
+        />
+      </div>
+
+      {/* Gradient Overlay */}
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0"
         style={{
-          backgroundImage: `linear-gradient(to right, rgba(45, 28, 48, 0.85), rgba(45, 28, 48, 0.4)), url('https://images.unsplash.com/photo-1512496011951-408a2fe6480c?w=1200')`,
+          background: "linear-gradient(90deg, #130C11 0%, #291A25 0%, #422A3C 20%, #56374E 50%, rgba(86, 55, 78, 0.7) 70%, rgba(66, 42, 60, 0) 95%)"
         }}
       />
 
@@ -202,13 +216,26 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
         </p>
 
         {/* ── Search Bar ─────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl md:rounded-full shadow-2xl p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center gap-3 max-w-4xl mb-6 md:mb-8">
-          
+        <div
+          className="bg-white shadow-2xl flex flex-col md:flex-row items-stretch md:items-center mb-6 md:mb-8"
+          style={{
+            width: "865px",
+            maxWidth: "100%",
+            height: "auto",
+            gap: "46px",
+            borderRadius: "50px",
+            paddingTop: "12px",
+            paddingRight: "14px",
+            paddingBottom: "12px",
+            paddingLeft: "40px",
+          }}
+        >
+
           {/* Product Input */}
           <div className="relative flex-1 flex items-center gap-3 px-4 md:border-r border-gray-200 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!productInput && (
-                <label className="text-primary text-xs font-medium mb-1">
+                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
                   Product Name
                 </label>
               )}
@@ -229,7 +256,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <div className="relative flex-1 flex items-center gap-3 px-4 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!locationInput && (
-                <label className="text-primary text-xs font-medium mb-1">
+                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
                   Location
                 </label>
               )}
@@ -309,10 +336,16 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <button
             onClick={handleSearchClick}
             disabled={isSearching}
-            className="bg-primary text-white px-6 sm:px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 w-full md:w-auto disabled:opacity-70"
+            className="text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
+            style={{
+              width: "127px",
+              height: "35px",
+              borderRadius: "21px",
+              backgroundColor: "#BA7894",
+            }}
           >
             {isSearching ? "Searching…" : "Search"}
-            <Search className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
           </button>
         </div>
 

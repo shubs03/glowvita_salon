@@ -88,6 +88,10 @@ const adminUserSchema = new mongoose.Schema({
     appointments: { type: Boolean, default: true },
     promotional: { type: Boolean, default: true },
   },
+  isPhoneVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 

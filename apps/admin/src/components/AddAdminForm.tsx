@@ -319,9 +319,18 @@ export function AddAdminForm({
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setIsPhoneOtpSent(true);
-      toast.success("OTP sent securely! (Test mode: use 123456)");
+      const res = await fetch('/api/admin/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formData.mobileNo }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsPhoneOtpSent(true);
+        toast.success(data.message || 'OTP sent to mobile number');
+      } else {
+        toast.error(data.message || 'Failed to send phone OTP');
+      }
     } catch (err) {
       toast.error("Failed to send phone OTP");
     } finally {
@@ -336,12 +345,17 @@ export function AddAdminForm({
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      if (phoneOtp === "123456") {
-        toast.success("Mobile number verified successfully!");
+      const res = await fetch('/api/admin/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formData.mobileNo, otp: phoneOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Mobile number verified successfully!');
         setIsPhoneVerified(true);
       } else {
-        toast.error("Invalid phone OTP");
+        toast.error(data.message || 'Invalid phone OTP');
       }
     } catch (err) {
       toast.error("Failed to verify phone OTP");

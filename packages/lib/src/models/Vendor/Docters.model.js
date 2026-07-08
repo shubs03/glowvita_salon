@@ -318,6 +318,10 @@ const doctorSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  isPhoneVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Pre-save middleware to auto-update subscription status based on endDate

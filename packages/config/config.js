@@ -32,3 +32,7 @@ export const FIREBASE_MESSAGING_SENDER_ID = process.env.NEXT_PUBLIC_FIREBASE_MES
 export const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 export const FIREBASE_VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 export const RAZORPAY_ACCOUNT_NUMBER = process.env.RAZORPAY_ACCOUNT_NUMBER;
+
+export const BESTSMS_AUTH_KEY = process.env.BESTSMS_AUTH_KEY;
+export const BESTSMS_SENDER = process.env.BESTSMS_SENDER;
+export const BESTSMS_DLT_TE_ID = process.env.BESTSMS_DLT_TE_ID

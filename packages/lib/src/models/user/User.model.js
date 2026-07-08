@@ -170,6 +170,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  isPhoneVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Pre-save middleware to auto-assign regionId

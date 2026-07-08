@@ -172,9 +172,18 @@ export function SupplierRegistrationForm({ onSuccess, email }: { onSuccess: () =
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setIsPhoneOtpSent(true);
-      toast.success("OTP sent securely! (Test mode: use 123456)");
+      const res = await fetch('/api/crm/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formData.mobile }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsPhoneOtpSent(true);
+        toast.success(data.message || 'OTP sent to your mobile number');
+      } else {
+        toast.error(data.message || 'Failed to send OTP');
+      }
     } catch (err) {
       toast.error("Failed to send phone OTP");
     } finally {
@@ -189,12 +198,17 @@ export function SupplierRegistrationForm({ onSuccess, email }: { onSuccess: () =
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      if (phoneOtp === "123456") {
-        toast.success("Phone verified successfully!");
+      const res = await fetch('/api/crm/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formData.mobile, otp: phoneOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Phone verified successfully!');
         setIsPhoneVerified(true);
       } else {
-        toast.error("Invalid phone OTP");
+        toast.error(data.message || 'Invalid phone OTP');
         setPhoneOtp('');
       }
     } catch (err) {

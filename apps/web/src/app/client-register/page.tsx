@@ -6,10 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
+import { PhoneInput, type PhoneInputValue } from '@repo/ui/phone-input';
 import { Calendar, Eye, EyeOff, Map as MapIcon, Gift, MapPin, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import { validateLocalNumber } from '@repo/lib/utils/phoneUtils';
 
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
@@ -25,7 +28,7 @@ function ClientRegisterForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobileNo, setMobileNo] = useState('');
+  const [phoneValue, setPhoneValue] = useState<PhoneInputValue>({ countryCode: '91', phone: '' });
   const [gender, setGender] = useState('');
   const [birthdayDate, setBirthdayDate] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -73,6 +76,7 @@ function ClientRegisterForm() {
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
 
   const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [phoneOtpAttemptedNumber, setPhoneOtpAttemptedNumber] = useState('');  // tracks countryCode+phone to prevent duplicate auto-sends
 
   // New state to track confirmed location
   const [confirmedLocation, setConfirmedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -132,17 +136,32 @@ function ClientRegisterForm() {
   };
 
   const handleSendPhoneOtp = async () => {
-    if (!mobileNo || mobileNo.length !== 10) {
-      toast.error('Please enter a valid 10-digit mobile number');
+    const { countryCode, phone } = phoneValue;
+    if (!phone || phone.length < 5) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+    // India-specific: require exactly 10 digits
+    if (countryCode === '91' && phone.length !== 10) {
+      toast.error('Please enter a valid 10-digit Indian mobile number');
       return;
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setIsPhoneOtpSent(true);
-      toast.success("OTP sent securely! (Test mode: use 123456)");
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, countryCode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsPhoneOtpSent(true);
+        toast.success(data.message || 'OTP sent to your mobile number');
+      } else {
+        toast.error(data.message || 'Failed to send OTP');
+      }
     } catch (err) {
-      toast.error("Failed to send phone OTP");
+      toast.error('Network error. Please try again.');
     } finally {
       setIsOtpLoading(false);
     }
@@ -150,32 +169,41 @@ function ClientRegisterForm() {
 
   const handleVerifyPhoneOtp = async () => {
     if (!phoneOtp || phoneOtp.length < 6) {
-      toast.error("Please enter a valid OTP");
+      toast.error('Please enter a valid 6-digit OTP');
       return;
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      if (phoneOtp === "123456") {
-        toast.success("Phone verified successfully!");
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneValue.phone, countryCode: phoneValue.countryCode, otp: phoneOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Phone verified successfully!');
         setIsPhoneVerified(true);
       } else {
-        toast.error("Invalid phone OTP");
+        toast.error(data.message || 'Invalid OTP');
         setPhoneOtp('');
       }
     } catch (err) {
-      toast.error("Failed to verify phone OTP");
+      toast.error('Network error. Please try again.');
     } finally {
       setIsOtpLoading(false);
     }
   };
 
-  // Auto-send Phone OTP when 10 digits are reached
+  // Auto-send Phone OTP when 10 digits are reached (India default behaviour)
+  const phoneKey = `${phoneValue.countryCode}:${phoneValue.phone}`;
   useEffect(() => {
-    if (mobileNo.length === 10 && !isPhoneOtpSent && !isPhoneVerified && !isOtpLoading) {
+    const { countryCode, phone } = phoneValue;
+    const isIndiaFull = countryCode === '91' && phone.length === 10;
+    if (isIndiaFull && phoneOtpAttemptedNumber !== phoneKey && !isPhoneVerified && !isOtpLoading) {
+      setPhoneOtpAttemptedNumber(phoneKey);
       handleSendPhoneOtp();
     }
-  }, [mobileNo, isPhoneOtpSent, isPhoneVerified, isOtpLoading]);
+  }, [phoneValue, phoneOtpAttemptedNumber, isPhoneVerified, isOtpLoading]);
 
   // Auto-verify Phone OTP when 6 digits are reached
   useEffect(() => {
@@ -211,7 +239,7 @@ function ClientRegisterForm() {
     if (!firstName) missingFields.push('First name');
     if (!lastName) missingFields.push('Last name');
     if (!email) missingFields.push('Email');
-    if (!mobileNo) missingFields.push('Mobile number');
+    if (!phoneValue.phone) missingFields.push('Mobile number');
     if (!confirmedLocation) missingFields.push('Location');
     if (!state) missingFields.push('State');
     if (!city) missingFields.push('City');
@@ -238,11 +266,10 @@ function ClientRegisterForm() {
       return;
     }
 
-    // Mobile number validation - must be exactly 10 digits
-    const mobileRegex = /^\d{10}$/;
-    if (!mobileRegex.test(mobileNo)) {
-      const errorMessage = 'Mobile number must be exactly 10 digits';
-      toast.error(errorMessage);
+    // Mobile number validation
+    const phoneValidation = validateLocalNumber(phoneValue.phone, phoneValue.countryCode);
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.error || 'Please enter a valid phone number');
       return;
     }
 
@@ -268,7 +295,8 @@ function ClientRegisterForm() {
           firstName,
           lastName,
           email,
-          mobileNo,
+          mobileNo: phoneValue.phone,
+          countryCode: phoneValue.countryCode,
           location: confirmedLocation,
           address,
           state,
@@ -684,6 +712,39 @@ function ClientRegisterForm() {
 
           {/* Form centered in remaining space */}
           <div className="flex-1 flex flex-col justify-center pb-6 overflow-hidden">
+          {!showRegistrationForm ? (
+            <div className="space-y-5">
+              <form onSubmit={handleProceedToForm} className="space-y-6">
+                {/* Mobile Block */}
+                <div className="space-y-4 p-5 rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                      Mobile Number <span className="text-red-500">*</span>
+                      {!isPhoneOtpSent && !isPhoneVerified && phoneValue.phone.length < 10 && phoneValue.countryCode === '91' && (
+                        <span className="text-[10px] font-normal text-gray-400 ml-auto">OTP sends automatically</span>
+                      )}
+                    </Label>
+                    {isPhoneVerified && (
+                      <span className="text-green-600 text-xs font-bold flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+                        <ShieldCheck className="w-4 h-4" /> Verified
+                      </span>
+                    )}
+                  </div>
+
+                  <PhoneInput
+                    value={phoneValue}
+                    disabled={isPhoneVerified || isOtpLoading}
+                    onChange={(val) => {
+                      const changed = val.phone !== phoneValue.phone || val.countryCode !== phoneValue.countryCode;
+                      setPhoneValue(val);
+                      if (changed) {
+                        setIsPhoneVerified(false);
+                        setIsPhoneOtpSent(false);
+                        setPhoneOtpAttemptedNumber('');
+                      }
+                    }}
+                    placeholder={phoneValue.countryCode === '91' ? 'Enter 10-digit mobile number' : 'Enter phone number'}
+                  />
 
             {!showRegistrationForm ? (
               <div className="space-y-4">
@@ -708,6 +769,21 @@ function ClientRegisterForm() {
                         className="w-full h-12 px-4 text-base font-semibold bg-gray-50 border border-gray-200 rounded-lg text-gray-700 cursor-not-allowed"
                       />
                     </div>
+                  )}
+                </div>
+
+                {/* Main Action Button */}
+                <Button
+                  type="submit"
+                  disabled={isOtpLoading || (!isPhoneVerified && phoneValue.phone.length < 10 && phoneValue.countryCode === '91')}
+                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  {isOtpLoading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : isPhoneVerified ? (
+                    "Continue to Registration"
+                  ) : isPhoneOtpSent ? (
+                    "Verify OTP"
                   ) : (
                     /* ── Pre-verification: flat style matching post-verification ── */
                     <div className="space-y-1.5">

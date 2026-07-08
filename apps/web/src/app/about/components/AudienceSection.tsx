@@ -11,15 +11,33 @@ const AudienceSection = () => {
   ];
 
   return (
-    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
-      <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-          Who We Serve
-        </h2>
-        <p className="text-muted-foreground mt-3 text-sm max-w-2xl">
-          GlowVita is designed for anyone who values quality, convenience, and exceptional 
-          beauty experiences, bringing together a diverse community united by self-care.
+      <div className="mb-2 md:mb-4">
+        <div className="inline-block">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-primary whitespace-nowrap pb-2 md:pb-4">
+            Who We Serve
+          </h2>
+          <div
+            className="h-[2px] w-full"
+            style={{
+              background: "linear-gradient(90deg, #000000 0%, #FFFFFF 100%)",
+            }}
+          />
+        </div>
+
+        <p
+          className="text-muted-foreground mt-3"
+          style={{
+            fontFamily: "Poppins",
+            fontWeight: 400,
+            fontStyle: "normal",
+            fontSize: "14px",
+            lineHeight: "160%",
+            letterSpacing: "0%",
+          }}
+        >
+          GlowVita is designed for anyone who values quality, convenience, and exceptional beauty experiences, bringing together a diverse community united by self-care.
         </p>
       </div>
 
@@ -36,7 +54,17 @@ const AudienceSection = () => {
                   {index + 1}
                 </div>
               </div>
-              <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
+              <h3
+                style={{
+                  fontFamily: 'Poppins',
+                  fontWeight: 400,
+                  fontStyle: 'normal',
+                  fontSize: '17px',
+                  lineHeight: '24px',
+                  letterSpacing: '0.1px',
+                }}
+                className="text-card-foreground"
+              >
                 {audience}
               </h3>
             </div>

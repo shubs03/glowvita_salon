@@ -14,6 +14,8 @@ import { Checkbox } from '@repo/ui/checkbox';
 import { Textarea } from '@repo/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
+import { PhoneInput, type PhoneInputValue } from '@repo/ui/phone-input';
+import { validateLocalNumber } from '@repo/lib/utils/phoneUtils';
 
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
@@ -27,6 +29,7 @@ interface FormData {
   businessName: string;
   email: string;
   phone: string;
+  countryCode: string;
   password: string;
   confirmPassword: string;
   category: SalonCategory | '';
@@ -91,6 +94,7 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
     businessName: '',
     email: email || '',
     phone: '',
+    countryCode: '91',
     password: '',
     confirmPassword: '',
     category: '',
@@ -176,15 +180,24 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
   };
 
   const handleSendPhoneOtp = async () => {
-    if (!formData.phone || formData.phone.length < 10) {
+    if (!formData.phone || formData.phone.length < 5) {
       toast.error("Please enter a valid phone number");
       return;
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setIsPhoneOtpSent(true);
-      toast.success("OTP sent securely! (Test mode: use 123456)");
+      const res = await fetch('/api/crm/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formData.phone, countryCode: formData.countryCode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsPhoneOtpSent(true);
+        toast.success(data.message || 'OTP sent to your mobile number');
+      } else {
+        toast.error(data.message || 'Failed to send OTP');
+      }
     } catch (err) {
       toast.error("Failed to send phone OTP");
     } finally {
@@ -199,12 +212,17 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      if (phoneOtp === "123456") {
-        toast.success("Phone verified successfully!");
+      const res = await fetch('/api/crm/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: formData.phone, countryCode: formData.countryCode, otp: phoneOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Phone verified successfully!');
         setIsPhoneVerified(true);
       } else {
-        toast.error("Invalid phone OTP");
+        toast.error(data.message || 'Invalid phone OTP');
         setPhoneOtp('');
       }
     } catch (err) {
@@ -295,12 +313,11 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
     } else if (!isEmailVerified) {
       newErrors.email = 'Please verify your email address';
     }
+    const phoneValidation = validateLocalNumber(formData.phone, formData.countryCode);
     if (!formData.phone) {
       newErrors.phone = 'Phone is required';
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone must be 10 digits';
-    } else if (!/^[0-9]+$/.test(formData.phone)) {
-      newErrors.phone = 'Phone can only contain numbers';
+    } else if (!phoneValidation.valid) {
+      newErrors.phone = phoneValidation.error || 'Phone is invalid';
     } else if (!isPhoneVerified) {
       newErrors.phone = 'Please verify your phone number';
     }
@@ -802,29 +819,20 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                       <Label className="text-sm font-semibold flex items-center gap-1">Phone <span className="text-red-500">*</span></Label>
                       {isPhoneVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
                     </div>
-                    <div className="flex gap-2">
-                      <Input 
-                        name="phone" 
-                        type="tel" 
-                        placeholder="Phone Number" 
-                        onChange={handleChange} 
-                        value={formData.phone} 
-                        required 
-                        maxLength={10} 
-                        disabled={isPhoneVerified || isOtpLoading}
-                        className={cn("h-12 flex-1 sm:h-14 px-4 sm:px-5 text-base sm:text-lg bg-white focus:ring-2 focus:ring-purple-100", isPhoneVerified && "border-green-300 bg-green-50 text-green-800")} 
-                      />
-                      {!isPhoneVerified && (
-                        <Button 
-                          type="button"
-                          onClick={handleSendPhoneOtp}
-                          disabled={isOtpLoading || formData.phone.length < 10}
-                          className="h-12 sm:h-14 px-4 rounded-xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200"
-                        >
-                          {isPhoneOtpSent ? "Resend" : "Send OTP"}
-                        </Button>
-                      )}
-                    </div>
+                    <PhoneInput
+                      value={{ countryCode: formData.countryCode, phone: formData.phone }}
+                      disabled={isPhoneVerified || isOtpLoading}
+                      onChange={(val) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          phone: val.phone,
+                          countryCode: val.countryCode
+                        }));
+                        setIsPhoneVerified(false);
+                        setIsPhoneOtpSent(false);
+                      }}
+                      className="bg-white"
+                    />
                     {renderError('phone')}
 
                     {isPhoneOtpSent && !isPhoneVerified && (
@@ -848,6 +856,19 @@ export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => 
                             {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
                           </Button>
                         </div>
+                      </div>
+                    )}
+                    
+                    {!isPhoneVerified && !isPhoneOtpSent && (
+                      <div className="pt-1">
+                        <Button 
+                          type="button"
+                          onClick={handleSendPhoneOtp}
+                          disabled={isOtpLoading || formData.phone.length < 5}
+                          className="w-full h-11 rounded-xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200"
+                        >
+                          Send Phone Verification OTP
+                        </Button>
                       </div>
                     )}
                   </div>

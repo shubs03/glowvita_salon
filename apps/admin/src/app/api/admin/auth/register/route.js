@@ -49,6 +49,7 @@ export async function POST(req) {
       profileImage: profileImage || "", // optional
       password: hashedPassword,
       roleName: role || "REGIONAL_ADMIN", // default role if not provided
+      isPhoneVerified: true,
     });
 
     await newAdmin.save();
