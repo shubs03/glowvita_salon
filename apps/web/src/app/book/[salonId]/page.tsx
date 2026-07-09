@@ -30,7 +30,12 @@ import {
   Plus,
   Tag,
   Check,
-  Store
+  Store,
+  Mail,
+  ChevronsLeft,
+  ChevronsRight,
+  CircleDot,
+  Dot
 } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
@@ -63,6 +68,7 @@ import { toast } from 'sonner';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "@repo/config/config";
+import { MarketingHeader } from "@/components/MarketingHeader";
 
 // Load Razorpay checkout.js dynamically
 const loadRazorpayScript = (): Promise<boolean> =>
@@ -4459,16 +4465,7 @@ function BookingPageContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
-        <Button variant="ghost" onClick={handlePrevStep} className="flex items-center text-md gap-2">
-          <ChevronLeft className="mr-1 h-6 w-6" />
-          {currentStep === 1 ? 'Back' : 'Back'}
-        </Button>
-
-        <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-          <X className="h-6 w-6" />
-        </Button>
-      </header>
+     <MarketingHeader isHomePage />
       <div className="flex-1 grid lg:grid-cols-12 gap-8 px-8">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
           <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
@@ -4622,427 +4619,364 @@ function BookingPageContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmation Modal */}
-      <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-        <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="text-center pb-3 border-b px-6 pt-4 flex-shrink-0">
-            <DialogTitle className="text-lg text-center font-bold">Confirm Appointment Details</DialogTitle>
-            <DialogDescription className="text-center mt-1 text-sm text-muted-foreground">
-              Please review your service and payment details
-            </DialogDescription>
-          </DialogHeader>
+{/* Confirmation Modal */}
+<Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
+  <DialogContent
+    className="sm:max-w-2xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl
+               [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100 [&>button]:hover:bg-white/10 [&>button]:rounded-full [&>button]:top-5"
+  >
 
-          <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Salon Info */}
-              <Card className="border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Scissors className="h-4 w-4 text-primary" />
-                    Salon Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm">{salonInfo?.name}</div>
-                      {/* Salon address removed as per request */}
+    {/* Header */}
+    <DialogHeader className="bg-[#422a3c] text-white text-center py-5 px-6 flex-shrink-0 rounded-t-xl">
+      <DialogTitle className="text-xl text-center font-bold flex items-center justify-center gap-2">
+        <img src="/uploads/calendar (2) 2.png" alt="calendar" className="h-5 w-5" />
+        Appointment Confirmation
+      </DialogTitle>
+      <DialogDescription className="text-center mt-1 text-sm text-white/80">
+        Please review and confirm your booking
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-5 space-y-4 bg-muted/20">
+
+      {/* Salon Info */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <img src="/uploads/salon 1.png" alt="salon" className="h-4 w-4" />
+            Salon Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1 pl-8 space-y-2">
+          <div className="flex items-center gap-1 font-semibold text-sm">
+            <Dot /> {salonInfo?.name}
+          </div>
+          <div className="flex flex-nowrap items-center gap-x-6 text-sm text-muted-foreground overflow-x-auto no-scrollbar">
+            {salonInfo?.phone && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                <img src="/uploads/telephone (1) 1.png" alt="phone" className="h-3.5 w-3.5" /> {salonInfo.phone}
+              </span>
+            )}
+            {salonInfo?.email && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                <img src="/uploads/email (7) 1.png" alt="mail" className="h-3.5 w-3.5" /> {salonInfo.email}
+              </span>
+            )}
+            {salonInfo?.address && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                <img src="/uploads/pin (3) 2.png" alt="location" className="h-3.5 w-3.5" /> {salonInfo.address}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Selected Services */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <img src="/uploads/customer-review (2) 1.png" alt="services" className="h-4 w-4" />
+            {selectedWeddingPackage ? 'Selected Package' : 'Selected Services'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1 pl-8">
+          <div className="divide-y">
+            {selectedWeddingPackage ? (
+              <>
+                <div className="flex flex-nowrap items-center justify-between py-3 gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm truncate">{selectedWeddingPackage.name}</div>
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {selectedWeddingPackage.duration || 'Variable duration'}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Appointment Details */}
-              <Card className="border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    Appointment Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2 p-2 border-b">
-                      <CalendarDays className="h-4 w-4 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">{format(selectedDate, 'MMM d, yyyy')}</div>
-                        <div className="text-[10px] text-muted-foreground">Date</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-2 border-b">
-                      <Clock className="h-4 w-4 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs">{selectedTime}</div>
-                        <div className="text-[10px] text-muted-foreground">Time</div>
-                      </div>
-                    </div>
-                    {selectedStaff && (
-                      <div className="col-span-2 flex items-center gap-2 p-2 border-b">
-                        <User className="h-4 w-4 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-xs truncate">{selectedStaff.name}</div>
-                          <div className="text-[10px] text-muted-foreground">Professional</div>
-                        </div>
-                      </div>
-                    )}
+                  <div className="font-semibold text-primary whitespace-nowrap shrink-0">
+                    ₹{weddingPackageMode === 'customized'
+                      ? Math.round(totalAmount)
+                      : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)}/-
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Customer Details */}
-              <Card className="border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    Customer Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2 p-2 border-b">
-                      <UserCircle className="h-4 w-4 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">
-                          {user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Guest')}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">Name</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-2 border-b">
-                      <Phone className="h-4 w-4 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">
-                          {user?.mobileNo || user?.phone || customerInfo?.phone || 'N/A'}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">Phone</div>
-                      </div>
-                    </div>
-                    <div className="col-span-2 flex items-start gap-2 p-2 border-b">
-                      <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs line-clamp-2">{serviceLocation?.address ? serviceLocation.address : 'At Salon'}</div>
-                        <div className="text-[10px] text-muted-foreground">{serviceLocation ? 'Home Service Location' : 'Location'}</div>
-                      </div>
-                    </div>
+                </div>
+                {(weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services || []).map((service, idx) => (
+                  <div key={service.id || idx} className="flex flex-nowrap items-center justify-between py-3 pl-2 gap-3">
+                    <span className="text-sm truncate">{service.name || service.serviceName}</span>
+                    {service.price && <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">₹{service.price}/-</span>}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment Summary */}
-              <Card className="border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-primary" />
-                    Payment Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between py-1 text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium">₹{priceBreakdown?.subtotal ? priceBreakdown.subtotal.toFixed(2) : totalAmount.toFixed(2)}</span>
+                ))}
+              </>
+            ) : (
+              selectedServices.map((service) => (
+                <div key={service.id}>
+                  <div className="flex flex-nowrap items-center justify-between py-3 gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate">{service.name}</div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">{service.duration}</div>
                     </div>
-                    {priceBreakdown && priceBreakdown.platformFee > 0 && (
-                      <div className="flex items-center justify-between py-1 text-sm">
-                        <span className="text-muted-foreground">Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}</span>
-                        <span className="font-medium">₹{priceBreakdown.platformFee.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {priceBreakdown && priceBreakdown.serviceTax > 0 && (
-                      <div className="flex items-center justify-between py-1 text-sm">
-                        <span className="text-muted-foreground">GST {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}</span>
-                        <span className="font-medium">₹{priceBreakdown.serviceTax.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {appliedOffer && (
-                      <div className="flex items-center justify-between py-1 text-sm text-green-600">
-                        <span className="flex items-center gap-1">
-                          <Tag className="h-3 w-3" />
-                          Discount ({appliedOffer.code})
+                    <div className="font-semibold text-primary whitespace-nowrap shrink-0">₹{service.discountedPrice || service.price}/-</div>
+                  </div>
+                  {service.selectedAddons && service.selectedAddons.length > 0 && (
+                    service.selectedAddons.map((addon) => (
+                      <div key={addon._id} className="flex flex-nowrap items-center justify-between py-2 pl-4 text-sm text-muted-foreground gap-3">
+                        <span className="flex items-center gap-1.5 truncate">
+                          <img src="/uploads/discount-code 1.png" alt="addon" className="h-3 w-3 shrink-0" /> {addon.name}
                         </span>
-                        <span className="font-semibold">-₹{(priceBreakdown?.discountAmount || (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)).toFixed(2)}</span>
+                        <span className="flex items-center gap-2 whitespace-nowrap shrink-0">
+                          ₹{addon.price}/-
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRemoveAddon(service.id, addon._id)}
+                          >
+                            ×
+                          </Button>
+                        </span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between pt-2 border-t font-semibold">
-                      <span className="text-primary">Total Amount</span>
-                      <span className="text-primary text-lg">₹{priceBreakdown?.finalTotal ? priceBreakdown.finalTotal.toFixed(2) : (totalAmount + (priceBreakdown?.platformFee || 0) + (priceBreakdown?.serviceTax || 0) - (priceBreakdown?.discountAmount || (appliedOffer ? (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value) : 0))).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Service Details - Full Width */}
-              <Card className="border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    {selectedWeddingPackage ? <Store className="h-4 w-4 text-primary" /> : <List className="h-4 w-4 text-primary" />}
-                    {selectedWeddingPackage ? 'Selected Package' : 'Selected Services'}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      ({selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices.length : (selectedWeddingPackage.services?.length || 0)) : selectedServices.length})
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="space-y-2">
-                    {selectedWeddingPackage ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between p-2 border-b">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm flex items-center gap-2">
-                              <Store className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                              <span className="truncate">{selectedWeddingPackage.name}</span>
-                              {weddingPackageMode === 'customized' && (
-                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1">Customized</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                              <Clock className="h-3 w-3 flex-shrink-0" />
-                              <span>{selectedWeddingPackage.duration || 'Variable duration'}</span>
-                            </div>
-                          </div>
-                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">
-                            ₹{weddingPackageMode === 'customized'
-                              ? Math.round(totalAmount)
-                              : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)}
-                          </div>
-                        </div>
-
-                        {/* Display services inside the package */}
-                        {weddingPackageMode === 'customized' ? (
-                          <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
-                            {customizedPackageServices.map((service: any) => (
-                              <div key={service.id} className="flex items-center justify-between p-2 border-b">
-                                <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
-                                  <Check className="h-3 w-3 text-primary flex-shrink-0" />
-                                  <span className="truncate">{service.name}</span>
-                                  {service.quantity && service.quantity > 1 && (
-                                    <span className="text-[10px] bg-gray-100 px-1 py-0.5 rounded">x{service.quantity}</span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                                  <div className="text-xs text-muted-foreground">
-                                    ₹{service.price}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          selectedWeddingPackage.services && selectedWeddingPackage.services.length > 0 && (
-                            <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
-                              {selectedWeddingPackage.services.map((ps: any, idx: number) => {
-                                const matchedService = services?.find((s: any) => s.id === ps.serviceId || s._id === ps.serviceId);
-                                return (
-                                  <div key={ps.service?._id || ps.serviceId || idx} className="flex items-center justify-between p-2 border-b">
-                                    <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
-                                      <Check className="h-3 w-3 text-primary flex-shrink-0" />
-                                      <span className="truncate">{matchedService?.name || ps.serviceName || ps.name || ps.service?.name || 'Service'}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      selectedServices.map((service) => (
-                        <div key={service.id} className="space-y-2">
-                          <div className="flex items-center justify-between p-2 border-b">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm flex items-center gap-2">
-                                <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                                <span className="truncate">{service.name}</span>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                <Clock className="h-3 w-3 flex-shrink-0" />
-                                <span>{service.duration}</span>
-                              </div>
-                            </div>
-                            <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.discountedPrice || service.price}</div>
-                          </div>
-
-                          {/* Display Add-ons */}
-                          {service.selectedAddons && service.selectedAddons.length > 0 && (
-                            <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
-                              {service.selectedAddons.map((addon) => (
-                                <div key={addon._id} className="flex items-center justify-between p-2 border-b">
-                                  <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
-                                    <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="truncate">{addon.name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                                    <div className="text-xs text-muted-foreground">₹{addon.price}</div>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                      onClick={() => handleRemoveAddon(service.id, addon._id)}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Offer Code Section - Full Width */}
-              <Card className="border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Star className="h-4 w-4 text-primary" />
-                    Discount Code
-                    {appliedOffer && <span className="text-xs font-normal text-primary">(Applied)</span>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-3 space-y-3">
-                  {/* Offer Code Input */}
-                  <div className="flex gap-2 relative">
-                    <div className="flex-1">
-                      <input
-                        id="offer-input"
-                        type="text"
-                        placeholder="Enter code or select from offers"
-                        value={offerCode}
-                        onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
-                        onFocus={() => filteredOffers && filteredOffers.length > 0 && setShowOfferDropdown(true)}
-                        className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-
-                      {/* Offer Dropdown */}
-                      {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
-                        <div id="offer-dropdown" className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
-                          {isOffersLoading ? (
-                            <div className="p-4 text-center text-xs text-muted-foreground">
-                              <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                              Loading offers...
-                            </div>
-                          ) : filteredOffers.length > 0 ? (
-                            <div className="py-1">
-                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => {
-                                const isApplicable = isOfferApplicable(offer, selectedServices);
-                                return (
-                                  <div
-                                    key={offer._id}
-                                    className={`px-3 py-2 border-b last:border-b-0 flex justify-between items-center transition-colors ${isApplicable
-                                      ? "hover:bg-primary/5 cursor-pointer bg-white"
-                                      : "opacity-60 bg-gray-50/50 cursor-not-allowed"
-                                      }`}
-                                    onClick={() => {
-                                      if (isApplicable) {
-                                        handleSelectOffer(offer);
-                                        setShowOfferDropdown(false);
-                                      }
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <div className={`p-1 rounded ${isApplicable ? "bg-primary/5 text-primary" : "bg-gray-200 text-gray-400"}`}>
-                                        <Tag className="h-3 w-3" />
-                                      </div>
-                                      <div className="flex-1">
-                                        <div className={`font-semibold text-xs ${isApplicable ? "text-primary" : "text-gray-500"}`}>{offer.code}</div>
-                                        <div className="text-[10px] text-muted-foreground">
-                                          {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
-                                          {offer.businessType === 'admin' && (
-                                            <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                                              {offer.isAdminGlobal ? 'Global' : 'Region'}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className={`text-[10px] font-medium ${isApplicable ? "text-primary" : "text-gray-400"}`}>
-                                      {isApplicable ? 'Select' : 'Disabled'}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      onClick={handleApplyOffer}
-                      disabled={!offerCode.trim()}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 px-3"
-                    >
-                      {isOffersLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Apply'}
-                    </Button>
-                  </div>
-
-                  {/* Applied Offer Display */}
-                  {appliedOffer && (
-                    <div className="bg-primary/10 border border-primary p-3 rounded-md text-sm flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-primary/10 p-1.5 rounded-md">
-                          <Star className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-primary text-xs">{appliedOffer.code}</div>
-                          <div className="text-primary text-[10px]">
-                            {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
-                            {appliedOffer.businessType === 'admin' && (
-                              <span className={`ml-1 px-1 rounded ${appliedOffer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'} text-[8px]`}>
-                                {appliedOffer.isAdminGlobal ? 'Global' : 'Region'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearOffer}
-                        className="h-6 w-6 p-0 text-primary hover:bg-primary/20"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    ))
                   )}
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-                  {/* No Offers Available */}
-                  {!appliedOffer && (!vendorOffers || vendorOffers.length === 0) && (
-                    <div className="text-center py-4 text-xs text-muted-foreground">
-                      No discount codes available
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+      {/* Appointment Details */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <img src="/uploads/calendar (8) 1.png" alt="calendar" className="h-4 w-4" />
+            Appointment Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1 pl-8">
+          <div className="flex flex-nowrap items-start justify-between gap-6">
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/calendar (2) 2.png" alt="calendar" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm whitespace-nowrap">{format(selectedDate, 'd MMMM yyyy')}</div>
+                <div className="text-xs text-muted-foreground">Date</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/day-and-night 1.png" alt="day" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm whitespace-nowrap">{format(selectedDate, 'EEEE')}</div>
+                <div className="text-xs text-muted-foreground">Day</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/clock (6) 1.png" alt="clock" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm whitespace-nowrap">{selectedTime}</div>
+                <div className="text-xs text-muted-foreground">Time</div>
+              </div>
             </div>
           </div>
+          {selectedStaff && (
+            <div className="flex flex-nowrap items-center gap-2 mt-4 pt-3 border-t justify-start text-sm whitespace-nowrap">
+              <User className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-medium">{selectedStaff.name}</span>
+              <span className="text-muted-foreground">— Professional</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-          <DialogFooter className="flex-shrink-0 sm:justify-end gap-3 pt-4 border-t px-6 pb-6">
-            <Button
-              variant="outline"
-              onClick={() => setIsConfirmationModalOpen(false)}
-              className="px-6"
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Edit
+      {/* Customer Info */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <img src="/uploads/manager 1.png" alt="user" className="h-4 w-4" />
+            Customer Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1 pl-8">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/user 1.png" alt="user" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate whitespace-nowrap">
+                  {user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Guest')}
+                </div>
+                <div className="text-xs text-muted-foreground">Name</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/email (7) 1.png" alt="mail" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate whitespace-nowrap">{user?.email || customerInfo?.email || 'N/A'}</div>
+                <div className="text-xs text-muted-foreground">Mail</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/telephone (1) 1.png" alt="phone" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate whitespace-nowrap">{user?.mobileNo || user?.phone || customerInfo?.phone || 'N/A'}</div>
+                <div className="text-xs text-muted-foreground">Contact</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 min-w-0">
+              <img src="/uploads/pin (3) 2.png" alt="pin" className="h-4 w-4 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate whitespace-nowrap">{serviceLocation?.address ? serviceLocation.address : 'At Salon'}</div>
+                <div className="text-xs text-muted-foreground">{serviceLocation ? 'Home Service Location' : 'Address'}</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Summary */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <img src="/uploads/secure-payment 1.png" alt="payment" className="h-4 w-4" />
+            Payment Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1 pl-8 space-y-2">
+          <div className="flex flex-nowrap items-center justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="whitespace-nowrap"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown?.subtotal ? priceBreakdown.subtotal.toFixed(2) : totalAmount.toFixed(2)}/-</span>
+          </div>
+          {priceBreakdown && priceBreakdown.platformFee > 0 && (
+            <div className="flex flex-nowrap items-center justify-between text-sm gap-3">
+              <span className="text-muted-foreground truncate">
+                Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}
+              </span>
+              <span className="whitespace-nowrap shrink-0"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown.platformFee.toFixed(2)}/-</span>
+            </div>
+          )}
+          {priceBreakdown && priceBreakdown.serviceTax > 0 && (
+            <div className="flex flex-nowrap items-center justify-between text-sm gap-3">
+              <span className="text-muted-foreground truncate">
+                GST & Other Taxes {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}
+              </span>
+              <span className="whitespace-nowrap shrink-0"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown.serviceTax.toFixed(2)}/-</span>
+            </div>
+          )}
+          {appliedOffer && (
+            <div className="flex flex-nowrap items-center justify-between text-sm text-green-600 gap-3">
+              <span className="flex items-center gap-1 truncate">
+                <img src="/uploads/discount-code 1.png" alt="discount" className="h-3 w-3 shrink-0" /> Discount ({appliedOffer.code})
+              </span>
+              <span className="whitespace-nowrap shrink-0">-₹{(priceBreakdown?.discountAmount || (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)).toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex flex-nowrap items-center justify-between pt-3 border-t">
+            <span className="font-semibold text-green-600">Total Amount</span>
+            <span className="font-bold text-lg text-green-600 whitespace-nowrap">
+              <img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-5 w-5 mr-1 align-text-bottom" />{priceBreakdown?.finalTotal
+                ? priceBreakdown.finalTotal.toFixed(2)
+                : (totalAmount + (priceBreakdown?.platformFee || 0) + (priceBreakdown?.serviceTax || 0) - (priceBreakdown?.discountAmount || (appliedOffer ? (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value) : 0))).toFixed(2)}/-
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Discount Code */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <img src="/uploads/discount-code 1.png" alt="star" className="h-4 w-4" />
+            Apply Discount Code
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-1 pl-8 space-y-3">
+          <div className="flex flex-nowrap gap-2 relative">
+            <div className="flex-1 min-w-0">
+              <input
+                id="offer-input"
+                type="text"
+                placeholder="Enter discount code"
+                value={offerCode}
+                onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
+                onFocus={() => filteredOffers && filteredOffers.length > 0 && setShowOfferDropdown(true)}
+                className="w-full px-4 py-2.5 border rounded-md text-sm bg-muted/30 focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+              {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
+                <div id="offer-dropdown" className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
+                  {filteredOffers.map((offer) => {
+                    const isApplicable = isOfferApplicable(offer, selectedServices);
+                    return (
+                      <div
+                        key={offer._id}
+                        className={`px-4 py-2.5 border-b last:border-b-0 flex flex-nowrap justify-between items-center gap-3 ${
+                          isApplicable ? "hover:bg-primary/5 cursor-pointer" : "opacity-60 bg-gray-50/50 cursor-not-allowed"
+                        }`}
+                        onClick={() => { if (isApplicable) { handleSelectOffer(offer); setShowOfferDropdown(false); } }}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{offer.code}</div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">
+                            {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium text-primary whitespace-nowrap shrink-0">
+                          {isApplicable ? 'Click to apply' : 'Disabled'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <Button onClick={handleApplyOffer} disabled={!offerCode.trim()} className="bg-primary hover:bg-primary/90 px-6 shrink-0">
+              {isOffersLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
             </Button>
-            <Button
-              onClick={() => {
-                setIsConfirmationModalOpen(false);
-                setIsPaymentModalOpen(true);
-              }}
-              className="bg-primary hover:bg-primary/90 px-6"
-            >
-              Continue to Payment
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+
+          {appliedOffer && (
+            <div className="bg-primary/10 border border-primary p-3 rounded-md text-sm flex flex-nowrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-semibold text-primary text-sm truncate">{appliedOffer.code}</div>
+                <div className="text-primary text-xs whitespace-nowrap">
+                  {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleClearOffer} className="h-6 w-6 p-0 text-primary hover:bg-primary/20 shrink-0">
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
+          {!appliedOffer && vendorOffers && vendorOffers.length > 0 && (
+            vendorOffers.slice(0, 1).map((offer) => (
+              <div
+                key={offer._id}
+                className="flex flex-nowrap items-center justify-between px-4 py-2.5 border rounded-md cursor-pointer hover:bg-primary/5 gap-3"
+                onClick={() => handleSelectOffer(offer)}
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">{offer.code}</div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                  </div>
+                </div>
+                <span className="text-xs font-medium text-primary whitespace-nowrap shrink-0">Click to apply</span>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
+
+    {/* Footer */}
+    <DialogFooter className="flex-shrink-0 sm:justify-end gap-3 py-4 border-t px-6 bg-white">
+      <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)} className="px-6">
+        <ChevronsLeft className="h-4 w-4 mr-2" />
+        Edit Details
+      </Button>
+      <Button
+        onClick={() => { setIsConfirmationModalOpen(false); setIsPaymentModalOpen(true); }}
+        className="bg-primary hover:bg-primary/90 px-6"
+      >
+        Confirm & Proceed
+        <ChevronsRight className="h-4 w-4 ml-2" />
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       {/* Service Schedule Dialog */}
       <Dialog open={isServiceScheduleOpen} onOpenChange={setIsServiceScheduleOpen}>
