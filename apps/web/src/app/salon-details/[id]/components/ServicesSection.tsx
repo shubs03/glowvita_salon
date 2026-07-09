@@ -2,15 +2,16 @@
 
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
 } from "@repo/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { useGetPublicVendorServicesQuery, useGetPublicVendorWeddingPackagesQuery } from "@repo/store/services/api";
-import { Loader2, AlertCircle, Home, Heart, Plus, Users, Gift, Clock, CheckCircle } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle, Plus, Users, Gift, Heart, Home } from "lucide-react";
 
 interface ServicesSectionProps {
   vendorId: string;
@@ -19,7 +20,10 @@ interface ServicesSectionProps {
 }
 
 const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, isSubscriptionExpired = false }) => {
-  const [activeServiceTab, setActiveServiceTab] = useState("All");
+  const router = useRouter();
+  const [serviceType, setServiceType] = useState<"Individual Services" | "Wedding Packages">("Individual Services");
+  const [locationType, setLocationType] = useState<"Visit Salon" | "Home Service">("Visit Salon");
+  const [activeCategory, setActiveCategory] = useState("All");
 
   // Fetch services dynamically from API
   const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useGetPublicVendorServicesQuery(vendorId);
@@ -29,7 +33,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
   // Process services data
   const services = useMemo(() => {
     let allItems: any[] = [];
-    
+
     // Add regular services
     if (servicesData?.services && servicesData.services.length > 0) {
       const regularServices = servicesData.services.map((service: any) => ({
@@ -73,7 +77,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
             duration: pkg.duration || 0,
             category: "Wedding Packages",
             description: pkg.description || "",
-            image: pkg.image || "https://placehold.co/200x200/png?text=" + encodeURIComponent(pkg.name || "Package"),
+            image: pkg.image || "/images/wedding package placeholder.png",
             servicesList: pkg.services || [],
             staffCount: pkg.staffCount || 1,
             assignedStaff: Array.isArray(pkg.assignedStaff) ? pkg.assignedStaff.map((s: any) => typeof s === 'string' ? s : (s.name || s.firstName || 'Staff')) : [],
@@ -90,52 +94,64 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
     return allItems;
   }, [servicesData, weddingPackagesData]);
 
-  // Generate dynamic service categories based on actual services
+  const filteredServicesByType = useMemo(() => {
+    let filtered = services;
+    if (serviceType === "Wedding Packages") {
+      filtered = filtered.filter((s: any) => s.isWeddingPackage);
+    } else {
+      filtered = filtered.filter((s: any) => !s.isWeddingPackage);
+    }
+
+    if (locationType === "Home Service") {
+      filtered = filtered.filter((s: any) => s.homeService?.available);
+    }
+
+    return filtered;
+  }, [services, serviceType, locationType]);
+
   const serviceCategories = useMemo(() => {
     const categories = ["All"];
-    if (services.length > 0) {
-      const uniqueCategories = Array.from(new Set(services.map((service: any) => service.category))) as string[];
-      // Keep "Wedding Packages" at the end if it exists
+    if (filteredServicesByType.length > 0) {
+      const uniqueCategories = Array.from(new Set(filteredServicesByType.map((service: any) => service.category))) as string[];
       const sortedCats = uniqueCategories.filter(c => c !== "Wedding Packages" && c !== "Other").sort();
       if (uniqueCategories.includes("Other")) {
         sortedCats.push("Other");
       }
-      if (uniqueCategories.includes("Wedding Packages")) {
-        sortedCats.push("Wedding Packages");
-      }
       categories.push(...sortedCats);
     }
     return categories;
-  }, [services]);
+  }, [filteredServicesByType]);
 
-  // Filter services by category
   const filteredServices = useMemo(() => {
-    return activeServiceTab === "All"
-      ? services
-      : services.filter((service: any) => service.category === activeServiceTab);
-  }, [services, activeServiceTab]);
+    return activeCategory === "All"
+      ? filteredServicesByType
+      : filteredServicesByType.filter((service: any) => service.category === activeCategory);
+  }, [filteredServicesByType, activeCategory]);
 
   const isLoadingData = servicesLoading || weddingPackagesLoading;
 
-  // Loading skeleton component
-  const LoadingSkeleton = () => (
-    <div className="space-y-4">
-      {[...Array(3)].map((_, index) => (
-        <div key={index} className="flex justify-between items-center p-4 border rounded-md animate-pulse">
-          <div className="space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-32"></div>
-            <div className="h-3 bg-gray-200 rounded w-16"></div>
-          </div>
-          <div className="text-right space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-16"></div>
-            <div className="h-8 bg-gray-200 rounded w-16"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  const handleBook = (e: React.MouseEvent, service: any) => {
+    e.stopPropagation();
+    if (service.isWeddingPackage) {
+      const packageData = { ...service, isWeddingPackage: true };
+      sessionStorage.setItem("selectedWeddingPackage", JSON.stringify(packageData));
+    } else {
+      const serviceData = {
+        id: service.id,
+        name: service.name,
+        price: service.price,
+        discountedPrice: service.discountedPrice,
+        duration: service.duration,
+        category: service.category,
+        description: service.description,
+        image: service.image,
+        locationType
+      };
+      sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+    }
+    onBookNow(service);
+  };
 
-  // Error state component
   const ErrorState = () => (
     <div className="text-center py-8">
       <p className="text-muted-foreground">Unable to load services. Please try again later.</p>
@@ -150,213 +166,170 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
   );
 
   return (
-    <section id="services">
-      <h2 className="text-4xl font-bold mb-2">Services Offered</h2>
-      <p className="text-muted-foreground mb-6">
-        Explore our wide range of professional services.
-      </p>
-      <Card>
-        <CardHeader>
-          <Tabs
-            value={activeServiceTab}
-            onValueChange={setActiveServiceTab}
-            className="w-full"
+    <section id="services" className="space-y-6">
+      <div>
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+          style={{ color: "#252B42" }}
+        >
+          Services Offered
+          <span
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
+          />
+        </h2>
+        <p className="text-sm md:text-base text-black mb-6">
+          Choose from a variety of expert treatments to enhance your natural beauty.
+        </p>
+      </div>
+
+      {/* Service Type Buttons */}
+      <div className="flex gap-4">
+        <button
+          onClick={() => { setServiceType("Individual Services"); setActiveCategory("All"); }}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${serviceType === "Individual Services" ? "bg-[#422A3C] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
+        >
+          <Image src="/images/customer (2) 1.png" alt="Individual" width={16} height={16} className={serviceType === "Individual Services" ? "brightness-0 invert" : ""} />
+          Individual Services
+        </button>
+        <button
+          onClick={() => { router.push(`/book/${vendorId}?tab=packages`); }}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-gray-700 hover:bg-gray-50`}
+          style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
+        >
+          <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} />
+          Wedding Packages
+        </button>
+      </div>
+
+      {/* Location Selection */}
+      <div className="bg-[#f2f6fc] p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Image src="/images/calendar (6) 1.png" alt="Calendar" width={24} height={24} />
+          <div>
+            <h3 className="font-semibold text-gray-900 text-sm">How would you like to book?</h3>
+            <p className="text-xs text-gray-600">Select your preferred services location type</p>
+          </div>
+        </div>
+        <div className="flex bg-white rounded-md p-1 shadow-sm border border-gray-100">
+          <button
+            onClick={() => setLocationType("Visit Salon")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Visit Salon" ? "bg-[#452c42] text-white" : "bg-transparent text-gray-700 hover:bg-gray-50"
+              }`}
           >
-            <div className="relative">
-              <TabsList className="relative flex w-full overflow-x-auto overflow-y-hidden no-scrollbar rounded-lg p-1">
-                {serviceCategories.map((cat) => (
-                  <TabsTrigger
-                    key={cat}
-                    value={cat}
-                    className="flex-shrink-0 text-xs sm:text-sm"
-                  >
-                    {cat}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-          </Tabs>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-0">
-          {/* Subscription Expired Warning */}
-          {isSubscriptionExpired && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-red-900 mb-1">Salon Currently Unavailable</h4>
-                <p className="text-sm text-red-700">
-                  This salon is not accepting bookings at the moment. Please check back later or contact them directly.
-                </p>
+            <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={locationType === "Visit Salon" ? "brightness-0 invert" : ""} />
+            Visit Salon
+          </button>
+          <button
+            onClick={() => setLocationType("Home Service")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Home Service" ? "bg-[#452c42] text-white" : "bg-transparent text-gray-700 hover:bg-gray-50"
+              }`}
+          >
+            <Image src="/images/home (2) 1.png" alt="Home" width={16} height={16} className={locationType === "Home Service" ? "brightness-0 invert" : ""} />
+            Home Service
+          </button>
+        </div>
+      </div>
+
+      {/* Category Dropdown */}
+      {serviceCategories.length > 0 && (
+        <div className="w-full sm:w-[500px] md:w-[600px] lg:w-[800px]">
+          <Select value={activeCategory} onValueChange={setActiveCategory}>
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue placeholder="Select Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {serviceCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Subscription Expired Warning */}
+      {isSubscriptionExpired && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-semibold text-red-900 mb-1">Salon Currently Unavailable</h4>
+            <p className="text-sm text-red-700">
+              This salon is not accepting bookings at the moment. Please check back later or contact them directly.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Services Grid */}
+      {isLoadingData ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span className="text-muted-foreground">Loading services...</span>
+        </div>
+      ) : servicesError ? (
+        <ErrorState />
+      ) : filteredServices.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredServices.map((service: any) => (
+            <div key={service.id} className="flex p-3 rounded-xl hover:shadow-sm transition-shadow relative" style={{ border: '1px solid #00000080', background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' }}>
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 mr-4">
+                <Image src={service.image} alt={service.name} fill className="object-cover" />
               </div>
-            </div>
-          )}
-          {isLoadingData ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-muted-foreground">Loading services...</span>
-            </div>
-          ) : servicesError ? (
-            <ErrorState />
-          ) : filteredServices.length > 0 ? (
-            filteredServices.map((service: any, index: number) => (
-              <div key={service.id || index} className="flex flex-col sm:flex-row items-start gap-4 p-4 border rounded-md hover:bg-secondary/50 transition-all duration-300 group cursor-pointer relative overflow-hidden">
-                {/* Service Image */}
-                <div className="relative w-full sm:w-32 h-40 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 bg-secondary/30">
-                  <Image
-                    src={service.image || `https://placehold.co/400x400/png?text=${encodeURIComponent(service.name)}`}
-                    alt={service.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  {service.isWeddingPackage && (
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500 text-white shadow-sm flex items-center gap-1">
-                      <Heart className="w-3 h-3" />
-                      Wedding Package
-                    </div>
+
+              <div className="flex flex-col flex-1 py-1">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-medium text-gray-900 text-sm sm:text-base pr-2">{service.name}</h4>
+                  {service.discountedPrice && service.discountedPrice < service.price && (
+                    <span className="bg-black text-white text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                      Save {Math.round(((service.price - service.discountedPrice) / service.price) * 100)}%
+                    </span>
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0 w-full mt-2 sm:mt-0">
-                  <h3 className="font-semibold group-hover:text-primary transition-colors text-lg truncate pr-14 sm:pr-0">{service.name}</h3>
-                  <div className="text-sm text-muted-foreground space-y-1 mt-1">
-                    <div className="flex flex-wrap items-center gap-3 text-xs">
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {service.duration} min</span>
-                      {service.isWeddingPackage && service.staffCount && (
-                         <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {service.staffCount} Staff</span>
-                      )}
-                      {service.isWeddingPackage && service.servicesList && (
-                         <span className="flex items-center gap-1"><Gift className="w-3 h-3"/> {service.servicesList.length} Services</span>
-                      )}
-                    </div>
-                    {service.description && (
-                      <p className="line-clamp-2 mt-2 text-sm text-muted-foreground/80">{service.description}</p>
-                    )}
-                    
-                    {/* Included Services for Wedding Packages */}
-                    {service.isWeddingPackage && (
-                      <div className="mt-3 bg-rose-50/50 border border-rose-100/50 rounded-xl p-3">
-                         <p className="text-[11px] font-bold text-rose-600 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                           <CheckCircle className="w-3.5 h-3.5"/> What's Included:
-                         </p>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                           {service.servicesList && service.servicesList.length > 0 && service.servicesList.map((incService: any, idx: number) => (
-                             <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground/90 bg-white/60 px-2 py-1.5 rounded-lg border border-rose-100/30">
-                               <Plus className="w-3 h-3 text-rose-400" />
-                               <span>{incService.serviceName || "Service"} {incService.quantity > 1 ? `(x${incService.quantity})` : ""}</span>
-                             </div>
-                           ))}
-                           {/* Expert Staff badge as requested */}
-                           <div className="flex items-center gap-2 text-xs text-muted-foreground/90 bg-white/60 px-2 py-1.5 rounded-lg border border-rose-100/30">
-                              <Users className="w-3 h-3 text-rose-400" />
-                              <span>Expert Staff</span>
-                           </div>
-                         </div>
-                         
-                         {service.assignedStaff && service.assignedStaff.length > 0 && (
-                           <div className="mt-3 pt-3 border-t border-rose-100/50">
-                             <p className="text-[10px] font-semibold text-rose-500 mb-1">Assigned Experts:</p>
-                             <div className="flex flex-wrap gap-2">
-                               {service.assignedStaff.map((staffName: string, idx: number) => (
-                                 <span key={idx} className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-                                   <div className="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
-                                   {staffName}
-                                 </span>
-                               ))}
-                             </div>
-                           </div>
-                         )}
-                      </div>
-                    )}
-
-                    {/* Subscription Expired Status */}
-                    {isSubscriptionExpired && (
-                      <p className="text-[10px] text-red-600 font-medium mt-1">
-                        This {service.isWeddingPackage ? "package" : "service"} is temporarily closed
-                      </p>
-                    )}
-
-                    {/* Service Badges */}
-                    {!service.isWeddingPackage && (
-                      <div className="flex gap-2 mt-2">
-                        {service.homeService?.available && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary text-secondary">
-                            <Home className="h-3 w-3 mr-1" />
-                            Home Service
-                          </span>
-                        )}
-                        {service.weddingService?.available && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">
-                            <Heart className="h-3 w-3 mr-1" />
-                            Wedding Service
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Image src="/images/clock (2) 4.png" alt="Time" width={14} height={14} />
+                  <span className="text-xs sm:text-sm text-gray-500">{service.duration} mins</span>
                 </div>
-                <div className="text-right sm:ml-4 self-end sm:self-auto w-full sm:w-auto flex sm:flex-col items-center sm:items-end justify-between sm:justify-start pt-3 sm:pt-0 border-t sm:border-t-0 border-border/50 mt-3 sm:mt-0">
-                  <div className="mb-2 text-left sm:text-right">
-                    {service.isWeddingPackage && <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5 font-semibold">Package Price</p>}
-                    {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice !== service.price ? (
-                      <div>
-                        <div className="flex items-center justify-start sm:justify-end gap-2">
-                          <span className="text-muted-foreground line-through text-xs italic">
-                            ₹{service.price}
-                          </span>
-                          <span className="font-bold text-lg text-primary">
-                            ₹{service.discountedPrice}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-green-600 font-bold uppercase tracking-wider">
-                          {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="font-bold text-lg text-primary">
-                        ₹{service.price}
-                      </p>
-                    )}
+
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Image src="/images/rupee (2) 1.png" alt="Price" width={14} height={14} />
+                    <span className="text-xs sm:text-sm text-gray-900 font-medium">
+                      {service.discountedPrice && service.discountedPrice < service.price ? (
+                        <>
+                          <span className="line-through text-gray-400 mr-1">{service.price}/-</span>
+                          {service.discountedPrice}/-
+                        </>
+                      ) : (
+                        `${service.price}/-`
+                      )}
+                    </span>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className={`h-9 px-6 rounded-full font-bold text-xs uppercase tracking-widest w-full sm:w-auto ${isSubscriptionExpired ? 'opacity-50' : 'hover:bg-primary hover:text-white transition-all shadow-sm'}`}
+
+                  <button
+                    onClick={(e) => handleBook(e, service)}
                     disabled={isSubscriptionExpired}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Redirect to book page with vendorId - since this is global components 
-                      // Wait, if it is in salon-details, onBookNow is passed from page
-                      if (service.isWeddingPackage) {
-                        const packageData = { ...service, isWeddingPackage: true };
-                        sessionStorage.setItem("selectedWeddingPackage", JSON.stringify(packageData));
-                      } else {
-                        const serviceData = {
-                          id: service.id,
-                          name: service.name,
-                          price: service.price,
-                          discountedPrice: service.discountedPrice,
-                          duration: service.duration,
-                          category: service.category,
-                          description: service.description,
-                          image: service.image
-                        };
-                        sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
-                      }
-                      onBookNow(service);
-                    }}
+                    className={`border border-gray-300 h-9 px-4 text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl ${isSubscriptionExpired ? "opacity-50 cursor-not-allowed bg-gray-100" : "text-gray-700 hover:bg-gray-50"
+                      }`}
                   >
-                    {isSubscriptionExpired ? 'Unavailable' : 'Book'}
-                  </Button>
+                    <Plus className="w-4 h-4" /> Add
+                  </button>
                 </div>
+
               </div>
-            ))
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No services available in this category.</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No services available in this category.</p>
+        </div>
+      )}
     </section>
   );
 };

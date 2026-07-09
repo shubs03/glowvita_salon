@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
@@ -16,6 +16,7 @@ import {
 } from "@repo/ui/card";
 import {
   Star,
+  StarHalf,
   MapPin,
   Clock,
   Phone,
@@ -126,9 +127,11 @@ const StaffDisplay = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="flex overflow-x-auto gap-6 pb-4">
         {Array.from({ length: 6 }).map((_, index) => (
-          <StaffSkeleton key={index} />
+          <div key={index} className="flex-shrink-0 min-w-[140px]">
+            <StaffSkeleton />
+          </div>
         ))}
       </div>
     );
@@ -151,10 +154,10 @@ const StaffDisplay = ({
   }
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div className="flex overflow-x-auto gap-6 pb-6 pt-2 snap-x">
       {staffData.map((member: any, index: number) => (
-        <div key={member.id || index} className="text-center group">
-          <div className="relative w-28 h-28 mx-auto rounded-full overflow-hidden shadow-lg mb-4 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
+        <div key={member.id || index} className="text-center group flex-shrink-0 min-w-[140px] snap-center">
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto rounded-full overflow-hidden shadow-md mb-3 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20 border-2 border-gray-100">
             <Image
               src={
                 member.image ||
@@ -166,10 +169,10 @@ const StaffDisplay = ({
               data-ai-hint={`${member.name || "staff member"} portrait`}
             />
           </div>
-          <h4 className="font-bold text-md mb-1">
+          <h4 className="font-bold text-sm sm:text-md mb-0.5 text-gray-900">
             {member.name || "Staff Member"}
           </h4>
-          <p className="text-sm text-primary font-medium">
+          <p className="text-xs sm:text-sm text-gray-600 font-medium capitalize">
             {member.role || "Team Member"}
           </p>
         </div>
@@ -213,16 +216,16 @@ const OfferSkeleton = () => (
 // Star Rating Component
 const StarRating = ({ rating }: { rating: number }) => {
   return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-4 w-4 ${star <= rating
-            ? "text-yellow-400 fill-yellow-400"
-            : "text-muted-foreground"
-            }`}
-        />
-      ))}
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => {
+        if (rating >= star) {
+          return <Star key={star} className="h-3 w-3 text-yellow-400 fill-yellow-400" />;
+        } else if (rating >= star - 0.5) {
+          return <StarHalf key={star} className="h-3 w-3 text-yellow-400 fill-yellow-400" />;
+        } else {
+          return <Star key={star} className="h-3 w-3 text-gray-300 fill-gray-300" />;
+        }
+      })}
     </div>
   );
 };
@@ -400,7 +403,48 @@ export default function SalonDetailsPage() {
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [mainImage, setMainImage] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [isWorkingHoursExpanded, setIsWorkingHoursExpanded] = useState(false);
 
+  const teamSectionRef = useRef<HTMLElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [sidebarOffset, setSidebarOffset] = useState(0);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    const handleScroll = () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+      animationFrameId = requestAnimationFrame(() => {
+        if (!teamSectionRef.current || !sidebarRef.current) return;
+
+        if (window.innerWidth < 1024) {
+          setSidebarOffset(0);
+          return;
+        }
+
+        const teamRect = teamSectionRef.current.getBoundingClientRect();
+        const sidebarRect = sidebarRef.current.getBoundingClientRect();
+
+        const overlap = sidebarRect.bottom - (teamRect.top - 24);
+
+        if (overlap > 0) {
+          setSidebarOffset(overlap);
+        } else {
+          setSidebarOffset(0);
+        }
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -1049,6 +1093,27 @@ export default function SalonDetailsPage() {
         toggleMobileMenu={toggleMobileMenu}
         isHomePage={false}
       />
+
+      {/* Breadcrumbs Banner (Sticky Full Width) */}
+      <div className="w-full sticky top-16 sm:top-20 z-30 shadow-md" style={{ backgroundColor: "#422A3C" }}>
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center gap-3">
+          <div className="flex items-center text-white min-w-0 flex-1">
+            <span className="font-normal text-base sm:text-lg truncate" title={salon.name}>
+              {salon.name}
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-1.5 bg-transparent text-white border-white hover:bg-white hover:text-black transition-colors rounded-lg flex-shrink-0 text-xs h-7 px-2"
+            onClick={toggleFavorite}
+          >
+            <Heart className={cn("h-3 w-3", isFavorited && "fill-red-500 text-red-500")} />
+            {isFavorited ? "Wishlisted" : "Wishlist"}
+          </Button>
+        </div>
+      </div>
+
       <PageContainer padding="none">
         <div className="container mx-auto px-4">
           {/* Subscription Expired Banner */}
@@ -1068,51 +1133,15 @@ export default function SalonDetailsPage() {
             </div>
           )}
 
-          {/* Salon Name and Basic Info */}
-          <section className="py-8 border-b">
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1">
-                <h1 className="text-5xl font-bold font-headline mb-4">
-                  {salon.name}
-                </h1>
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      {salon.reviewCount > 0 && (
-                        <>
-                          <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                          <span className="font-semibold">{salon.rating}</span>
-                        </>
-                      )}
-                      <span>({salon.reviewCount} reviews)</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    <span>{salon.address}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={toggleFavorite}
-                >
-                  <Heart className={cn("h-4 w-4", isFavorited && "fill-red-500 text-red-500")} />
-                  {isFavorited ? "Wishlisted" : "Wishlist"}
-                </Button>
-              </div>
-            </div>
-          </section>
+
 
           {/* Compact Bento Grid Hero Gallery */}
           <section className="py-6">
-            <div className="grid grid-cols-6 grid-rows-2 gap-2 h-80 md:h-[450px] lg:h-[520px]">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 auto-rows-fr h-[500px] md:h-[480px] lg:h-[560px]">
               {/* Box 1 (Main Square) */}
               <div
-                className="col-span-2 row-span-2 rounded-md overflow-hidden group cursor-pointer"
+                className="col-span-2 md:col-span-2 lg:col-span-2 row-span-2 rounded-md overflow-hidden group cursor-pointer"
+
                 onClick={() => openGalleryModal(salon.images[0] || "/images/1 (6).png")}
               >
                 <Image
@@ -1126,7 +1155,7 @@ export default function SalonDetailsPage() {
               </div>
               {/* Box 2 (Top Mid) */}
               <div
-                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+                className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
                 onClick={() => openGalleryModal(salon.images[1] || "/images/2 (6).png")}
               >
                 <Image
@@ -1140,7 +1169,7 @@ export default function SalonDetailsPage() {
               </div>
               {/* Box 3 (Top Right) */}
               <div
-                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
+                className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
                 onClick={() => openGalleryModal(salon.images[2] || "/images/3 (3).png")}
               >
                 <Image
@@ -1154,7 +1183,7 @@ export default function SalonDetailsPage() {
               </div>
               {/* Box 4 (Bottom Mid) */}
               <div
-                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+                className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
                 onClick={() => openGalleryModal(salon.images[3] || "/images/4 (2).png")}
               >
                 <Image
@@ -1168,7 +1197,7 @@ export default function SalonDetailsPage() {
               </div>
               {/* Box 5 (Bottom Right) */}
               <div
-                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
+                className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
                 onClick={() => openGalleryModal(salon.images[4] || "/images/5 (2).png")}
               >
                 <Image
@@ -1179,96 +1208,26 @@ export default function SalonDetailsPage() {
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   data-ai-hint="salon reception area"
                 />
-                {salon.images.length > 5 && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span className="text-white font-semibold text-sm">
-                      +{salon.images.length - 5} more
-                    </span>
+                <div className="absolute bottom-3 right-3">
+                  <div className="bg-white text-black px-3 py-1.5 rounded-md text-sm font-medium shadow-sm flex items-center gap-2">
+                    See all Images
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </section>
 
           {/* Main Content Area */}
-
-          <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
+          <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8 relative">
             {/* Left Scrolling Column */}
-            <div className="lg:col-span-2 space-y-16">
-              {/* About Section */}
-              <section id="about">
-                <h2 className="text-4xl font-bold mb-2">About {salon.name}</h2>
-                <p className="text-muted-foreground mb-6">
-                  Discover the story and values behind our brand.
-                </p>
-
-                <div className="space-y-8">
-                  <p className="text-muted-foreground leading-relaxed">
-                    {salon.mission || salon.description}
-                  </p>
-                  {/* Stats section - always show structure with values or defaults */}
-                  <div className="grid sm:grid-cols-3 gap-4 text-center">
-                    <div className="bg-secondary/50 p-4 rounded-lg">
-                      <p className="text-4xl font-bold text-primary">
-                        {isLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto" />
-                        ) : (
-                          vendorData?.dynamicClientCount ||
-                          vendorData?.stats?.find(
-                            (s: any) => s.label === "Happy Clients"
-                          )?.value ||
-                          vendorData?.clientCount ||
-                          salon.reviewCount ||
-                          0
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Happy Clients
-                      </p>
-                    </div>
-                    <div className="bg-secondary/50 p-4 rounded-lg">
-                      <p className="text-4xl font-bold text-primary">
-                        {isLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto" />
-                        ) : (
-                          vendorData?.stats?.find(
-                            (s: any) => s.label === "Services"
-                          )?.value ||
-                          servicesData?.services?.length ||
-                          0
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Services
-                      </p>
-                    </div>
-                    <div className="bg-secondary/50 p-4 rounded-lg">
-                      <p className="text-4xl font-bold text-primary">
-                        {isLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto" />
-                        ) : (
-                          vendorData?.stats?.find(
-                            (s: any) => s.label === "Products Sold"
-                          )?.value ||
-                          productsData?.products?.length ||
-                          0
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Products
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
+            <div className="lg:col-start-1 lg:col-span-2 lg:row-start-1 space-y-8">
               <SpecialOffered
                 vendorId={id}
                 isSubscriptionExpired={isSubscriptionExpired}
                 onBookNow={(offer) => handleBookNow(null, offer.code)}
               />
 
-              <ServicesOffered
+              <ServicesSection
                 vendorId={id}
                 onBookNow={handleBookNow}
                 isSubscriptionExpired={isSubscriptionExpired}
@@ -1285,10 +1244,310 @@ export default function SalonDetailsPage() {
                 onAddToCart={handleAddToCart}
               />
 
-              <section id="team">
-                <h2 className="text-4xl font-bold mb-2">Meet Our Team</h2>
-                <p className="text-muted-foreground mb-6">
-                  Our talented and experienced professionals.
+              {/* About Section - moved after Products */}
+              <section id="about">
+                <h2
+                  className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+                  style={{ color: "#252B42" }}
+                >
+                  About {salon.name}
+                  <span
+                    className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+                    }}
+                  />
+                </h2>
+                <p className="text-sm md:text-base text-black mb-6">
+                  Discover the story and values behind our brand.
+                </p>
+
+                <div className="space-y-8">
+                  <p className="text-xl text-black leading-relaxed">
+                    {salon.mission || salon.description}
+                  </p>
+                  {/* Stats section - always show structure with values or defaults */}
+                  <div className="flex justify-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 text-center max-w-4xl w-full">
+                      <div className="py-6 px-4 rounded-lg border border-border flex items-center gap-4 justify-center">
+                        <img
+                          src="/images/Group 1000002792 (1).png"
+                          alt="Happy Clients"
+                          className="w-16 h-16 object-contain shrink-0"
+                        />
+                        <div>
+                          <p className="text-2xl font-bold text-primary">
+                            {isLoading ? (
+                              <Skeleton className="h-7 w-12 mx-auto" />
+                            ) : (
+                              vendorData?.dynamicClientCount ||
+                              vendorData?.stats?.find(
+                                (s: any) => s.label === "Happy Clients"
+                              )?.value ||
+                              vendorData?.clientCount ||
+                              salon.reviewCount ||
+                              0
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Happy Clients
+                          </p>
+                        </div>
+                      </div>
+                      <div className="py-6 px-4 rounded-lg border border-border flex items-center gap-4 justify-center">
+                        <img
+                          src="/images/Group 1000002854.png"
+                          alt="Services"
+                          className="w-16 h-16 object-contain shrink-0"
+                        />
+                        <div>
+                          <p className="text-2xl font-bold text-primary">
+                            {isLoading ? (
+                              <Skeleton className="h-7 w-12 mx-auto" />
+                            ) : (
+                              vendorData?.stats?.find(
+                                (s: any) => s.label === "Services"
+                              )?.value ||
+                              servicesData?.services?.length ||
+                              0
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Services
+                          </p>
+                        </div>
+                      </div>
+                      <div className="py-6 px-4 rounded-lg border border-border flex items-center gap-4 justify-center">
+                        <img
+                          src="/images/Group 1000002797 (3).png"
+                          alt="Products"
+                          className="w-16 h-16 object-contain shrink-0"
+                        />
+                        <div>
+                          <p className="text-2xl font-bold text-primary">
+                            {isLoading ? (
+                              <Skeleton className="h-7 w-12 mx-auto" />
+                            ) : (
+                              vendorData?.stats?.find(
+                                (s: any) => s.label === "Products Sold"
+                              )?.value ||
+                              productsData?.products?.length ||
+                              0
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            Products
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+
+            </div>
+
+            {/* Right Sticky Column */}
+            <div ref={sidebarRef} className="lg:col-start-3 lg:col-span-1 lg:row-start-1 lg:row-span-2 lg:sticky top-28 self-start space-y-2 pt-10 z-0">
+              <div
+                className="w-full shadow-lg rounded-2xl overflow-hidden bg-white border border-gray-100 flex flex-col"
+                style={{ clipPath: sidebarOffset > 0 ? `inset(0 0 ${sidebarOffset}px 0)` : 'none' }}
+              >
+                {/* Gradient Header */}
+                <div
+                  className="pt-4 px-4 pb-4 text-white flex flex-col relative flex-shrink-0"
+                  style={{ background: 'linear-gradient(179.56deg, #422A3C 0.38%, #A86B99 131.62%)' }}
+                >
+                  <div className="flex justify-center mb-4">
+                    <div className="text-lg font-bold border-b border-white pb-0.5 inline-block">
+                      Book an Appointment
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col w-full">
+                    <div className="flex items-center gap-2 w-full">
+                      <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {vendorData?.profileImage && !vendorData.profileImage.includes('placehold') ? (
+                          <Image
+                            src={vendorData.profileImage}
+                            alt="Logo"
+                            width={40}
+                            height={40}
+                            className="object-cover h-full w-full"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/salon-placeholder.png'; }}
+                          />
+                        ) : (
+                          <Image
+                            src="/images/salon-placeholder.png"
+                            alt={salon.name || 'Salon'}
+                            width={40}
+                            height={40}
+                            className="object-cover h-full w-full"
+                          />
+                        )}
+                      </div>
+                      <h3 className="font-bold text-xl truncate flex-1 text-left">{salon.name}</h3>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 mt-0 ml-[50px]">
+                      {salon.reviewCount > 0 && (
+                        <>
+                          <StarRating rating={salon.rating || 0} />
+                          <span className="text-sm font-bold">{salon.rating}</span>
+                        </>
+                      )}
+                      <span className="text-sm opacity-90">({salon.reviewCount || 0} reviews)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* White Body */}
+                <div className="p-3 space-y-2.5 pb-4">
+
+                  {/* Working Hours Block */}
+                  <div
+                    className="bg-[#EBF3FD] rounded-xl p-3 cursor-pointer transition-colors hover:bg-blue-50"
+                    onClick={() => setIsWorkingHoursExpanded(!isWorkingHoursExpanded)}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-2">
+                        <Image src="/images/clock (20).png" alt="Clock" width={16} height={16} />
+                        <span className="text-base font-semibold text-green-700">
+                          {(() => {
+                            const getTodayClosing = () => {
+                              try {
+                                const currentDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()];
+                                const rawData = workingHoursData?.data?.workingHoursArray || workingHoursData?.data?.workingHours || workingHoursData?.data;
+                                if (!rawData) return "until 5:00 pm";
+                                let todayData;
+                                if (Array.isArray(rawData)) {
+                                  todayData = rawData.find((d: any) => d.day?.toLowerCase() === currentDayName.toLowerCase());
+                                } else if (typeof rawData === 'object') {
+                                  todayData = rawData[currentDayName.toLowerCase()];
+                                }
+                                if (!todayData || todayData.isOpen === false) return "Closed";
+
+                                let closeTime = todayData.close;
+                                if (Array.isArray(todayData.hours) && todayData.hours.length > 0) {
+                                  closeTime = todayData.hours[0].closeTime || todayData.hours[0].close;
+                                } else if (typeof todayData.hours === "string") {
+                                  const parts = todayData.hours.split("-");
+                                  if (parts.length === 2) closeTime = parts[1].trim();
+                                }
+                                if (!closeTime) return "until 5:00 pm";
+
+                                const [h, m] = closeTime.split(":");
+                                let hours = parseInt(h, 10);
+                                if (isNaN(hours)) return "until " + closeTime;
+                                const ampm = hours >= 12 ? 'pm' : 'am';
+                                hours = hours % 12 || 12;
+                                return `until ${hours}:${m} ${ampm}`;
+                              } catch (e) {
+                                return "until 5:00 pm";
+                              }
+                            };
+                            const todayClosing = getTodayClosing();
+                            if (todayClosing === "Closed") {
+                              return <span className="text-red-600">Closed Today</span>;
+                            }
+                            return <>Open <span className="text-gray-800 font-normal">{todayClosing}</span></>;
+                          })()}
+                        </span>
+                      </div>
+                      <Image
+                        src="/images/down-arrow 1.png"
+                        alt="Arrow Down"
+                        width={12}
+                        height={12}
+                        className={`transition-transform duration-200 ${isWorkingHoursExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </div>
+                    {!isWorkingHoursExpanded && (
+                      <div className="text-sm text-gray-500 pl-7 mt-0.5">
+                        Book your slot today!
+                      </div>
+                    )}
+                    {isWorkingHoursExpanded && (
+                      <div className="mt-2 pt-2 border-t border-blue-100/50">
+                        <WorkingHoursDisplay
+                          workingHoursData={workingHoursData?.data}
+                          isLoading={isLoadingWorkingHours}
+                          error={workingHoursError}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact Info Block */}
+                  <div className="bg-[#EBF3FD] rounded-xl p-3 space-y-2.5">
+                    {/* Address */}
+                    <div className="flex items-start gap-2.5">
+                      <Image src="/images/placeholder (12).png" alt="Location" width={16} height={16} className="mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-base text-gray-700 leading-relaxed">
+                          {salon.address}
+                        </p>
+                        <Link
+                          href={`https://maps.google.com/?q=${encodeURIComponent(salon.address)}`}
+                          target="_blank"
+                          className="text-sm text-blue-600 flex items-center gap-1 mt-1 hover:underline font-medium"
+                        >
+                          Get Directions <Image src="/images/right-arrow 1.png" alt="Arrow Right" width={10} height={10} />
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 pt-0">
+                      <Image src="/images/phone (7).png" alt="Phone" width={18} height={18} className="flex-shrink-0" />
+                      <span className="text-base text-gray-700">{salon.phone || "+91 9363653563"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <Image src="/images/gmail 1.png" alt="Email" width={18} height={18} className="flex-shrink-0" />
+                      <span className="text-base text-gray-700 truncate">{salon.email || "nidhisalon@gmail.com"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <Image src="/images/global (2).png" alt="Website" width={18} height={18} className="flex-shrink-0" />
+                      <span className="text-base text-gray-700 truncate">{salon.website || "www.glowvitasalon.com"}</span>
+                    </div>
+                  </div>
+
+                  {/* Book Button */}
+                  <div className="flex justify-center px-1">
+                    <button
+                      onClick={() => handleBookNow()}
+                      disabled={isSubscriptionExpired}
+                      className="w-[85%] text-white text-sm font-semibold py-2.5 rounded-xl mt-1 transition-opacity hover:opacity-90 disabled:opacity-50"
+                      style={{ background: '#422A3C' }}
+                    >
+                      {isSubscriptionExpired ? 'Salon Unavailable' : 'Book Appointment'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Full Width Sections (Overlapping right column on scroll) */}
+            <div className="lg:col-start-1 lg:col-span-3 lg:row-start-2 space-y-16 pt-16 pb-12 relative">
+              <section id="team" ref={teamSectionRef}>
+                <h2
+                  className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+                  style={{ color: "#252B42" }}
+                >
+                  Our Skilled Specialists
+                  <span
+                    className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+                    }}
+                  />
+                </h2>
+                <p className="text-sm md:text-base text-black mb-6">
+                  Experienced artists providing personalized care for every client.
                 </p>
                 <StaffDisplay
                   staffData={staffData?.staff || []}
@@ -1305,165 +1564,36 @@ export default function SalonDetailsPage() {
                 refetchReviews={refetchReviews}
               />
             </div>
-
-            {/* Right Sticky Column */}
-            <div className="lg:sticky top-28 self-start space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Book an Appointment</CardTitle>
-                  <CardDescription>
-                    Choose your service and book online.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <h3 className="text-4xl font-bold mb-2">{salon.name}</h3>
-
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        {salon.reviewCount > 0 && (
-                          <>
-                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <span className="font-medium">{salon.rating}</span>
-                          </>
-                        )}
-                        <span className="text-sm text-muted-foreground ml-1">
-                          ({salon.reviewCount} reviews)
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 text-sm">
-                      <Badge
-                        variant="secondary"
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        {servicesData?.services?.length || 15}+ Services
-                      </Badge>
-                      <Badge
-                        variant="secondary"
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        {productsData?.products?.length || 0}+ Products
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <Button
-                    size="lg"
-                    className="w-full rounded-sm"
-                    onClick={() => handleBookNow()}
-                    disabled={isSubscriptionExpired}
-                  >
-                    {isSubscriptionExpired ? 'Salon Unavailable' : 'Book Now'}
-                  </Button>
-
-                  {isSubscriptionExpired && (
-                    <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-2 flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-700">
-                        This salon is not available for bookings at the moment
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Working Hours</CardTitle>
-                  <CardDescription>
-                    View our working hours and plan your visit.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <WorkingHoursDisplay
-                    workingHoursData={workingHoursData?.data}
-                    isLoading={isLoadingWorkingHours}
-                    error={workingHoursError}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact</CardTitle>
-                  <CardDescription>
-                    Choose your service and book online.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`mailto:${salon.email}`}
-                      className="flex items-center gap-2"
-                    >
-                      <Mail className="h-4 w-4" /> {salon.email || "N/A"}
-                    </Link>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`tel:${salon.phone}`}
-                      className="flex items-center gap-2"
-                    >
-                      <Phone className="h-4 w-4" /> {salon.phone || "N/A"}
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      className="flex items-center gap-2"
-                      href={`https://maps.google.com/?q=${encodeURIComponent(salon.address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MapPin className="h-4 w-4" />{" "}
-                      <span>{salon.address}</span>
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      className="flex items-center gap-2"
-                      href={salon.website || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Globe className="h-4 w-4" /> {salon.website || "N/A"}
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
-          <DownloadApp />
         </div>
-
-        <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
-          <DialogContent className="max-w-4xl p-0">
-            <div className="relative aspect-video bg-black">
-              <Image
-                src={mainImage}
-                alt="Gallery View"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <div className="flex justify-center gap-2 p-4 bg-secondary">
-              {salon.images.map((img: string, index: number) => (
-                <button key={index} onClick={() => setMainImage(img)}>
-                  <Image
-                    src={img}
-                    alt={`Thumbnail ${index + 1}`}
-                    width={80}
-                    height={60}
-                    className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? "border-primary" : "border-transparent hover:border-primary/50"}`}
-                  />
-                </button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <DownloadApp />
       </PageContainer>
+
+      <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
+        <DialogContent className="max-w-4xl p-0">
+          <div className="relative aspect-video bg-black">
+            <Image
+              src={mainImage}
+              alt="Gallery View"
+              fill
+              className="object-contain"
+            />
+          </div>
+          <div className="flex justify-center gap-2 p-4 bg-secondary">
+            {salon.images.map((img: string, index: number) => (
+              <button key={index} onClick={() => setMainImage(img)}>
+                <Image
+                  src={img}
+                  alt={`Thumbnail ${index + 1}`}
+                  width={80}
+                  height={60}
+                  className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? "border-primary" : "border-transparent hover:border-primary/50"}`}
+                />
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       <Footer />
     </>
   );
