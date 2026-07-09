@@ -3,31 +3,8 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
-import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star, Info } from 'lucide-react';
+import { User, Users, CheckCircle, Loader2, AlertCircle, Star, Info } from 'lucide-react';
 import { StaffMember, Service } from '@/hooks/useBookingData';
-
-const Breadcrumb = ({ currentStep, setCurrentStep, bookingMode }: { currentStep: number; setCurrentStep: (step: number) => void; bookingMode?: string; }) => {
-    const steps = ['Services', 'Select Professional', bookingMode === 'home' ? 'Location' : 'Time Slot'];
-    return (
-        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-            {steps.map((step, index) => (
-                <React.Fragment key={step}>
-                    <button
-                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
-                        className={cn(
-                            "transition-colors",
-                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-                            currentStep === index + 1 && "text-primary font-semibold"
-                        )}
-                    >
-                        {step}
-                    </button>
-                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-                </React.Fragment>
-            ))}
-        </nav>
-    );
-};
 
 interface Step2StaffProps {
     selectedStaff: StaffMember | null;
@@ -127,7 +104,6 @@ export function Step2_Staff({
     if (isLoading) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -135,13 +111,13 @@ export function Step2_Staff({
                         </div>
                         <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
                     </div>
-                    <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+                    <p className="text-black">Choose your preferred stylist or select any professional.</p>
                 </div>
 
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Loading staff members...</p>
+                        <p className="text-black">Loading staff members...</p>
                     </div>
                 </div>
             </div>
@@ -152,7 +128,6 @@ export function Step2_Staff({
     if (error) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -160,13 +135,13 @@ export function Step2_Staff({
                         </div>
                         <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
                     </div>
-                    <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+                    <p className="text-black">Choose your preferred stylist or select any professional.</p>
                 </div>
 
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <AlertCircle className="h-8 w-8 text-destructive" />
-                        <p className="text-muted-foreground">Unable to load staff members. Please try again.</p>
+                        <p className="text-black">Unable to load staff members. Please try again.</p>
                     </div>
                 </div>
             </div>
@@ -175,15 +150,17 @@ export function Step2_Staff({
 
     return (
         <div className="w-full">
-            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
             <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-primary/10 rounded-full text-primary">
-                        <Users className="h-6 w-6" />
+                <div className="flex justify-between items-start">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit" onClick={() => setCurrentStep(currentStep - 1)}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+                            <h2 className="text-2xl font-bold font-headline">Professional(s)</h2>
+                        </div>
+                        <p className="text-black pl-7">Choose your preferred stylist or select any professional.</p>
                     </div>
-                    <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
                 </div>
-                <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
 
                 {/* Wedding Package Information */}
                 {isWeddingPackage && weddingPackage && (
@@ -212,17 +189,18 @@ export function Step2_Staff({
                     )}
                     onClick={() => handleSelectStaff(null)}
                 >
-                    <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
-                        <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
+                        <Image src="/images/profile (7) 1.png" alt="Any Professional" width={120} height={120} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                     </div>
                     <h3 className="font-semibold text-foreground">Any Professional</h3>
-                    <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
+                    <p className="text-sm text-black">We'll assign an available expert.</p>
                     {!selectedStaff && (
                         <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                             <CheckCircle className="h-4 w-4" />
                         </div>
                     )}
                 </div>
+
                 {/* Staff Member Cards */}
                 {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => (
                     <div
@@ -244,16 +222,16 @@ export function Step2_Staff({
                             />
                         </div>
                         <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
-                        <p className="text-xs text-muted-foreground">{staffMember.role}</p>
+                        <p className="text-xs text-black">{staffMember.role}</p>
                         {staffMember.rating && (
                             <div className="flex items-center gap-1 mt-1">
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
+                                <span className="text-xs text-black">{staffMember.rating}</span>
                             </div>
                         )}
                         {staffMember.specialties && staffMember.specialties.length > 0 && (
                             <div className="mt-1">
-                                <p className="text-xs text-muted-foreground truncate">
+                                <p className="text-xs text-black truncate">
                                     {staffMember.specialties.slice(0, 2).join(', ')}
                                 </p>
                             </div>
@@ -268,11 +246,11 @@ export function Step2_Staff({
                     <div className="col-span-full flex items-center justify-center py-12">
                         <div className="flex flex-col items-center gap-4">
                             <Users className="h-8 w-8 text-muted-foreground" />
-                            <p className="text-muted-foreground">No staff members available for this service. You can still book with any professional.</p>
+                            <p className="text-black">No staff members available for this service. You can still book with any professional.</p>
                         </div>
                     </div>
                 )}
             </div>
         </div>
     );
-}
+};

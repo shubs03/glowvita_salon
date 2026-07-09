@@ -141,11 +141,11 @@ const StaffDisplay = ({
     return (
       <div className="text-center py-12">
         <div className="bg-secondary/20 rounded-lg p-8">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto text-black mb-4" />
+          <p className="text-black">
             Team information will be displayed here
           </p>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-sm text-black mt-2">
             Meet our talented professionals when available
           </p>
         </div>
@@ -169,10 +169,10 @@ const StaffDisplay = ({
               data-ai-hint={`${member.name || "staff member"} portrait`}
             />
           </div>
-          <h4 className="font-bold text-sm sm:text-md mb-0.5 text-gray-900">
+          <h4 className="font-bold text-sm md:text-base mb-0.5 text-black">
             {member.name || "Staff Member"}
           </h4>
-          <p className="text-xs sm:text-sm text-gray-600 font-medium capitalize">
+          <p className="text-xs md:text-sm text-black font-medium capitalize">
             {member.role || "Team Member"}
           </p>
         </div>
@@ -354,7 +354,7 @@ const WorkingHoursDisplay = ({
               className={cn(
                 "font-semibold",
                 timeDisplay === "Closed"
-                  ? "text-muted-foreground"
+                  ? "text-black"
                   : "text-primary"
               )}
             >
@@ -1028,7 +1028,7 @@ export default function SalonDetailsPage() {
         <PageContainer padding="none">
           <div className="container mx-auto px-4 py-16 text-center">
             <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-black mb-6">
               We couldn't load the salon details. Please try again later.
             </p>
             <Button onClick={() => window.location.reload()}>Try Again</Button>
@@ -1051,7 +1051,7 @@ export default function SalonDetailsPage() {
         <PageContainer padding="none">
           <div className="container mx-auto px-4 py-16 text-center">
             <h1 className="text-2xl font-bold mb-4">Salon Not Found</h1>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-black mb-6">
               The salon you're looking for doesn't exist or has been removed.
             </p>
             <Button onClick={() => window.history.back()}>Go Back</Button>
@@ -1259,27 +1259,29 @@ export default function SalonDetailsPage() {
                     }}
                   />
                 </h2>
-                <p className="text-sm md:text-base text-black mb-6">
+                <p className="text-sm md:text-base text-black mb-2">
                   Discover the story and values behind our brand.
                 </p>
 
-                <div className="space-y-8">
+                <div className="space-y-4">
                   <p className="text-xl text-black leading-relaxed">
-                    {salon.mission || salon.description}
+                    {salon.mission || salon.description || "This salon is providing you all kind of service's this is unisex salon"}
                   </p>
                   {/* Stats section - always show structure with values or defaults */}
                   <div className="flex justify-start">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 text-center max-w-4xl w-full">
-                      <div className="py-6 px-4 rounded-lg border border-border flex items-center gap-4 justify-center">
-                        <img
-                          src="/images/Group 1000002792 (1).png"
-                          alt="Happy Clients"
-                          className="w-16 h-16 object-contain shrink-0"
-                        />
-                        <div>
-                          <p className="text-2xl font-bold text-primary">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-3xl w-full">
+                      <div className="py-3 px-4 rounded-2xl border border-gray-300 flex items-center gap-3 justify-start">
+                        <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+                          <img
+                            src="/images/Group 1000002792 (1).png"
+                            alt="Happy Clients"
+                            className="w-16 h-16 object-contain"
+                          />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-3xl font-bold text-primary">
                             {isLoading ? (
-                              <Skeleton className="h-7 w-12 mx-auto" />
+                              <Skeleton className="h-8 w-14" />
                             ) : (
                               vendorData?.dynamicClientCount ||
                               vendorData?.stats?.find(
@@ -1290,21 +1292,23 @@ export default function SalonDetailsPage() {
                               0
                             )}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-0.5">
+                          <p className="text-base font-medium text-black mt-1">
                             Happy Clients
                           </p>
                         </div>
                       </div>
-                      <div className="py-6 px-4 rounded-lg border border-border flex items-center gap-4 justify-center">
-                        <img
-                          src="/images/Group 1000002854.png"
-                          alt="Services"
-                          className="w-16 h-16 object-contain shrink-0"
-                        />
-                        <div>
-                          <p className="text-2xl font-bold text-primary">
+                      <div className="py-3 px-4 rounded-2xl border border-gray-300 flex items-center gap-3 justify-start">
+                        <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+                          <img
+                            src="/images/Group 1000002854.png"
+                            alt="Services"
+                            className="w-16 h-16 object-contain"
+                          />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-3xl font-bold text-primary">
                             {isLoading ? (
-                              <Skeleton className="h-7 w-12 mx-auto" />
+                              <Skeleton className="h-8 w-14" />
                             ) : (
                               vendorData?.stats?.find(
                                 (s: any) => s.label === "Services"
@@ -1313,21 +1317,23 @@ export default function SalonDetailsPage() {
                               0
                             )}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-0.5">
+                          <p className="text-base font-medium text-black mt-1">
                             Services
                           </p>
                         </div>
                       </div>
-                      <div className="py-6 px-4 rounded-lg border border-border flex items-center gap-4 justify-center">
-                        <img
-                          src="/images/Group 1000002797 (3).png"
-                          alt="Products"
-                          className="w-16 h-16 object-contain shrink-0"
-                        />
-                        <div>
-                          <p className="text-2xl font-bold text-primary">
+                      <div className="py-3 px-4 rounded-2xl border border-gray-300 flex items-center gap-3 justify-start">
+                        <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center">
+                          <img
+                            src="/images/Group 1000002797 (3).png"
+                            alt="Products"
+                            className="w-16 h-16 object-contain"
+                          />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-3xl font-bold text-primary">
                             {isLoading ? (
-                              <Skeleton className="h-7 w-12 mx-auto" />
+                              <Skeleton className="h-8 w-14" />
                             ) : (
                               vendorData?.stats?.find(
                                 (s: any) => s.label === "Products Sold"
@@ -1336,7 +1342,7 @@ export default function SalonDetailsPage() {
                               0
                             )}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-0.5">
+                          <p className="text-base font-medium text-black mt-1">
                             Products
                           </p>
                         </div>
@@ -1452,7 +1458,7 @@ export default function SalonDetailsPage() {
                             if (todayClosing === "Closed") {
                               return <span className="text-red-600">Closed Today</span>;
                             }
-                            return <>Open <span className="text-gray-800 font-normal">{todayClosing}</span></>;
+                            return <>Open <span className="text-black font-normal">{todayClosing}</span></>;
                           })()}
                         </span>
                       </div>
@@ -1465,7 +1471,7 @@ export default function SalonDetailsPage() {
                       />
                     </div>
                     {!isWorkingHoursExpanded && (
-                      <div className="text-sm text-gray-500 pl-7 mt-0.5">
+                      <div className="text-sm text-black pl-7 mt-0.5">
                         Book your slot today!
                       </div>
                     )}
@@ -1483,10 +1489,10 @@ export default function SalonDetailsPage() {
                   {/* Contact Info Block */}
                   <div className="bg-[#EBF3FD] rounded-xl p-3 space-y-2.5">
                     {/* Address */}
-                    <div className="flex items-start gap-2.5">
-                      <Image src="/images/placeholder (12).png" alt="Location" width={16} height={16} className="mt-1 flex-shrink-0" />
+                    <div className="flex items-start gap-3">
+                      <Image src="/images/placeholder (12).png" alt="Location" width={20} height={20} className="mt-1 flex-shrink-0" />
                       <div>
-                        <p className="text-base text-gray-700 leading-relaxed">
+                        <p className="text-base text-black leading-relaxed">
                           {salon.address}
                         </p>
                         <Link
@@ -1499,19 +1505,19 @@ export default function SalonDetailsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 pt-0">
-                      <Image src="/images/phone (7).png" alt="Phone" width={18} height={18} className="flex-shrink-0" />
-                      <span className="text-base text-gray-700">{salon.phone || "+91 9363653563"}</span>
+                    <div className="flex items-center gap-3 pt-0">
+                      <Image src="/images/phone (7).png" alt="Phone" width={20} height={20} className="flex-shrink-0" />
+                      <span className="text-base text-black">{salon.phone || "+91 9363653563"}</span>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <Image src="/images/gmail 1.png" alt="Email" width={18} height={18} className="flex-shrink-0" />
-                      <span className="text-base text-gray-700 truncate">{salon.email || "nidhisalon@gmail.com"}</span>
+                    <div className="flex items-center gap-3">
+                      <Image src="/images/gmail 1.png" alt="Email" width={20} height={20} className="flex-shrink-0" />
+                      <span className="text-base text-black truncate">{salon.email || "nidhisalon@gmail.com"}</span>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <Image src="/images/global (2).png" alt="Website" width={18} height={18} className="flex-shrink-0" />
-                      <span className="text-base text-gray-700 truncate">{salon.website || "www.glowvitasalon.com"}</span>
+                    <div className="flex items-center gap-3">
+                      <Image src="/images/global (2).png" alt="Website" width={20} height={20} className="flex-shrink-0" />
+                      <span className="text-base text-black truncate">{salon.website || "www.glowvitasalon.com"}</span>
                     </div>
                   </div>
 
@@ -1531,7 +1537,7 @@ export default function SalonDetailsPage() {
             </div>
 
             {/* Full Width Sections (Overlapping right column on scroll) */}
-            <div className="lg:col-start-1 lg:col-span-3 lg:row-start-2 space-y-16 pt-16 pb-12 relative">
+            <div className="lg:col-start-1 lg:col-span-3 lg:row-start-2 space-y-8 pt-0 pb-12 relative">
               <section id="team" ref={teamSectionRef}>
                 <h2
                   className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"

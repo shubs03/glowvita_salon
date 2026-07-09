@@ -1,10 +1,9 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/card';
-import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
+import { Button } from '@repo/ui/button';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Search, X, Heart } from 'lucide-react';
+import { ArrowRight, Tag, Scissors, User, Calendar, Clock, MapPin, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@repo/ui/cn';
@@ -400,12 +399,12 @@ export function BookingSummary({
                   </div>
                 ))
               )}
-              {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+              {currentStep > 1 && serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
                 serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
                   <p key={assignment.service.id} className="text-sm">With: <span className="font-medium">{assignment.staff?.name || 'Any Professional'}</span></p>
                 ))
               ) : (
-                selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
+                currentStep > 1 && selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
               )}
               {selectedTime && <p className="text-sm">On: <span className="font-medium">{format(selectedDate, 'MMM d')} at {selectedTime}</span></p>}
             </div>
@@ -433,363 +432,435 @@ export function BookingSummary({
   }
 
   return (
-    <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl flex flex-col max-h-[calc(100vh-8rem)]">
-      <CardHeader className="p-6 border-b flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="relative w-16 h-16 flex-shrink-0">
-            <Image
-              src={currentSalonInfo.image || "/images/salon-placeholder.png"}
-              alt={currentSalonInfo.name}
-              fill
-              className="rounded-lg shadow-md border-2 border-background object-cover"
-              data-ai-hint="salon exterior"
-            />
-          </div>
-          <div>
-            <CardTitle className="font-bold text-lg">{currentSalonInfo.name}</CardTitle>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-              <Star className="h-4 w-4 text-yellow-400 fill-current" />
-              <span>{currentSalonInfo.rating} ({currentSalonInfo.reviews} reviews)</span>
-            </div>
+    <div className="w-full shadow-lg rounded-2xl overflow-hidden bg-white border border-gray-100 flex flex-col max-h-[calc(100vh-8rem)]">
+      {/* Gradient Header Section */}
+      <div
+        className="pt-4 px-4 pb-4 text-white flex flex-col relative flex-shrink-0"
+        style={{ background: 'linear-gradient(179.56deg, #422A3C 0.38%, #A86B99 131.62%)' }}
+      >
+        <div className="flex justify-center mb-4">
+          <div className="text-lg font-bold border-b border-white pb-0.5 inline-block text-white">
+            Your Booking Details
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="p-6 space-y-4 flex-grow overflow-y-auto no-scrollbar">
-        <div className="space-y-3">
-          <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />Your Booking Details</h4>
 
-          {/* Show Wedding Package or Regular Services */}
-          {weddingPackage ? (
-            <div className="p-3 bg-secondary/50 rounded-md">
-              <div className="w-full">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-xs text-muted-foreground">Wedding Package</p>
-                  {weddingPackageMode === 'customized' && (
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">Customized</span>
-                  )}
-                </div>
-                <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
-                {weddingPackage.description && (
-                  <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{weddingPackage.description}</p>
-                )}
-
-                <div className="space-y-2 pt-3 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Services Included</span>
-                    <span className="font-medium">
-                      {weddingPackageMode === 'customized' && customizedPackageServices
-                        ? customizedPackageServices.length
-                        : weddingPackage.services?.length || 0}
+        <div className="flex flex-col w-full relative z-10">
+          <div className="flex items-center gap-2 w-full">
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+              <Image
+                src={currentSalonInfo.image || "/images/salon-placeholder.png"}
+                alt={currentSalonInfo.name}
+                width={40}
+                height={40}
+                className="object-cover h-full w-full"
+                data-ai-hint="salon exterior"
+              />
+            </div>
+            <h3 className="font-bold text-xl truncate flex-1 text-left text-white">{currentSalonInfo.name}</h3>
+          </div>
+          <div className="flex items-center gap-1.5 mt-0 ml-[50px]">
+              {(() => {
+                const rating = parseFloat(String(currentSalonInfo.rating || '0'));
+                const full = Math.floor(rating);
+                const half = rating - full >= 0.25 && rating - full < 0.75;
+                const empty = 5 - full - (half ? 1 : 0);
+                return (
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: full }).map((_, i) => (
+                      <svg key={`f${i}`} className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                    {half && (
+                      <svg key="half" className="h-3.5 w-3.5" viewBox="0 0 20 20">
+                        <defs>
+                          <linearGradient id="halfStarGrad">
+                            <stop offset="50%" stopColor="#facc15" />
+                            <stop offset="50%" stopColor="#6b7280" stopOpacity="0.4" />
+                          </linearGradient>
+                        </defs>
+                        <path fill="url(#halfStarGrad)" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    )}
+                    {Array.from({ length: Math.max(0, empty) }).map((_, i) => (
+                      <svg key={`e${i}`} className="h-3.5 w-3.5 text-gray-400/40 fill-gray-400/40" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                    <span className="text-sm opacity-90 text-white ml-1">
+                      ({currentSalonInfo.reviews} reviews)
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Duration</span>
-                    <span className="font-medium">{totalDuration} min</span>
-                  </div>
-                  {weddingPackage.staffCount && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Staff Required</span>
-                      <span className="font-medium">
-                        {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
-                      </span>
-                    </div>
-                  )}
-                  {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground block mb-1.5">Available Staff</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
-                            {getStaffName(staff)}
-                          </span>
-                        ))}
-                        {weddingPackage.assignedStaff.length > 3 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground">
-                            +{weddingPackage.assignedStaff.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
-                    <span>Package Price</span>
-                    <span className="text-primary">₹{subtotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-secondary/50 rounded-md">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
-                <div className="w-full">
-                  <p className="text-xs text-muted-foreground mb-1">Services</p>
-                  {selectedServices.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedServices.map((service) => (
-                        <div key={service.id} className="space-y-1">
-                          <div className="flex justify-between items-center">
-                            <p className="font-medium text-sm">{service.name}</p>
-                            <span className="text-sm">₹{service.discountedPrice || service.price}</span>
-                          </div>
-                          {service.selectedAddons && service.selectedAddons.length > 0 && (
-                            <div className="pl-3 border-l-2 border-primary/20 space-y-1">
-                              {service.selectedAddons.map((addon) => (
-                                <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground group">
-                                  <span>+ {addon.name}</span>
-                                  <div className="flex items-center gap-1">
-                                    <span>₹{addon.price}</span>
-                                    {onRemoveAddon && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onRemoveAddon(service.id, addon._id);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
-                                        title="Remove addon"
-                                      >
-                                        <X className="h-3 w-3 text-destructive" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="font-medium text-sm">No services selected</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="p-3 bg-secondary/50 rounded-md">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-md"><User className="h-4 w-4 text-primary" /></div>
-              <div>
-                <p className="text-xs text-muted-foreground">Professional(s)</p>
-                {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
-                  <div className="space-y-1">
-                    {serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
-                      <p key={assignment.service.id} className="font-medium text-sm">
-                        {assignment.service.name}: {assignment.staff?.name || 'Any Professional'}
-                      </p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="font-medium text-sm">{selectedStaff?.name || 'Any Professional'}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Wedding Location Display */}
-          {isWeddingPackage && (
-            <div className="p-3 bg-secondary/50 rounded-md">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Location</p>
-                  {weddingVenueType === 'salon' ? (
-                    <p className="font-medium text-sm">At Salon</p>
-                  ) : weddingVenueType === 'venue' && (serviceLocation as any)?.address ? (
-                    <div>
-                      <p className="font-medium text-sm">Wedding Venue</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(serviceLocation as any).address}
-                        {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="font-medium text-sm text-muted-foreground">Not selected</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Regular or Home Service Location Display */}
-          {!isWeddingPackage && isHomeService && (
-            <div className="p-3 bg-secondary/50 rounded-md">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Location</p>
-                  {serviceLocation && (serviceLocation as any).address ? (
-                    <div>
-                      <p className="font-medium text-sm">Home Service</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(serviceLocation as any).address}
-                        {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="font-medium text-sm text-muted-foreground">Not selected</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="p-3 bg-secondary/50 rounded-md">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-md"><Calendar className="h-4 w-4 text-primary" /></div>
-              <div>
-                <p className="text-xs text-muted-foreground">Date & Time</p>
-                <p className="font-medium text-sm">
-                  {format(selectedDate, 'EEEE, MMM d')}
-                  {selectedTime ? ` at ${selectedTime}` : ', no time selected'}
-                </p>
-              </div>
-            </div>
+                );
+              })()}
           </div>
         </div>
+      </div>
 
-        <Separator className="my-4" />
+      <div className="flex-grow overflow-y-auto no-scrollbar flex flex-col">
+        <div className="p-5 space-y-3 flex-grow">
+          <div className="space-y-3">
 
-        {/* Price Breakdown Section */}
-        <div className="space-y-3">
-          <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-            <Tag className="h-4 w-4" />Price Breakdown
-          </h4>
+            {/* Show Wedding Package or Regular Services */}
+            {weddingPackage ? (
+              <div className="p-3 rounded-xl" style={{ background: '#EBF3FD' }}>
+                <div className="w-full">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-xs text-muted-foreground">Wedding Package</p>
+                    {weddingPackageMode === 'customized' && (
+                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">Customized</span>
+                    )}
+                  </div>
+                  <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
+                  {weddingPackage.description && (
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{weddingPackage.description}</p>
+                  )}
 
-          <div className="bg-secondary/30 rounded-lg p-4 space-y-2">
-            {/* Itemized Services and Addons (regular services only) */}
-            {!weddingPackage && selectedServices.length > 0 && (
-              <div className="space-y-2 pb-2 border-b border-border/50">
-                {selectedServices.map((service) => {
-                  const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined
-                    ? parseFloat(String(service.discountedPrice))
-                    : parseFloat(String(service.price || '0'));
-
-                  return (
-                    <div key={service.id} className="space-y-1">
+                  <div className="space-y-2 pt-3 border-t">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Services Included</span>
+                      <span className="font-medium">
+                        {weddingPackageMode === 'customized' && customizedPackageServices
+                          ? customizedPackageServices.length
+                          : weddingPackage.services?.length || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total Duration</span>
+                      <span className="font-medium">{totalDuration} min</span>
+                    </div>
+                    {weddingPackage.staffCount && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-foreground">{service.name}</span>
-                        <span className="font-medium">₹{Math.round(servicePrice)}</span>
+                        <span className="text-muted-foreground">Staff Required</span>
+                        <span className="font-medium">
+                          {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
+                        </span>
                       </div>
-                      {service.selectedAddons && service.selectedAddons.length > 0 && (
-                        <div className="pl-3 space-y-1">
-                          {service.selectedAddons.map((addon) => (
-                            <div key={addon._id} className="flex justify-between text-xs text-muted-foreground">
-                              <span>+ {addon.name}</span>
-                              <span>₹{Math.round(typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0))}</span>
-                            </div>
+                    )}
+                    {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground block mb-1.5">Available Staff</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
+                              {getStaffName(staff)}
+                            </span>
                           ))}
+                          {weddingPackage.assignedStaff.length > 3 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground">
+                              +{weddingPackage.assignedStaff.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
+                      <span>Package Price</span>
+                      <span className="text-primary">₹{subtotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl" style={{ background: '#EBF3FD' }}>
+                <div className="flex items-start gap-3">
+                  {/* Scissors image instead of icon */}
+                  <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 mt-0.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/images/Group 1000002854.png" alt="Service" className="h-10 w-10 object-contain" />
+                  </div>
+                  <div className="w-full">
+                    <p className="text-sm font-semibold text-black mb-1">Service</p>
+                    {selectedServices.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedServices.map((service) => (
+                          <div key={service.id} className="space-y-1">
+                            <div className="flex justify-between items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <p className="font-semibold text-base text-black truncate">{service.name}</p>
+                                {service.duration && (
+                                  <span className="flex items-center gap-0.5 text-xs text-gray-500 shrink-0">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {service.duration}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-base font-semibold text-black shrink-0">₹{service.discountedPrice || service.price}</span>
+                            </div>
+
+                            {/* Addons */}
+                            {service.selectedAddons && service.selectedAddons.length > 0 && (
+                              <div className="pl-3 border-l-2 border-primary/20 space-y-1">
+                                {service.selectedAddons.map((addon) => (
+                                  <div key={addon._id} className="flex justify-between items-center text-sm text-gray-700 group">
+                                    <span>+ {addon.name}</span>
+                                    <div className="flex items-center gap-1">
+                                      <span>₹{addon.price}</span>
+                                      {onRemoveAddon && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemoveAddon(service.id, addon._id);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
+                                          title="Remove addon"
+                                        >
+                                          <X className="h-3 w-3 text-destructive" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="font-medium text-sm">No services selected</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Professionals List - Step 2+ */}
+            {!isWeddingPackage && currentStep > 1 && (serviceStaffAssignments?.length > 0 || selectedStaff) && (
+              <div className="p-3 rounded-xl mt-3" style={{ background: '#EBF3FD' }}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 mt-0.5">
+                    <Image src="/images/customer 11.png" alt="Professional" width={24} height={24} className="object-contain" />
+                  </div>
+                  <div className="w-full">
+                    <p className="text-sm font-semibold text-black mb-1">Professional(s)</p>
+                    <div className="space-y-1">
+                      {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                        serviceStaffAssignments.map(a => (
+                          <div key={a.service.id} className="text-gray-700 text-sm">
+                            <span className="font-medium text-black">{a.service.name}</span>: {a.staff?.name || 'Any Professional'}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-gray-700 text-sm">
+                          {selectedStaff?.name || 'Any Professional'}
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Wedding Package: show Total Services → Package Discount → Subtotal */}
-            {weddingPackage && totalServicesPrice != null && (
+
+
+            {/* Wedding Location Display */}
+            {isWeddingPackage && (
+              <div className="p-3 bg-secondary/50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Location</p>
+                    {weddingVenueType === 'salon' ? (
+                      <p className="font-medium text-sm">At Salon</p>
+                    ) : weddingVenueType === 'venue' && (serviceLocation as any)?.address ? (
+                      <div>
+                        <p className="font-medium text-sm">Wedding Venue</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(serviceLocation as any).address}
+                          {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-medium text-sm text-muted-foreground">Not selected</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Regular or Home Service Location Display */}
+            {!isWeddingPackage && isHomeService && (
+              <div className="p-3 bg-secondary/50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Location</p>
+                    {serviceLocation && (serviceLocation as any).address ? (
+                      <div>
+                        <p className="font-medium text-sm">Home Service</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(serviceLocation as any).address}
+                          {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-medium text-sm text-muted-foreground">Not selected</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Date & Time - only show when time is selected */}
+            {selectedTime && (
+              <div className="p-3 bg-secondary/50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-md"><Calendar className="h-4 w-4 text-primary" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date &amp; Time</p>
+                    <p className="font-medium text-sm">
+                      {format(selectedDate, 'EEEE, MMM d')} at {selectedTime}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Price Breakdown Section */}
+          <div className="space-y-1 mt-2">
+            <h4 className="font-semibold text-sm text-black flex items-center gap-2">
+              <Tag className="h-4 w-4" />Price Breakdown
+            </h4>
+
+            <div className="bg-white rounded-lg p-4 space-y-2 text-black">
+              {/* Itemized Services and Addons (regular services only) */}
+              {!weddingPackage && selectedServices.length > 0 && (
+                <div className="space-y-2 pb-2 border-b border-black">
+                  {selectedServices.map((service) => {
+                    const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined
+                      ? parseFloat(String(service.discountedPrice))
+                      : parseFloat(String(service.price || '0'));
+
+                    return (
+                      <div key={service.id} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-black">{service.name}</span>
+                          <span className="font-medium text-black">₹{Math.round(servicePrice)}</span>
+                        </div>
+                        {service.selectedAddons && service.selectedAddons.length > 0 && (
+                          <div className="pl-3 space-y-1">
+                            {service.selectedAddons.map((addon) => (
+                              <div key={addon._id} className="flex justify-between text-xs text-muted-foreground">
+                                <span>+ {addon.name}</span>
+                                <span>₹{Math.round(typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0))}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Wedding Package: show Total Services → Package Discount → Subtotal */}
+              {weddingPackage && totalServicesPrice != null && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-black">Total Services</span>
+                  <span className="text-black">₹{totalServicesPrice.toFixed(2)}</span>
+                </div>
+              )}
+
+              {weddingPackage && packageInherentDiscount > 0 && (() => {
+                const totalP = totalServicesPrice || 0;
+                const discountPct = totalP > 0 ? Math.round((packageInherentDiscount / totalP) * 100) : 0;
+                return (
+                  <div className="flex justify-between text-sm text-green-600 font-medium">
+                    <span className="text-muted-foreground">
+                      Package Discount{discountPct > 0 ? ` (${discountPct}%)` : ''}
+                    </span>
+                    <span>-₹{packageInherentDiscount.toFixed(2)}</span>
+                  </div>
+                );
+              })()}
+
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Services</span>
-                <span>₹{totalServicesPrice.toFixed(2)}</span>
+                <span className="text-black">Subtotal</span>
+                <span className="text-black">₹{subtotal.toFixed(2)}</span>
               </div>
-            )}
 
-            {weddingPackage && packageInherentDiscount > 0 && (() => {
-              const totalP = totalServicesPrice || 0;
-              const discountPct = totalP > 0 ? Math.round((packageInherentDiscount / totalP) * 100) : 0;
-              return (
+              {priceBreakdown && priceBreakdown.platformFee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-black">Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}</span>
+                  <span className="text-black">₹{priceBreakdown.platformFee.toFixed(2)}</span>
+                </div>
+              )}
+
+              {priceBreakdown && priceBreakdown.serviceTax > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-black">GST {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}</span>
+                  <span className="text-black">₹{priceBreakdown.serviceTax.toFixed(2)}</span>
+                </div>
+              )}
+
+              {priceBreakdown && priceBreakdown.vendorServiceTax > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-black">Vendor Service Tax</span>
+                  <span className="text-black">₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* Offer code discount (separate from package's built-in discount) */}
+              {priceBreakdown && priceBreakdown.discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-green-600 font-medium">
                   <span className="text-muted-foreground">
-                    Package Discount{discountPct > 0 ? ` (${discountPct}%)` : ''}
+                    Discount {propCouponCode || priceBreakdown.couponCode ? `(${propCouponCode || priceBreakdown.couponCode})` : ''}
                   </span>
-                  <span>-₹{packageInherentDiscount.toFixed(2)}</span>
+                  <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
                 </div>
-              );
-            })()}
+              )}
 
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>₹{subtotal.toFixed(2)}</span>
-            </div>
+              <div className="border-t border-black my-2"></div>
 
-            {priceBreakdown && priceBreakdown.platformFee > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}</span>
-                <span>₹{priceBreakdown.platformFee.toFixed(2)}</span>
+              <div className="flex justify-between font-semibold">
+                <span className="text-black">Total Amount</span>
+                <span className="text-black">₹{Math.round(total)}</span>
               </div>
-            )}
-
-            {priceBreakdown && priceBreakdown.serviceTax > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">GST {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}</span>
-                <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
-              </div>
-            )}
-
-            {priceBreakdown && priceBreakdown.vendorServiceTax > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Vendor Service Tax</span>
-                <span>₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>
-              </div>
-            )}
-
-            {/* Offer code discount (separate from package's built-in discount) */}
-            {priceBreakdown && priceBreakdown.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600 font-medium">
-                <span className="text-muted-foreground">
-                  Discount {propCouponCode || priceBreakdown.couponCode ? `(${propCouponCode || priceBreakdown.couponCode})` : ''}
-                </span>
-                <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-
-            <Separator className="my-2" />
-
-            <div className="flex justify-between font-semibold">
-              <span>Total Amount</span>
-              <span className="text-primary">₹{Math.round(total)}</span>
             </div>
           </div>
         </div>
-      </CardContent>
-      <CardFooter className="p-6 flex-shrink-0">
+      </div>
+
+      {/* Footer Button */}
+      <div className="flex-shrink-0 p-5 border-t bg-white">
         {weddingPackage && currentStep === 1 ? (
-          <div className="w-full space-y-3">
+          <div className="w-full space-y-3 flex flex-col items-center">
             {onEditPackage && (
-              <Button
-                className="w-full h-12 text-base"
-                size="lg"
-                variant="outline"
+              <button
+                className="w-[85%] text-gray-700 bg-white border border-gray-300 text-sm font-semibold py-2.5 rounded-xl transition-opacity hover:bg-gray-50 disabled:opacity-50"
                 onClick={onEditPackage}
               >
-                <Scissors className="mr-2 h-5 w-5" />
-                Edit Package
-              </Button>
+                <div className="flex items-center justify-center">
+                  <Scissors className="mr-2 h-4 w-4" />
+                  Edit Package
+                </div>
+              </button>
             )}
-            <Button
-              className="w-full h-12 text-base group"
-              size="lg"
+            <button
+              className="w-[85%] text-white text-sm font-semibold py-2.5 rounded-xl mt-1 transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: '#422A3C' }}
               disabled={!isButtonEnabled}
               onClick={onNextStep}
             >
               {buttonLabel}
-              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-            </Button>
+            </button>
           </div>
         ) : (
-          <Button
-            className="w-full h-12 text-base group"
-            size="lg"
-            disabled={!isButtonEnabled}
-            onClick={onNextStep}
-          >
-            {buttonLabel}
-            <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-          </Button>
+          <div className="flex justify-center w-full">
+            <button
+              className="w-[85%] text-white text-sm font-semibold py-2.5 rounded-xl mt-1 transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: '#422A3C' }}
+              disabled={!isButtonEnabled}
+              onClick={onNextStep}
+            >
+              {buttonLabel}
+            </button>
+          </div>
         )}
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

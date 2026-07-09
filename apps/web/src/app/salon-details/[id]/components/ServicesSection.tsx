@@ -154,7 +154,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
 
   const ErrorState = () => (
     <div className="text-center py-8">
-      <p className="text-muted-foreground">Unable to load services. Please try again later.</p>
+      <p className="text-black">Unable to load services. Please try again later.</p>
       <Button
         variant="outline"
         className="mt-4"
@@ -190,7 +190,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
       <div className="flex gap-4">
         <button
           onClick={() => { setServiceType("Individual Services"); setActiveCategory("All"); }}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${serviceType === "Individual Services" ? "bg-[#422A3C] text-white" : "bg-white text-gray-700 hover:bg-gray-50"
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${serviceType === "Individual Services" ? "bg-[#422A3C] text-white" : "bg-white text-black hover:bg-gray-50"
             }`}
           style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
         >
@@ -199,7 +199,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
         </button>
         <button
           onClick={() => { router.push(`/book/${vendorId}?tab=packages`); }}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-gray-700 hover:bg-gray-50`}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-black hover:bg-gray-50`}
           style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
         >
           <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} />
@@ -208,18 +208,18 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
       </div>
 
       {/* Location Selection */}
-      <div className="bg-[#f2f6fc] p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[#EBF3FD] p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Image src="/images/calendar (6) 1.png" alt="Calendar" width={24} height={24} />
           <div>
-            <h3 className="font-semibold text-gray-900 text-sm">How would you like to book?</h3>
-            <p className="text-xs text-gray-600">Select your preferred services location type</p>
+            <h3 className="font-semibold text-black text-sm md:text-base">How would you like to book?</h3>
+            <p className="text-xs md:text-sm text-black">Select your preferred services location type</p>
           </div>
         </div>
         <div className="flex bg-white rounded-md p-1 shadow-sm border border-gray-100">
           <button
             onClick={() => setLocationType("Visit Salon")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Visit Salon" ? "bg-[#452c42] text-white" : "bg-transparent text-gray-700 hover:bg-gray-50"
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Visit Salon" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
               }`}
           >
             <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={locationType === "Visit Salon" ? "brightness-0 invert" : ""} />
@@ -227,7 +227,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
           </button>
           <button
             onClick={() => setLocationType("Home Service")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Home Service" ? "bg-[#452c42] text-white" : "bg-transparent text-gray-700 hover:bg-gray-50"
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Home Service" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
               }`}
           >
             <Image src="/images/home (2) 1.png" alt="Home" width={16} height={16} className={locationType === "Home Service" ? "brightness-0 invert" : ""} />
@@ -269,21 +269,21 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
       {isLoadingData ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span className="text-muted-foreground">Loading services...</span>
+          <span className="text-black">Loading services...</span>
         </div>
       ) : servicesError ? (
         <ErrorState />
       ) : filteredServices.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredServices.map((service: any) => (
-            <div key={service.id} className="flex p-3 rounded-xl hover:shadow-sm transition-shadow relative" style={{ border: '1px solid #00000080', background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' }}>
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 mr-4">
+            <div key={service.id} className="flex p-2.5 rounded-xl hover:shadow-sm transition-shadow relative" style={{ border: '1px solid #00000080', background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' }}>
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 mr-3">
                 <Image src={service.image} alt={service.name} fill className="object-cover" />
               </div>
 
-              <div className="flex flex-col flex-1 py-1">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium text-gray-900 text-sm sm:text-base pr-2">{service.name}</h4>
+              <div className="flex flex-col flex-1 py-0.5 justify-center">
+                <div className="flex justify-between items-start mb-1">
+                  <h4 className="font-medium text-black text-sm sm:text-base pr-2">{service.name}</h4>
                   {service.discountedPrice && service.discountedPrice < service.price && (
                     <span className="bg-black text-white text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                       Save {Math.round(((service.price - service.discountedPrice) / service.price) * 100)}%
@@ -291,18 +291,18 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Image src="/images/clock (2) 4.png" alt="Time" width={14} height={14} />
-                  <span className="text-xs sm:text-sm text-gray-500">{service.duration} mins</span>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image src="/images/clock (2) 4.png" alt="Time" width={12} height={12} />
+                  <span className="text-xs text-black">{service.duration} mins</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Image src="/images/rupee (2) 1.png" alt="Price" width={14} height={14} />
-                    <span className="text-xs sm:text-sm text-gray-900 font-medium">
+                    <Image src="/images/rupee (2) 1.png" alt="Price" width={12} height={12} />
+                    <span className="text-xs sm:text-sm text-black font-medium">
                       {service.discountedPrice && service.discountedPrice < service.price ? (
                         <>
-                          <span className="line-through text-gray-400 mr-1">{service.price}/-</span>
+                          <span className="line-through text-black mr-1">{service.price}/-</span>
                           {service.discountedPrice}/-
                         </>
                       ) : (
@@ -314,10 +314,11 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                   <button
                     onClick={(e) => handleBook(e, service)}
                     disabled={isSubscriptionExpired}
-                    className={`border border-gray-300 h-9 px-4 text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl ${isSubscriptionExpired ? "opacity-50 cursor-not-allowed bg-gray-100" : "text-gray-700 hover:bg-gray-50"
+                    className={`border h-8 px-4 text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl ${isSubscriptionExpired ? "opacity-50 cursor-not-allowed bg-gray-100 border-gray-300 text-black" : "hover:bg-gray-50"
                       }`}
+                    style={!isSubscriptionExpired ? { borderColor: '#422A3C', color: '#422A3C' } : {}}
                   >
-                    <Plus className="w-4 h-4" /> Add
+                    <Plus className="w-3 h-3" /> Buy now
                   </button>
                 </div>
 
@@ -327,7 +328,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
         </div>
       ) : (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">No services available in this category.</p>
+          <p className="text-black">No services available in this category.</p>
         </div>
       )}
     </section>
