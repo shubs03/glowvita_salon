@@ -509,7 +509,7 @@ export const Step3_TimeSlot = memo(({
 
   // Reusable back-arrow + title header (matches MultiService design)
   const PageHeader = () => (
-    <button
+    <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit"
       onClick={() => {
         if (lockedSlot) {
           handleReleaseLock(true);
@@ -518,12 +518,13 @@ export const Step3_TimeSlot = memo(({
         }
         setCurrentStep(currentStep - 1);
       }}
-      className="flex items-center gap-2 mb-4 text-black hover:opacity-70 transition-opacity"
-      type="button"
     >
-      <ChevronLeft className="h-5 w-5" strokeWidth={2} />
-      <span className="text-base font-semibold">Select Location</span>
-    </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+      <h2 className="text-2xl font-bold font-headline text-black">
+        Select Time Slot
+      </h2>
+    </div>
   );
 
   // Loading state
@@ -574,7 +575,7 @@ export const Step3_TimeSlot = memo(({
 
       {/* Page subheading */}
       <div className="mb-6 px-[26px]">
-        <p className="text-sm text-black mt-1">
+        <p className="text-black mt-1">
           Pick the perfect date and time that suits your schedule, so your appointment feels effortless and well-timed.
         </p>
 
@@ -598,7 +599,7 @@ export const Step3_TimeSlot = memo(({
           {/* Select Date label */}
           <div className="flex items-center gap-2 mb-4">
             <CalendarDays className="h-[17px] w-[17px] text-black" strokeWidth={1.75} />
-            <span className="text-sm text-black">Select Date</span>
+            <span className="text-black">Select Date</span>
           </div>
 
           <div className="flex items-center mb-6">
@@ -667,7 +668,7 @@ export const Step3_TimeSlot = memo(({
         <div className="flex items-center justify-between mb-4 mt-2">
           <div className="flex items-center gap-2">
             <Clock className="h-[17px] w-[17px] text-black" strokeWidth={1.75} />
-            <span className="text-sm text-black">Select Time</span>
+            <span className="text-black">Select Time</span>
           </div>
           <button
             type="button"

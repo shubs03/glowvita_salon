@@ -456,11 +456,11 @@ export function Step1_Services({
         <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit" onClick={() => window.history.back()}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
-          <h2 className="text-2xl font-bold font-headline">
+          <h2 className="text-2xl font-bold font-headline text-black">
             {viewMode === 'services' ? 'Select Your Services' : 'Choose Wedding Package'}
           </h2>
         </div>
-        <p className="text-sm text-muted-foreground pl-7">
+        <p className="text-sm text-black pl-7">
           {viewMode === 'services'
             ? 'Choose one or more services you\'d like to book.'
             : 'Select from our specially curated wedding packages'}

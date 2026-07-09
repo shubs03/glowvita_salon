@@ -375,7 +375,7 @@ export function BookingSummary({
                     {service.selectedAddons && service.selectedAddons.length > 0 && (
                       <div className="pl-3 border-l-2 border-primary/20 space-y-1">
                         {service.selectedAddons.map((addon) => (
-                          <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground group">
+                          <div key={addon._id} className="flex justify-between items-center text-xs text-black group">
                             <span>+ {addon.name}</span>
                             <div className="flex items-center gap-1">
                               <span>₹{addon.price}</span>
@@ -415,7 +415,7 @@ export function BookingSummary({
                 <span className="text-lg font-bold">₹{Math.round(total)}</span>
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
-              <p className="text-xs text-muted-foreground">Total (incl. tax)</p>
+              <p className="text-xs text-black">Total (incl. tax)</p>
             </div>
             <Button
               className="w-40 h-12"
@@ -506,19 +506,19 @@ export function BookingSummary({
               <div className="p-3 rounded-xl" style={{ background: '#EBF3FD' }}>
                 <div className="w-full">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs text-muted-foreground">Wedding Package</p>
+                    <p className="text-xs text-black">Wedding Package</p>
                     {weddingPackageMode === 'customized' && (
                       <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">Customized</span>
                     )}
                   </div>
                   <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
                   {weddingPackage.description && (
-                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{weddingPackage.description}</p>
+                    <p className="text-xs text-black mb-3 line-clamp-2">{weddingPackage.description}</p>
                   )}
 
                   <div className="space-y-2 pt-3 border-t">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Services Included</span>
+                      <span className="text-black">Services Included</span>
                       <span className="font-medium">
                         {weddingPackageMode === 'customized' && customizedPackageServices
                           ? customizedPackageServices.length
@@ -526,12 +526,12 @@ export function BookingSummary({
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total Duration</span>
+                      <span className="text-black">Total Duration</span>
                       <span className="font-medium">{totalDuration} min</span>
                     </div>
                     {weddingPackage.staffCount && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Staff Required</span>
+                        <span className="text-black">Staff Required</span>
                         <span className="font-medium">
                           {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
                         </span>
@@ -539,7 +539,7 @@ export function BookingSummary({
                     )}
                     {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
                       <div className="text-sm">
-                        <span className="text-muted-foreground block mb-1.5">Available Staff</span>
+                        <span className="text-black block mb-1.5">Available Staff</span>
                         <div className="flex flex-wrap gap-1.5">
                           {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
                             <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
@@ -579,7 +579,7 @@ export function BookingSummary({
                               <div className="flex items-center gap-2 min-w-0">
                                 <p className="font-semibold text-base text-black truncate">{service.name}</p>
                                 {service.duration && (
-                                  <span className="flex items-center gap-0.5 text-xs text-gray-500 shrink-0">
+                                  <span className="flex items-center gap-0.5 text-xs text-black shrink-0">
                                     <Clock className="h-3.5 w-3.5" />
                                     {service.duration}
                                   </span>
@@ -592,7 +592,7 @@ export function BookingSummary({
                             {service.selectedAddons && service.selectedAddons.length > 0 && (
                               <div className="pl-3 border-l-2 border-primary/20 space-y-1">
                                 {service.selectedAddons.map((addon) => (
-                                  <div key={addon._id} className="flex justify-between items-center text-sm text-gray-700 group">
+                                  <div key={addon._id} className="flex justify-between items-center text-sm text-black group">
                                     <span>+ {addon.name}</span>
                                     <div className="flex items-center gap-1">
                                       <span>₹{addon.price}</span>
@@ -638,12 +638,12 @@ export function BookingSummary({
                     <div className="space-y-1">
                       {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
                         serviceStaffAssignments.map(a => (
-                          <div key={a.service.id} className="text-gray-700 text-sm">
+                          <div key={a.service.id} className="text-black text-sm">
                             <span className="font-medium text-black">{a.service.name}</span>: {a.staff?.name || 'Any Professional'}
                           </div>
                         ))
                       ) : (
-                        <div className="text-gray-700 text-sm">
+                        <div className="text-black text-sm">
                           {selectedStaff?.name || 'Any Professional'}
                         </div>
                       )}
@@ -661,19 +661,19 @@ export function BookingSummary({
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Location</p>
+                    <p className="text-xs text-black">Location</p>
                     {weddingVenueType === 'salon' ? (
                       <p className="font-medium text-sm">At Salon</p>
                     ) : weddingVenueType === 'venue' && (serviceLocation as any)?.address ? (
                       <div>
                         <p className="font-medium text-sm">Wedding Venue</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-black">
                           {(serviceLocation as any).address}
                           {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
                         </p>
                       </div>
                     ) : (
-                      <p className="font-medium text-sm text-muted-foreground">Not selected</p>
+                      <p className="font-medium text-sm text-black">Not selected</p>
                     )}
                   </div>
                 </div>
@@ -686,17 +686,17 @@ export function BookingSummary({
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Location</p>
+                    <p className="text-xs text-black">Location</p>
                     {serviceLocation && (serviceLocation as any).address ? (
                       <div>
                         <p className="font-medium text-sm">Home Service</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-black">
                           {(serviceLocation as any).address}
                           {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
                         </p>
                       </div>
                     ) : (
-                      <p className="font-medium text-sm text-muted-foreground">Not selected</p>
+                      <p className="font-medium text-sm text-black">Not selected</p>
                     )}
                   </div>
                 </div>
@@ -709,7 +709,7 @@ export function BookingSummary({
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-md"><Calendar className="h-4 w-4 text-primary" /></div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Date &amp; Time</p>
+                    <p className="text-xs text-black">Date &amp; Time</p>
                     <p className="font-medium text-sm">
                       {format(selectedDate, 'EEEE, MMM d')} at {selectedTime}
                     </p>
@@ -743,7 +743,7 @@ export function BookingSummary({
                         {service.selectedAddons && service.selectedAddons.length > 0 && (
                           <div className="pl-3 space-y-1">
                             {service.selectedAddons.map((addon) => (
-                              <div key={addon._id} className="flex justify-between text-xs text-muted-foreground">
+                              <div key={addon._id} className="flex justify-between text-xs text-black">
                                 <span>+ {addon.name}</span>
                                 <span>₹{Math.round(typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0))}</span>
                               </div>
@@ -769,7 +769,7 @@ export function BookingSummary({
                 const discountPct = totalP > 0 ? Math.round((packageInherentDiscount / totalP) * 100) : 0;
                 return (
                   <div className="flex justify-between text-sm text-green-600 font-medium">
-                    <span className="text-muted-foreground">
+                    <span className="text-black">
                       Package Discount{discountPct > 0 ? ` (${discountPct}%)` : ''}
                     </span>
                     <span>-₹{packageInherentDiscount.toFixed(2)}</span>
@@ -806,7 +806,7 @@ export function BookingSummary({
               {/* Offer code discount (separate from package's built-in discount) */}
               {priceBreakdown && priceBreakdown.discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-green-600 font-medium">
-                  <span className="text-muted-foreground">
+                  <span className="text-black">
                     Discount {propCouponCode || priceBreakdown.couponCode ? `(${propCouponCode || priceBreakdown.couponCode})` : ''}
                   </span>
                   <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
@@ -830,7 +830,7 @@ export function BookingSummary({
           <div className="w-full space-y-3 flex flex-col items-center">
             {onEditPackage && (
               <button
-                className="w-[85%] text-gray-700 bg-white border border-gray-300 text-sm font-semibold py-2.5 rounded-xl transition-opacity hover:bg-gray-50 disabled:opacity-50"
+                className="w-[85%] text-black bg-white border border-gray-300 text-sm font-semibold py-2.5 rounded-xl transition-opacity hover:bg-gray-50 disabled:opacity-50"
                 onClick={onEditPackage}
               >
                 <div className="flex items-center justify-center">

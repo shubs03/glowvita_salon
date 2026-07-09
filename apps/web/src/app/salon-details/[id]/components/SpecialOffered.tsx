@@ -249,7 +249,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
           </div>
 
           {/* Description Card with discount badge */}
-          <div className="flex-1 w-full bg-[#EBF3FD] border border-gray-200 rounded-2xl p-2 md:p-2 relative flex flex-col justify-center mt-8 md:mt-0 shadow-sm min-h-[9rem]">
+          <div className="flex-1 w-full bg-[#EBF3FD] border border-gray-200 rounded-2xl p-4 pl-6 md:p-5 md:pl-8 relative flex flex-col justify-center mt-8 md:mt-0 shadow-sm min-h-[9rem]">
 
             {/* Discount Badge - Circle at top right corner of card */}
             <div
@@ -304,7 +304,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
               <p className="text-sm md:text-base text-black leading-relaxed mb-1">
                 Transform your style with our{" "}
                 <strong className="font-bold">{currentOffer.applicableServices.join(", ")}</strong>{" "}
-                service. Expert stylists, quality service, unbeatable price!
+                service.
               </p>
             )}
 
