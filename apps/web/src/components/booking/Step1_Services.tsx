@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Card, CardContent } from '@repo/ui/card';
+import { Card } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Bolt, Plus, Check, Scissors, Loader2, AlertCircle, Home, Heart, Users, X, Clock , List, User } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Plus, Check, Scissors, Loader2, AlertCircle, Heart, Users, X, Clock, List, User } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 import { Service, WeddingPackage } from '@/hooks/useBookingData';
@@ -22,42 +23,43 @@ import {
 import { Checkbox } from "@repo/ui/checkbox";
 import { Label } from "@repo/ui/label";
 
-const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: { 
-  currentStep: number; 
-  setCurrentStep: (step: number) => void; 
+const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
   isWeddingPackage?: boolean;
 }) => {
   const steps = isWeddingPackage
-    ? ['Select Package', 'Select Date & Time', 'Confirm Booking']
-    : ['Services', 'Select Professional', 'Time Slot'];
+    ? { 1: 'Select Package', 3: 'Select Date & Time', 4: 'Confirm Booking' }
+    : { 1: 'Services', 2: 'Select Professional', 3: 'Time Slot' };
+
+  const currentStepName = (steps as any)[currentStep] || 'Booking';
 
   return (
-    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-      {steps.map((step, index) => {
-        // Map index to step number
-        // Regular: 0->1, 1->2, 2->3
-        // Wedding: 0->1, 1->3, 2->4
-        const targetStep = isWeddingPackage
-          ? (index === 0 ? 1 : index === 1 ? 3 : 4)
-          : index + 1;
+    <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 mb-6 shadow-sm">
+      <nav className="flex items-center text-xs sm:text-sm font-medium text-muted-foreground flex-wrap gap-y-2">
+        {Object.values(steps).map((step, index) => {
+          const targetStep = isWeddingPackage
+            ? (index === 0 ? 1 : index === 1 ? 3 : 4)
+            : index + 1;
 
-        return (
-          <React.Fragment key={step}>
-            <button
-              onClick={() => currentStep > targetStep && setCurrentStep(targetStep)}
-              className={cn(
-                "transition-colors",
-                currentStep > targetStep ? "hover:text-primary" : "cursor-default",
-                currentStep === targetStep && "text-primary font-semibold"
-              )}
-            >
-              {step}
-            </button>
-            {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-          </React.Fragment>
-        );
-      })}
-    </nav>
+          return (
+            <React.Fragment key={step as string}>
+              <button
+                onClick={() => currentStep > targetStep && setCurrentStep(targetStep)}
+                className={cn(
+                  "transition-colors",
+                  currentStep > targetStep ? "hover:text-primary" : "cursor-default",
+                  currentStep === targetStep && "text-primary font-bold bg-white px-2 py-0.5 rounded-md shadow-sm border border-primary/10"
+                )}
+              >
+                {step as string}
+              </button>
+              {index < Object.keys(steps).length - 1 && <ChevronRight className="h-4 w-4 mx-1 sm:mx-2 text-muted-foreground/50" />}
+            </React.Fragment>
+          );
+        })}
+      </nav>
+    </div>
   );
 };
 
@@ -135,17 +137,17 @@ export function Step1_Services({
   // Create a staff lookup map for quick ID to name resolution
   const staffLookup = useMemo(() => {
     console.log('Creating staff lookup from:', staffData);
-    
+
     if (!staffData) {
       console.log('No staff data available');
       return {};
     }
-    
+
     const lookup: { [key: string]: string } = {};
-    
+
     // Try multiple data structure patterns
     let staffArray: any[] = [];
-    
+
     if (Array.isArray(staffData)) {
       staffArray = staffData;
     } else if ((staffData as any)?.data && Array.isArray((staffData as any).data)) {
@@ -153,29 +155,29 @@ export function Step1_Services({
     } else if ((staffData as any)?.staff && Array.isArray((staffData as any).staff)) {
       staffArray = (staffData as any).staff;
     }
-    
+
     console.log('Staff Array to process:', staffArray, 'Length:', staffArray.length);
-    
+
     if (staffArray.length > 0) {
       staffArray.forEach((staff: any, index: number) => {
         console.log(`Processing staff ${index}:`, staff);
-        
+
         if (staff) {
           // Try all possible ID fields
           const staffId = staff._id || staff.id || staff.staffId;
           // Try all possible name fields
-          const staffName = staff.name || staff.fullName || staff.staffName || staff.firstName 
+          const staffName = staff.name || staff.fullName || staff.staffName || staff.firstName
             || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
-          
+
           console.log(`Staff ${index} - ID: ${staffId}, Name: ${staffName}`);
-          
+
           if (staffId && staffName) {
             lookup[String(staffId)] = staffName;
           }
         }
       });
     }
-    
+
     console.log('Final Staff Lookup Map:', lookup);
     return lookup;
   }, [staffData]);
@@ -183,14 +185,14 @@ export function Step1_Services({
   // Helper function to get staff name from ID with fallback
   const getStaffName = (staff: any): string => {
     console.log('Getting staff name for:', staff);
-    
+
     // If staff is already a string, treat it as an ID and look it up
     if (typeof staff === 'string') {
       const resolvedName = staffLookup[staff];
       console.log(`Resolved ID "${staff}" to name:`, resolvedName);
       return resolvedName || staff || 'Staff Member';
     }
-    
+
     // If staff is an object, try to extract information
     if (staff && typeof staff === 'object') {
       // First try to get the ID and look it up
@@ -199,17 +201,17 @@ export function Step1_Services({
         console.log(`Found staff name in lookup for ID ${staffId}:`, staffLookup[String(staffId)]);
         return staffLookup[String(staffId)];
       }
-      
+
       // Try to get name directly from the object
       const directName = staff.name || staff.fullName || staff.staffName || staff.firstName
         || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
-      
+
       if (directName) {
         console.log('Found staff name directly from object:', directName);
         return directName;
       }
     }
-    
+
     console.log('Falling back to default Staff Member');
     return 'Staff Member';
   };
@@ -347,7 +349,7 @@ export function Step1_Services({
 
   // Handle wedding package selection with confirmation
   const handleSelectWeddingPackage = (pkg: WeddingPackage | null) => {
-    const isCurrentlySelected = !!selectedWeddingPackage && 
+    const isCurrentlySelected = !!selectedWeddingPackage &&
       (selectedWeddingPackage.id === (pkg?.id || pkg?._id) || selectedWeddingPackage._id === (pkg?.id || pkg?._id));
 
     if (onWeddingPackageSelect) {
@@ -450,17 +452,15 @@ export function Step1_Services({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={!!selectedWeddingPackage} />
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 bg-primary/10 rounded-full text-primary">
-            {viewMode === 'services' ? <Scissors className="h-6 w-6" /> : <Heart className="h-6 w-6" />}
-          </div>
-          <h2 className="text-3xl font-bold font-headline">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit" onClick={() => window.history.back()}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+          <h2 className="text-2xl font-bold font-headline">
             {viewMode === 'services' ? 'Select Your Services' : 'Choose Wedding Package'}
           </h2>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-muted-foreground pl-7">
           {viewMode === 'services'
             ? 'Choose one or more services you\'d like to book.'
             : 'Select from our specially curated wedding packages'}
@@ -469,29 +469,31 @@ export function Step1_Services({
 
       {/* View Mode Tabs */}
       {hasWeddingPackages && (
-        <div className="flex gap-2 mb-6 p-1 bg-muted rounded-lg w-fit">
+        <div className="flex gap-4 mb-6">
           <button
             onClick={() => setViewMode('services')}
-            className={cn(
-              "px-6 py-3 rounded-md font-medium transition-all flex items-center gap-2",
-              viewMode === 'services'
-                ? "bg-white shadow-sm text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
+            style={{
+              background: viewMode === 'services' ? '#422A3C' : '#ffffff',
+              color: viewMode === 'services' ? '#ffffff' : '#374151',
+              border: '1px solid #00000082',
+              borderRadius: '0.375rem'
+            }}
           >
-            <Scissors className="h-4 w-4" />
+            <Image src="/images/customer (2) 1.png" alt="Individual" width={16} height={16} className={viewMode === 'services' ? 'brightness-0 invert' : ''} />
             Individual Services
           </button>
           <button
             onClick={() => setViewMode('packages')}
-            className={cn(
-              "px-6 py-3 rounded-md font-medium transition-all flex items-center gap-2",
-              viewMode === 'packages'
-                ? "bg-white shadow-sm text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
+            style={{
+              background: viewMode === 'packages' ? '#422A3C' : '#ffffff',
+              color: viewMode === 'packages' ? '#ffffff' : '#374151',
+              border: '1px solid #00000082',
+              borderRadius: '0.375rem'
+            }}
           >
-            <Heart className="h-4 w-4" />
+            <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} className={viewMode === 'packages' ? 'brightness-0 invert' : ''} />
             Wedding Packages
             {displayWeddingPackages.length > 0 && (
               <span className="ml-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
@@ -505,202 +507,147 @@ export function Step1_Services({
       {/* Services View */}
       {viewMode === 'services' && (
         <>
-          {/* Tab-like navigation for categories */}
-          <div className="sticky top-0 z-10 pb-4 -mx-6 px-6">
-            <div className="relative">
-              <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
-                {displayCategories.map((category: { name: string }) => (
-                  <Button
-                    key={category.name}
-                    variant={activeCategory === category.name ? 'default' : 'outline'}
-                    className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${activeCategory === category.name ? '' : 'hover:bg-primary/5 hover:border-primary/50'
-                      }`}
-                    onClick={() => setActiveCategory(category.name)}
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-            
-            </div>
-          </div>
-
-
-          {/* Booking Mode Switcher - Essential UX Element */}
-          <div className="mb-6 bg-secondary/20 p-4 rounded-xl border border-border">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div className="mb-2 sm:mb-0">
-                <h3 className="font-bold text-lg flex items-center gap-2">
-                  <span className="bg-primary/20 p-1.5 rounded-full"><Scissors className="w-4 h-4 text-primary" /></span>
-                  How would you like to book?
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">Select your preferred service location type</p>
-              </div>
-
-              <div className="bg-background rounded-lg p-1 flex gap-1 border shadow-sm w-full sm:w-auto">
-                <button
-                  onClick={() => {
-                    // Start fresh if switching modes? Or keep compatible services?
-                    // For safety, let's keep it simple: switching mode is allowed, 
-                    // incompatible services will need to be deselected manually or we can filter them out.
-                    // For now, simple state switch.
-                    setBookingMode('salon');
-                  }}
-                  className={cn(
-                    "flex-1 sm:flex-none px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2",
-                    bookingMode === 'salon'
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-secondary/50"
-                  )}
-                >
-                  <Scissors className="w-4 h-4" />
-                  Visit Salon
-                </button>
-                <button
-                  onClick={() => setBookingMode('home')}
-                  className={cn(
-                    "flex-1 sm:flex-none px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2",
-                    bookingMode === 'home'
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-secondary/50"
-                  )}
-                >
-                  <Home className="w-4 h-4" />
-                  Home Service
-                </button>
+          {/* Booking Mode Switcher - FIRST */}
+          <div className="mb-4 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ background: '#EBF3FD' }}>
+            <div className="flex items-center gap-3">
+              <Image src="/images/calendar (6) 1.png" alt="Calendar" width={24} height={24} />
+              <div>
+                <h3 className="font-semibold text-black text-sm md:text-base">How would you like to book?</h3>
+                <p className="text-xs md:text-sm text-black">Select your preferred services location type</p>
               </div>
             </div>
 
-            {bookingMode === 'home' && (
-              <div className="mt-3 text-xs text-primary bg-primary/10 px-3 py-2 rounded-md border border-primary/20 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>You are browsing services available for <strong>Home Visit</strong>. Salon-only services are disabled.</span>
-              </div>
-            )}
+            <div className="flex bg-white rounded-md p-1 shadow-sm border border-gray-100">
+              <button
+                onClick={() => setBookingMode('salon')}
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                style={{
+                  background: bookingMode === 'salon' ? '#422A3C' : 'transparent',
+                  color: bookingMode === 'salon' ? '#ffffff' : '#000000'
+                }}
+              >
+                <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={bookingMode === 'salon' ? 'brightness-0 invert' : ''} />
+                Visit Salon
+              </button>
+              <button
+                onClick={() => setBookingMode('home')}
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                style={{
+                  background: bookingMode === 'home' ? '#422A3C' : 'transparent',
+                  color: bookingMode === 'home' ? '#ffffff' : '#000000'
+                }}
+              >
+                <Image src="/images/home (2) 1.png" alt="Home" width={16} height={16} className={bookingMode === 'home' ? 'brightness-0 invert' : ''} />
+                Home Service
+              </button>
+            </div>
           </div>
+
+          {/* Category Dropdown - AFTER booking mode switcher */}
+          {displayCategories.length > 1 && (
+            <div className="mb-4 w-full max-w-[550px]">
+              <Select value={activeCategory} onValueChange={setActiveCategory}>
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {displayCategories.map((category: { name: string }) => (
+                    <SelectItem key={category.name} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Services List */}
-          <div className="space-y-4 pt-4">
-            {servicesToDisplay.map((service: Service) => {
-              const isSelected = selectedServices.some(s => s.id === service.id);
-              // Check if service is available for home or wedding (support both formats)
-              const isHomeService = service.homeService?.available || service.serviceHomeService?.available;
-              const isWeddingService = service.weddingService?.available || service.serviceWeddingService?.available;
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {servicesToDisplay
+              .filter((service: Service) => {
+                // In home mode, hide salon-only services entirely
+                if (bookingMode === 'home') {
+                  const isHomeService = service.homeService?.available || service.serviceHomeService?.available;
+                  return !!isHomeService;
+                }
+                return true; // Visit Salon: show all
+              })
+              .map((service: Service) => {
+                const isSelected = selectedServices.some(s => s.id === service.id);
 
-              // UX: Calculate if disabled based on mode
-              // Disabled if: Mode is HOME AND Not available at home
-              const isDisabled = bookingMode === 'home' && !isHomeService;
-
-              return (
-                <Card
-                  key={service.id}
-                  className={cn(
-                    'p-4 flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 border-2',
-                    isDisabled ? 'opacity-50 grayscale cursor-not-allowed bg-muted' : 'cursor-pointer hover:border-primary/50 hover:shadow-md',
-                    isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent bg-secondary/30'
-                  )}
-                  onClick={() => !isDisabled && handleSelectService(service)}
-                >
-                  {/* Image Section */}
-                  <div className="relative w-full sm:w-20 h-24 sm:h-20 rounded-md overflow-hidden flex-shrink-0">
-                    <Image
-                      src={service.image || `https://picsum.photos/seed/${service.name}/200/200.png`}
-                      alt={service.name}
-                      fill
-                      className="object-cover"
-                      data-ai-hint="beauty service"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = `https://picsum.photos/seed/${service.name}/200/200.png`;
-                      }}
-                    />
-                  </div>
-
-                  {/* Content Section */}
-                  <div className="flex-1 text-center sm:text-left">
-                    <h3 className="font-semibold">{service.name}</h3>
-                    <p className="text-sm text-muted-foreground">{service.duration}</p>
-
-                    {/* Visual cue for why it's disabled */}
-                    {isDisabled && (
-                      <p className="text-xs text-destructive font-medium mt-1 flex items-center justify-center sm:justify-start gap-1">
-                        <AlertCircle className="w-3 h-3" /> Salon Only
-                      </p>
+                return (
+                  <div
+                    key={service.id}
+                    className={cn(
+                      'flex p-3 rounded-xl transition-shadow relative cursor-pointer hover:shadow-md',
+                      isSelected ? 'ring-2 shadow-md' : ''
                     )}
+                    style={{ border: isSelected ? '1px solid #087326' : '1px solid #00000080', background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' }}
+                    onClick={() => handleSelectService(service)}
+                  >
+                    {/* Selected Badge Removed */}
 
-                    {/* Show service type badges */}
-                    <div className="flex gap-2 mt-2 justify-center sm:justify-start">
-                      {isHomeService && (
-                        <span className={cn(
-                          "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                          isDisabled ? "bg-muted text-muted-foreground" : "bg-primary text-secondary"
-                        )}>
-                          <Home className="h-3 w-3 mr-1" />
-                          Home Service
-                        </span>
-                      )}
-                      {isWeddingService && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
-                          <Heart className="h-3 w-3 mr-1" />
-                          Wedding Service
-                        </span>
-                      )}
-                      {service.isAddon && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          <Plus className="h-3 w-3 mr-1" />
-                          Addon
-                        </span>
-                      )}
-                      {/* Swiggy-style Customisable Badge */}
-                      {service.addOns && service.addOns.length > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                          <Bolt className="h-3 w-3 mr-1" />
-                          Customisable
-                        </span>
-                      )}
+                    {/* Image Section */}
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 mr-3">
+                      <Image
+                        src={service.image || `https://picsum.photos/seed/${service.name}/200/200.png`}
+                        alt={service.name}
+                        fill
+                        className="object-cover"
+                        data-ai-hint="beauty service"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://picsum.photos/seed/${service.name}/200/200.png`;
+                        }}
+                      />
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="flex flex-col flex-1 py-1">
+                      <div className="flex justify-between items-start mb-2 gap-2">
+                        <h4 className="font-medium text-black text-sm sm:text-base pr-2">{service.name}</h4>
+                        {service.discountedPrice && parseFloat(String(service.discountedPrice)) < parseFloat(String(service.price)) && (
+                          <span className="shrink-0 bg-black text-white text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                            Save {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}%
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Image src="/images/clock (2) 4.png" alt="Time" width={14} height={14} />
+                        <span className="text-xs text-black">{service.duration} mins</span>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-auto">
+                        <div className="flex items-center gap-1.5">
+                          <Image src="/images/rupee (2) 1.png" alt="Price" width={14} height={14} />
+                          <span className="text-xs sm:text-sm text-black font-medium">
+                            {service.discountedPrice && parseFloat(String(service.discountedPrice)) < parseFloat(String(service.price)) ? (
+                              <>
+                                <span className="line-through text-black mr-1">{service.price}/-</span>
+                                {service.discountedPrice}/-
+                              </>
+                            ) : (
+                              `${service.price}/-`
+                            )}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSelectService(service); }}
+                          className={cn(
+                            'border h-8 px-4 text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl',
+                            isSelected ? 'bg-[#087326]/10 border-[#087326] text-[#087326]' : 'hover:bg-gray-50'
+                          )}
+                          style={isSelected ? { color: '#087326', borderColor: '#087326', backgroundColor: 'rgba(8, 115, 38, 0.1)' } : { borderColor: '#422A3C', color: '#422A3C' }}
+                        >
+                          {isSelected ? <><Image src="/images/check 1.png" alt="Selected" width={16} height={16} /> Selected</> : <><Plus className="w-4 h-4" /> Add</>}
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Price & Action Button */}
-                  <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 text-right">
-                    <div className="text-right">
-                      {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== service.price ? (
-                        <>
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="text-muted-foreground line-through text-sm">
-                              ₹{service.price}
-                            </span>
-                            <span className="font-bold text-lg text-primary">
-                              ₹{service.discountedPrice}
-                            </span>
-                          </div>
-                          <div className="text-xs text-green-600 font-medium">
-                            {Math.round(((parseFloat(service.price || '0') - parseFloat(service.discountedPrice || '0')) / parseFloat(service.price || '1')) * 100)}% OFF
-                          </div>
-                        </>
-                      ) : (
-                        <span className="font-bold text-lg text-primary">
-                          ₹{service.price}
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={isSelected ? "default" : "secondary"}
-                      disabled={isDisabled}
-                      className={cn("w-28 shadow-sm transition-all", isDisabled && "opacity-50")}
-                    >
-                      {isSelected ? (
-                        <><Check className="h-4 w-4 mr-2" /> Selected</>
-                      ) : (
-                        <><Plus className="h-4 w-4 mr-2" /> Add</>
-                      )}
-                    </Button>
-                  </div>
-
-                </Card>
-              );
-            })}
+                );
+              })}
           </div>
         </>
       )}
@@ -717,7 +664,7 @@ export function Step1_Services({
 
                 if (!isValidPackage) return null;
 
-                const isSelected = !!selectedWeddingPackage && 
+                const isSelected = !!selectedWeddingPackage &&
                   (selectedWeddingPackage.id === (pkg.id || pkg._id) || selectedWeddingPackage._id === (pkg.id || pkg._id));
                 const isCustomized = isSelected && weddingPackageMode === 'customized' && selectedWeddingPackage;
 

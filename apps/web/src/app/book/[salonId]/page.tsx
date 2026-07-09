@@ -47,6 +47,7 @@ import { Step2_MultiService } from "@/components/booking/Step2_MultiService";
 import { Step3_MultiServiceTimeSlot } from "@/components/booking/Step3_MultiServiceTimeSlot";
 import { Step3_LocationSelection } from "@/components/booking/Step3_LocationSelection";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@repo/ui/card';
 import { Separator } from '@repo/ui/separator';
@@ -83,6 +84,80 @@ const loadRazorpayScript = (): Promise<boolean> =>
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
+
+type BookingStepBannerProps = {
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
+  bookingMode: 'salon' | 'home';
+  isWeddingPackage?: boolean;
+};
+
+const getBookingStepItems = (bookingMode: 'salon' | 'home', isWeddingPackage = false) => {
+  if (isWeddingPackage) {
+    return [
+      { step: 1, label: 'Select Package' },
+      { step: 3, label: 'Location' },
+      { step: 4, label: 'Time Slot' },
+    ];
+  }
+
+  if (bookingMode === 'home') {
+    return [
+      { step: 1, label: 'Services' },
+      { step: 2, label: 'Select Professionals' },
+      { step: 3, label: 'Location' },
+      { step: 4, label: 'Time Slot' },
+    ];
+  }
+
+  return [
+    { step: 1, label: 'Services' },
+    { step: 2, label: 'Select Professionals' },
+    { step: 3, label: 'Time Slot' },
+  ];
+};
+
+const BookingStepBanner = ({
+  currentStep,
+  setCurrentStep,
+  bookingMode,
+  isWeddingPackage = false,
+}: BookingStepBannerProps) => {
+  const steps = getBookingStepItems(bookingMode, isWeddingPackage);
+
+  return (
+    <nav className="flex items-center text-xs sm:text-sm font-medium text-white/70 flex-wrap justify-start gap-y-2">
+      {steps.map((item, index) => {
+        const isCompleted = currentStep > item.step;
+        const isActive = currentStep === item.step;
+
+        return (
+          <React.Fragment key={item.step}>
+            <button
+              type="button"
+              onClick={() => isCompleted && setCurrentStep(item.step)}
+              className={[
+                "transition-colors rounded-md px-2 py-0.5",
+                isCompleted ? "text-white hover:bg-white/10 hover:text-white" : "cursor-default",
+                isActive ? "text-white font-bold" : "",
+              ].filter(Boolean).join(" ")}
+            >
+              {item.label}
+            </button>
+            {index < steps.length - 1 && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/images/next (1) 3.png"
+                alt="arrow"
+                className="h-3 w-3 mx-0.5 sm:mx-1 flex-shrink-0 opacity-70"
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </nav>
+  );
+};
 
 // Add a custom hook to fetch tax fee settings
 const useTaxFeeSettings = () => {
@@ -3665,7 +3740,7 @@ function BookingPageContent() {
               weddingPackageMode={weddingPackageMode}
               bookingMode={bookingMode}
               setBookingMode={handleBookingModeChange}
-              initialViewMode={selectedWeddingPackage ? 'packages' : 'services'}
+              initialViewMode={selectedWeddingPackage || searchParams?.get('tab') === 'packages' ? 'packages' : 'services'}
             />
           );
         case 2:
@@ -4463,10 +4538,37 @@ function BookingPageContent() {
     }
   }, [services, isLoading, selectedServices.length]);
 
+  const salonDetailsHref = salonId ? `/salon-details/${salonId}` : '/salons';
+
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-     <MarketingHeader isHomePage />
-      <div className="flex-1 grid lg:grid-cols-12 gap-8 px-8">
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Styled Banner Header */}
+      <header className="flex-shrink-0 sticky top-0 z-20" style={{ background: '#422A3C' }}>
+        <div className="flex items-center px-6 md:px-10 py-4">
+          {/* Left: salon name + arrow + booking steps */}
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            <Link
+              href={salonDetailsHref}
+              className="text-sm font-semibold text-white truncate max-w-[120px] hover:text-white/90"
+            >
+              {salonInfo?.name || 'Salon'}
+            </Link>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/next (1) 3.png"
+              alt="arrow"
+              className="h-3 w-3 flex-shrink-0 opacity-70"
+            />
+            <BookingStepBanner
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+              bookingMode={bookingMode}
+              isWeddingPackage={!!selectedWeddingPackage}
+            />
+          </div>
+        </div>
+      </header>
+      <div className="flex-1 grid lg:grid-cols-12 gap-6 px-6 lg:px-8 py-2">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
           <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
             {/* Debug info

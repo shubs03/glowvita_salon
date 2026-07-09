@@ -3,29 +3,31 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
-import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star, Plus, X } from 'lucide-react';
+import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star, StarHalf, Plus, X, Clock, Users2 } from 'lucide-react';
 import { StaffMember, Service, ServiceStaffAssignment, isStaffCompatibleWithService } from '@/hooks/useBookingData';
 
-const Breadcrumb = ({ currentStep, setCurrentStep, bookingMode }: { currentStep: number; setCurrentStep: (step: number) => void; bookingMode?: string; }) => {
-    const steps = ['Services', 'Select Professionals', bookingMode === 'home' ? 'Location' : 'Time Slot'];
+// Default profile image shown when a staff member has no photo (or the photo fails to load).
+// Place your actual asset at this path in /public, e.g. public/images/default-profile.png
+const DEFAULT_PROFILE_IMAGE = '/images/default-profile.png';
+
+// Renders a 5-star rating, filling full/half/empty stars based on a numeric rating (e.g. 4.5 -> 4 full + 1 half)
+const StarRating = ({ rating }: { rating: number }) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating - fullStars >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
     return (
-        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-            {steps.map((step, index) => (
-                <React.Fragment key={step}>
-                    <button
-                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
-                        className={cn(
-                            "transition-colors",
-                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-                            currentStep === index + 1 && "text-primary font-semibold"
-                        )}
-                    >
-                        {step}
-                    </button>
-                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-                </React.Fragment>
+        <div className="flex items-center gap-0.5">
+            {Array.from({ length: fullStars }).map((_, i) => (
+                <Star key={`full-${i}`} className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
             ))}
-        </nav>
+            {hasHalfStar && (
+                <StarHalf className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+            )}
+            {Array.from({ length: Math.max(emptyStars, 0) }).map((_, i) => (
+                <Star key={`empty-${i}`} className="h-3.5 w-3.5 text-muted-foreground/30" />
+            ))}
+        </div>
     );
 };
 
@@ -56,6 +58,8 @@ export function Step2_MultiService({
     // State to track which service is currently being assigned
     const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
     const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
+    // Tracks which staff photos failed to load, so we can fall back to the default profile image
+    const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
     // Filter staff based on current service
     useEffect(() => {
@@ -145,7 +149,6 @@ export function Step2_MultiService({
     if (isLoading) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -153,13 +156,13 @@ export function Step2_MultiService({
                         </div>
                         <h2 className="text-3xl font-bold font-headline">Select Professionals</h2>
                     </div>
-                    <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
+                    <p className="text-black">Choose your preferred stylist for each service.</p>
                 </div>
 
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Loading staff members...</p>
+                        <p className="text-black">Loading staff members...</p>
                     </div>
                 </div>
             </div>
@@ -170,7 +173,6 @@ export function Step2_MultiService({
     if (error) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -178,13 +180,13 @@ export function Step2_MultiService({
                         </div>
                         <h2 className="text-3xl font-bold font-headline">Select Professionals</h2>
                     </div>
-                    <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
+                    <p className="text-black">Choose your preferred stylist for each service.</p>
                 </div>
 
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <AlertCircle className="h-8 w-8 text-destructive" />
-                        <p className="text-muted-foreground">Unable to load staff members. Please try again.</p>
+                        <p className="text-black">Unable to load staff members. Please try again.</p>
                     </div>
                 </div>
             </div>
@@ -195,7 +197,6 @@ export function Step2_MultiService({
     if (serviceStaffAssignments.length === 0) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -203,13 +204,13 @@ export function Step2_MultiService({
                         </div>
                         <h2 className="text-3xl font-bold font-headline">Select Professionals</h2>
                     </div>
-                    <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
+                    <p className="text-black">Choose your preferred stylist for each service.</p>
                 </div>
 
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <AlertCircle className="h-8 w-8 text-destructive" />
-                        <p className="text-muted-foreground">No services selected. Please go back and select services.</p>
+                        <p className="text-black">No services selected. Please go back and select services.</p>
                     </div>
                 </div>
             </div>
@@ -221,21 +222,19 @@ export function Step2_MultiService({
 
     return (
         <div className="w-full">
-            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
             <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-primary/10 rounded-full text-primary">
-                        <Users className="h-6 w-6" />
-                    </div>
-                    <h2 className="text-3xl font-bold font-headline">Select Professionals</h2>
+                <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit" onClick={() => setCurrentStep(currentStep - 1)}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+                    <h2 className="text-2xl font-bold font-headline">Select Professionals</h2>
                 </div>
-                <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
+                <p className="text-black pl-7">Choose your preferred stylist for each service.</p>
             </div>
 
             {/* Progress indicator */}
             <div className="mb-6">
                 <div className="flex items-start justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground mt-0.5">
+                    <span className="text-sm font-medium text-black mt-0.5">
                         Service {currentAssignmentIndex + 1} of {serviceStaffAssignments.length}
                     </span>
                     <div className="text-right">
@@ -243,7 +242,7 @@ export function Step2_MultiService({
                             {currentAssignment?.service?.name}
                         </span>
                         {currentAssignment?.service?.selectedAddons && currentAssignment.service.selectedAddons.length > 0 && (
-                            <span className="text-xs text-muted-foreground block mt-0.5">
+                            <span className="text-xs text-black block mt-0.5">
                                 + {currentAssignment.service.selectedAddons.map(a => a.name).join(', ')}
                             </span>
                         )}
@@ -257,80 +256,142 @@ export function Step2_MultiService({
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-                {/* Any Professional Card */}
+            {/* Vertical staff list */}
+            <div className="flex flex-col gap-4 mb-8">
+                {/* Any Professional Row */}
                 <div
                     className={cn(
-                        'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
-                        !serviceStaffAssignments[currentAssignmentIndex]?.staff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
+                        'group relative flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 overflow-hidden',
+                        !serviceStaffAssignments[currentAssignmentIndex]?.staff
+                            ? 'border-primary shadow-lg'
+                            : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                     )}
+                    style={!serviceStaffAssignments[currentAssignmentIndex]?.staff ? { background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' } : undefined}
                     onClick={() => handleSelectStaff(null)}
                 >
-                    <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
-                        <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                    <h3 className="font-semibold text-foreground">Any Professional</h3>
-                    <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
                     {!serviceStaffAssignments[currentAssignmentIndex]?.staff && (
-                        <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4" />
-                        </div>
+                        <span
+                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-2xl"
+                            style={{ background: '#422A3C' }}
+                        />
+                    )}
+                    <div className="relative w-14 h-14 shrink-0 rounded-full overflow-hidden shadow-md">
+                        <Image src="/images/profile (7) 1.png" alt="Any Professional" width={112} height={112} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                        <h3 className="font-semibold text-foreground">Any Professional</h3>
+                        <p className="text-sm text-black">We'll assign an available expert.</p>
+                    </div>
+                    {!serviceStaffAssignments[currentAssignmentIndex]?.staff && (
+                        <span
+                            className="shrink-0 px-4 py-1.5 rounded-full text-white text-sm font-medium"
+                            style={{ background: '#087326' }}
+                        >
+                            Selected
+                        </span>
                     )}
                 </div>
-                {/* Staff Member Cards */}
+
+                {/* Staff Member Rows */}
                 {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => {
                     // Check if this staff member is selected for the current service
                     const isCurrentStaffSelected = serviceStaffAssignments[currentAssignmentIndex]?.staff?.id === staffMember.id;
+                    // Optional fields — safe to omit if not present on StaffMember yet
+                    const experience = (staffMember as any).experience;
+                    const clients = (staffMember as any).clients;
+                    const imageSrc = brokenImages[staffMember.id] || !staffMember.image
+                        ? DEFAULT_PROFILE_IMAGE
+                        : staffMember.image;
 
                     return (
                         <div
                             key={staffMember.id}
                             className={cn(
-                                'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
-                                isCurrentStaffSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                                'group relative flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 overflow-hidden',
+                                isCurrentStaffSelected
+                                    ? 'border-primary shadow-lg'
+                                    : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
                             )}
+                            style={isCurrentStaffSelected ? { background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' } : undefined}
                             onClick={() => handleSelectStaff(staffMember)}
                         >
-                            <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
+                            {isCurrentStaffSelected && (
+                                <span
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-2xl"
+                                    style={{ background: '#422A3C' }}
+                                />
+                            )}
+                            <div className="relative w-14 h-14 shrink-0 rounded-full overflow-hidden shadow-md">
                                 <Image
-                                    src={staffMember.image || `https://picsum.photos/seed/${staffMember.name}/400/400`}
+                                    src={imageSrc}
                                     alt={staffMember.name}
-                                    width={120}
-                                    height={120}
+                                    width={112}
+                                    height={112}
                                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                     data-ai-hint="professional staff portrait"
+                                    onError={() => setBrokenImages(prev => ({ ...prev, [staffMember.id]: true }))}
                                 />
                             </div>
-                            <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
-                            <p className="text-xs text-muted-foreground">{staffMember.role}</p>
-                            {staffMember.rating && (
-                                <div className="flex items-center gap-1 mt-1">
-                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
+
+                            <div className="flex-1 min-w-0 text-left">
+                                <h3 className="font-semibold text-foreground">{staffMember.name}</h3>
+                                <p className="text-sm text-black">{staffMember.role}</p>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                    {staffMember.rating && (
+                                        <div className="flex items-center gap-1">
+                                            <StarRating rating={staffMember.rating} />
+                                            <span className="text-xs text-black">
+                                                {staffMember.rating}
+                                                {(staffMember as any).reviewCount ? ` (${(staffMember as any).reviewCount} reviews)` : ''}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {experience && (
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span className="text-xs text-black">{experience}</span>
+                                        </div>
+                                    )}
+                                    {clients && (
+                                        <div className="flex items-center gap-1">
+                                            <Users2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span className="text-xs text-black">{clients}</span>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                            {staffMember.specialties && staffMember.specialties.length > 0 && (
-                                <div className="mt-1">
-                                    <p className="text-xs text-muted-foreground truncate">
+                                {staffMember.specialties && staffMember.specialties.length > 0 && (
+                                    <p className="text-xs text-black truncate mt-1">
                                         {staffMember.specialties.slice(0, 2).join(', ')}
                                     </p>
-                                </div>
-                            )}
-                            {isCurrentStaffSelected && (
-                                <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                                    <CheckCircle className="h-4 w-4" />
-                                </div>
-                            )}
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectStaff(staffMember);
+                                }}
+                                className={cn(
+                                    'shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
+                                    !isCurrentStaffSelected && 'border border-border text-foreground hover:border-primary/50 hover:bg-secondary/50'
+                                )}
+                                style={isCurrentStaffSelected ? { background: '#087326', color: '#fff' } : undefined}
+                            >
+                                {isCurrentStaffSelected ? 'Selected' : 'Select'}
+                            </button>
                         </div>
                     );
                 }) : (
-                    <div className="col-span-full flex items-center justify-center py-12">
+                    <div className="flex items-center justify-center py-12">
                         <div className="flex flex-col items-center gap-4">
                             <Users className="h-8 w-8 text-muted-foreground" />
-                            <p className="text-muted-foreground">No staff members available for this service. You can still book with any professional.</p>
+                            <p className="text-black">No staff members available for this service. You can still book with any professional.</p>
                         </div>
                     </div>
                 )}
+
+
             </div>
 
             {/* Navigation buttons */}
@@ -342,10 +403,10 @@ export function Step2_MultiService({
                     <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
                     {currentAssignmentIndex === 0 ? 'Back to Services' : 'Previous Service'}
                 </button>
-                
+
                 <div className="flex items-center gap-2">
                     {serviceStaffAssignments.length > 1 && (
-                        <span className="text-sm text-muted-foreground hidden sm:inline">
+                        <span className="text-sm text-black hidden sm:inline">
                             {serviceStaffAssignments.filter(a => a.staff !== null).length} of {serviceStaffAssignments.length} assigned
                         </span>
                     )}
