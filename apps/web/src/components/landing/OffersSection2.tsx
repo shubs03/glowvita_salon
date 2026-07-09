@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useGetPublicAllOffersQuery } from '@repo/store/services/api';
 import { useSelector } from 'react-redux';
 import Link from 'next/link';
@@ -11,7 +12,157 @@ interface SimplifiedOffer {
   image: string;
   validTill: string;
   salonName: string;
+  services: string[];
 }
+
+const PortalTooltip = ({
+  left,
+  top,
+  services,
+}: {
+  left: number;
+  top: number;
+  services: string[];
+}) => {
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: 'absolute',
+        left: `${left}px`,
+        top: `${top}px`,
+        // Left edge anchored to circle's left edge; only move up 100%
+        transform: 'translateY(-100%)',
+        backgroundColor: '#EBF3FD',
+        borderColor: '#c8dff7',
+        zIndex: 9999,
+      }}
+      className="border rounded-xl shadow-xl p-3 w-fit pointer-events-none"
+    >
+      {/* Arrow at fixed offset pointing down on the left side of the tooltip */}
+      <div
+        className="absolute -bottom-2 left-6 -translate-x-1/2 border-8 border-transparent"
+        style={{ borderTopColor: '#EBF3FD' }}
+      />
+      <div
+        className="absolute -bottom-[10px] left-6 -translate-x-1/2 border-[9px] border-transparent -z-10"
+        style={{ borderTopColor: '#c8dff7' }}
+      />
+
+      {services.length > 0 ? (
+        <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-1.5">
+          {services.map((service, sIdx) => (
+            <div key={sIdx} className="flex items-center gap-1.5 text-sm text-black-800 whitespace-nowrap">
+              <span className="text-[#422A3C] font-bold leading-none">•</span>
+              <span>{service}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-500 italic">Applicable on all services</p>
+      )}
+    </div>,
+    document.body
+  );
+};
+
+const OfferCircleItem = ({ offer, salonsUrl }: { offer: SimplifiedOffer; salonsUrl: string }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [tooltipCoords, setTooltipCoords] = useState<{ left: number; top: number; } | null>(null);
+  const elementRef = useRef<HTMLDivElement>(null);
+  const validTillRef = useRef<HTMLDivElement>(null);
+  const discountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isHovered) {
+      const circleEl = elementRef.current;
+      const pillEl = validTillRef.current ?? discountRef.current ?? elementRef.current;
+      if (circleEl && pillEl) {
+        const circleRect = circleEl.getBoundingClientRect();
+        const pillRect = pillEl.getBoundingClientRect();
+        const scrollX = window.scrollX ?? window.pageXOffset ?? 0;
+        const scrollY = window.scrollY ?? window.pageYOffset ?? 0;
+
+        // Tooltip left edge = circle's left edge + small rightward nudge
+        const left = circleRect.left + scrollX + 100;
+        // Tooltip bottom touches the top of the validity pill
+        const top = pillRect.top + scrollY;
+
+        setTooltipCoords({ left, top });
+      }
+    } else {
+      setTooltipCoords(null);
+    }
+  }, [isHovered]);
+
+  const services = offer.services || [];
+  let displayText = offer.title;
+
+  if (services.length > 0) {
+    if (services.length <= 2) {
+      displayText = services.join(' + ');
+    } else {
+      displayText = `${services.slice(0, 2).join(' + ')} + ...`;
+    }
+  }
+
+  return (
+    <div
+      ref={elementRef}
+      className="relative flex flex-col items-center flex-shrink-0 group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <Link
+        href={salonsUrl}
+        className="flex flex-col items-center"
+      >
+        {/* Circle with image + overlay text */}
+        <div className="relative w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full overflow-hidden shadow-lg">
+          <img
+            src={offer.image}
+            alt={offer.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-black/45"></div>
+          <div className="absolute inset-0 flex items-center justify-center px-2.5 text-center">
+            <span className="text-white text-[10px] sm:text-[11px] lg:text-xs font-bold leading-tight drop-shadow-md">
+              {displayText}
+            </span>
+          </div>
+        </div>
+
+        {/* Discount pill - overlaps circle bottom */}
+        <div
+          ref={discountRef}
+          className="relative z-10 -mt-3 bg-green-600 text-white text-[10px] sm:text-[12px] font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap"
+        >
+          {offer.discount}
+        </div>
+
+        {/* Valid till pill */}
+        {offer.validTill && (
+          <div
+            ref={validTillRef}
+            className="relative z-10 -mt-1 bg-red-900 text-white text-[9px] sm:text-[13px] font-semibold px-3 py-1 rounded-full shadow-md whitespace-nowrap"
+          >
+            Valid till : {offer.validTill}
+          </div>
+        )}
+      </Link>
+
+      {/* Tooltip Portal: left edge = circle left, arrow points at the pill center */}
+      {tooltipCoords && (
+        <PortalTooltip
+          left={tooltipCoords.left}
+          top={tooltipCoords.top}
+          services={services}
+        />
+      )}
+    </div>
+  );
+};
 
 const OffersSection2 = () => {
   const { selectedRegionId, userLat, userLng, locationLabel } = useSalonFilter();
@@ -41,6 +192,7 @@ const OffersSection2 = () => {
           ? new Date(offer.expires).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
           : '',
         salonName: 'Valid @ All Salons',
+        services: offer.applicableSpecialties || [],
       }))
     : [];
 
@@ -119,38 +271,11 @@ const OffersSection2 = () => {
                 const salonsUrl = `/salons?${params.toString()}`;
 
                 return (
-                  <Link
+                  <OfferCircleItem
                     key={index}
-                    href={salonsUrl}
-                    className="flex flex-col items-center flex-shrink-0 group"
-                  >
-                    {/* Circle with image + overlay text */}
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full overflow-hidden shadow-lg">
-                      <img
-                        src={offer.image}
-                        alt={offer.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-black/45"></div>
-                      <div className="absolute inset-0 flex items-center justify-center px-2.5 text-center">
-                        <span className="text-white text-[10px] sm:text-[11px] lg:text-xs font-bold leading-tight drop-shadow-md">
-                          {offer.title}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Discount pill - overlaps circle bottom */}
-                    <div className="relative z-10 -mt-3 bg-green-600 text-white text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">
-                      {offer.discount}
-                    </div>
-
-                    {/* Valid till pill */}
-                    {offer.validTill && (
-                      <div className="relative z-10 -mt-1 bg-red-900 text-white text-[9px] sm:text-[10px] font-semibold px-3 py-1 rounded-full shadow-md whitespace-nowrap">
-                        Valid till : {offer.validTill}
-                      </div>
-                    )}
-                  </Link>
+                    offer={offer}
+                    salonsUrl={salonsUrl}
+                  />
                 );
               })}
             </div>
