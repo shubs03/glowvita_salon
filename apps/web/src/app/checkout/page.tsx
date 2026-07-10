@@ -10,7 +10,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
-import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2, Trash2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2, Trash2, Truck, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery, useGetPublicVendorByIdQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -747,101 +747,100 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
-                <CardDescription>Review your order details and costs.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {product.id.startsWith('cart-') && cartItems.length > 0 ? (
-                  <div className="space-y-6">
-                    {cartItems.map((item, index) => (
-                      <div key={item.productId || item._id || index} className={`flex items-center gap-6 ${index !== 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
-                        <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-8">
+            <div className="space-y-6">
+              {product.id.startsWith('cart-') && cartItems.length > 0 ? (
+                <div className="space-y-6">
+                  {cartItems.map((item, index) => (
+                    <div key={item.productId || item._id || index} className={`border border-gray-200 rounded-lg overflow-hidden flex flex-col ${index !== 0 ? 'mt-4' : ''}`}>
+                      <div className="bg-white p-3 px-4 border-b border-gray-100 flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Fast Delivery</span>
+                      </div>
+                      <div className="bg-[#EBF3FD] p-4 flex gap-4 sm:gap-6 items-start">
+                        <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border bg-white p-1">
                           <img
                             src={item.productImage || item.image || "/images/product-placeholder.png"}
                             alt={item.productName || item.name}
                             onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover rounded-md"
                           />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-base">{item.productName || item.name}</h3>
-                          <p className="text-sm text-muted-foreground">Sold by: {item.vendorName || product.vendorName}</p>
-                          <div className="flex flex-col gap-1 mt-1">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs text-muted-foreground">Quantity: {item.quantity}</span>
-                              <span className="text-xs text-muted-foreground">Price: ₹{item.price.toFixed(2)}</span>
-                            </div>
+                        <div className="flex-1 flex flex-col">
+                          <h3 className="font-semibold text-base text-gray-900">{item.productName || item.name}</h3>
+                          <div className="flex items-center gap-2 sm:gap-3 mt-1.5">
+                            <span className="font-bold text-gray-900">₹{item.price.toFixed(2)}</span>
                             {item.hasSale && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground line-through">₹{item.originalPrice.toFixed(2)}</span>
-                                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
-                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
-                                </Badge>
-                              </div>
+                              <>
+                                <span className="text-sm text-gray-500 line-through">₹{item.originalPrice.toFixed(2)}</span>
+                                <span className="text-sm font-bold text-green-600">
+                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% off
+                                </span>
+                              </>
                             )}
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex flex-wrap items-center justify-end gap-2 text-right">
-                            {(item.hasSale || (item.originalPrice && item.originalPrice > item.price)) ? (
-                              <>
-                                <span className="text-muted-foreground line-through text-xs sm:text-sm">
-                                  ₹{(item.originalPrice * item.quantity).toFixed(2)}
-                                </span>
-                                <span className="font-semibold text-foreground">
-                                  ₹{(item.price * item.quantity).toFixed(2)}
-                                </span>
-                                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100 flex-shrink-0">
-                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
-                                </Badge>
-                              </>
-                            ) : (
-                              <p className="font-semibold text-foreground text-right">
-                                ₹{(item.price * item.quantity).toFixed(2)}
-                              </p>
-                            )}
+                          <div className="flex items-center gap-3 mt-3">
+                            <span className="text-sm text-gray-600 font-medium">Qty</span>
+                            <span className="font-medium text-sm bg-white border px-4 py-1 rounded-md">{item.quantity}</span>
                           </div>
                         </div>
                       </div>
-                    ))}
+                      <div className="bg-white p-3 px-4 flex justify-between items-center text-sm border-t border-gray-100">
+                        <span className="text-gray-500">Sold by : <span className="text-gray-700 font-medium">{item.vendorName || product.vendorName}</span></span>
+                        <span className="text-gray-500 font-medium">{shippingEnabled ? 'Standard Delivery' : 'Free Delivery'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+                  <div className="bg-white p-3 px-4 border-b border-gray-100 flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Fast Delivery</span>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-6">
-                    <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
+                  <div className="bg-[#EBF3FD] p-4 flex gap-4 sm:gap-6 items-start">
+                    <div className="relative w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg border bg-white p-1">
                       <img
                         src={(product.image && product.image.trim()) ? product.image : "/images/product-placeholder.png"}
                         alt={product.name}
                         onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-md"
                       />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{product.name}</h3>
-                      <p className="text-sm text-muted-foreground">Sold by: {product.vendorName}</p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-sm text-muted-foreground">Quantity:</span>
+                    <div className="flex-1 flex flex-col">
+                      <h3 className="font-semibold text-lg text-gray-900">{product.name}</h3>
+                      <div className="flex items-center gap-2 sm:gap-3 mt-1.5">
+                        <span className="font-bold text-gray-900 text-lg">₹{product.price.toFixed(2)}</span>
+                        {(product.hasSale || (product.originalPrice && product.originalPrice > product.price)) && (
+                          <>
+                            <span className="text-sm text-gray-500 line-through">₹{product.originalPrice.toFixed(2)}</span>
+                            <span className="text-sm font-bold text-green-600">
+                              {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% off
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 mt-3">
+                        <span className="text-sm text-gray-600 font-medium">Qty</span>
                         {product.isCartOrder ? (
-                          <span className="font-medium text-sm">{product.quantity}</span>
+                          <span className="font-medium text-sm bg-white border px-4 py-1 rounded-md">{product.quantity}</span>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center bg-white border rounded-md overflow-hidden">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-8 w-8 rounded-none hover:bg-gray-100"
                               onClick={() => handleQuantityChange(-1)}
                               disabled={product.quantity <= 1}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="font-medium text-sm w-4 text-center">{product.quantity}</span>
+                            <span className="font-medium text-sm w-8 text-center border-x py-1">{product.quantity}</span>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-8 w-8 rounded-none hover:bg-gray-100"
                               onClick={() => handleQuantityChange(1)}
                             >
                               <Plus className="h-3 w-3" />
@@ -850,378 +849,369 @@ export default function CheckoutPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="flex flex-wrap items-center justify-end gap-2 text-right">
-                        {(product.hasSale || (product.originalPrice && product.originalPrice > product.price)) ? (
-                          <>
-                            <span className="text-muted-foreground line-through text-sm sm:text-base">
-                              ₹{(product.originalPrice * product.quantity).toFixed(2)}
-                            </span>
-                            <span className="font-semibold text-lg text-foreground">
-                              ₹{subtotal.toFixed(2)}
-                            </span>
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100 flex-shrink-0">
-                              {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                            </Badge>
-                          </>
-                        ) : (
-                          <p className="font-semibold text-lg text-foreground text-right w-full">
-                            ₹{subtotal.toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <div className="bg-white p-3 px-4 flex justify-between items-center text-sm border-t border-gray-100">
+                    <span className="text-gray-500">Sold by : <span className="text-gray-700 font-medium">{product.vendorName}</span></span>
+                    <span className="text-gray-500 font-medium">{shippingEnabled ? 'Standard Delivery' : 'Free Delivery'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping & Contact Details</CardTitle>
-                <CardDescription>Please confirm where we should send your order.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-6">
-                  {savedAddresses.length > 0 && !showAddressForm && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {savedAddresses.map((addr) => (
-                        <div
-                          key={addr._id}
-                          className={`relative p-4 border rounded-lg cursor-pointer transition-all ${selectedAddressId === addr._id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 hover:border-gray-300'}`}
-                          onClick={() => handleAddressSelect(addr)}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <p className="font-bold text-sm">{addr.fullName || user?.firstName + ' ' + user?.lastName}</p>
-                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{addr.address}</p>
-                              <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} - {addr.pincode}</p>
-                              <p className="text-sm text-muted-foreground">Phone: {addr.mobileNo || contactNumber}</p>
-                              <div className="pt-2 flex items-center gap-4">
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="h-auto p-0 text-sky-600 hover:text-sky-700 font-normal"
-                                  onClick={(e) => handleEditAddress(addr, e)}
-                                >
-                                  Edit address
-                                </Button>
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="h-auto p-0 text-red-600 hover:text-red-700 font-normal flex items-center gap-1"
-                                  onClick={(e) => handleDeleteAddress(addr._id, e)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                            {selectedAddressId === addr._id && (
-                              <CheckCircle2 className="h-5 w-5 text-primary" />
-                            )}
-                          </div>
+            <div className="space-y-6">
+              {savedAddresses.length > 0 && !showAddressForm && (
+                <div className="flex flex-col gap-4">
+                  {savedAddresses.map((addr, index) => (
+                    <div
+                      key={addr._id}
+                      className={`relative p-5 border rounded-xl cursor-pointer transition-all w-full ${selectedAddressId === addr._id ? 'border-primary/50 bg-primary/[0.02] ring-1 ring-primary/50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                      onClick={() => handleAddressSelect(addr)}
+                    >
+                      {index === 0 && (
+                        <div className="mb-3">
+                          <h2 className="text-[17px] font-bold text-gray-900 mb-0.5">Shipping & Contact Details</h2>
+                          <p className="text-[14px] text-gray-500">Please confirm where you should send your order.</p>
                         </div>
-                      ))}
-                      <button
-                        className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary group"
-                        onClick={() => {
-                          setShowAddressForm(true);
-                          setAddressFormErrors({});
-                        }}
-                      >
-                        <Plus className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="font-medium">Add New Address</span>
-                      </button>
-                    </div>
-                  )}
+                      )}
+                      <div className="flex justify-between items-end">
+                        <div className="border-l-[1.5px] border-black pl-4 ml-1">
+                          <p className="font-medium text-[15px] text-gray-900">{addr.fullName || user?.firstName + ' ' + user?.lastName}</p>
+                          <p className="text-[14px] text-gray-500 mt-1 whitespace-pre-wrap">{addr.address}, {addr.city}, {addr.state} - {addr.pincode}</p>
+                          <p className="text-[14px] text-gray-500 mt-0.5">Phone: {addr.mobileNo || contactNumber}</p>
+                        </div>
 
-                  {(savedAddresses.length === 0 || showAddressForm) && (
-                    <div className="space-y-4 border p-4 rounded-lg bg-white">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg">{editingAddressId ? 'Edit shipping address' : 'Enter a new shipping address'}</h3>
-                        {savedAddresses.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          {index === 0 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-indigo-100/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowAddressForm(true);
+                                setAddressFormErrors({});
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setShowAddressForm(false);
-                              setEditingAddressId(null);
-                              setAddressFormErrors({});
-                              setNewAddress({
-                                fullName: '', mobileNo: '', pincode: '', houseNo: '',
-                                area: '', landmark: '', city: '', state: '', isPrimary: false
-                              });
-                            }}
+                            size="icon"
+                            className="h-8 w-8 rounded-full bg-indigo-100/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
+                            onClick={(e) => { e.stopPropagation(); handleEditAddress(addr, e); }}
                           >
-                            Cancel
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="fullName">Full Name (First and Last name) <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="fullName"
-                            value={newAddress.fullName}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
-                                setNewAddress({ ...newAddress, fullName: val });
-                                if (addressFormErrors.fullName) {
-                                  setAddressFormErrors({ ...addressFormErrors, fullName: '' });
-                                }
-                              }
-                            }}
-                            placeholder="e.g. John Doe"
-                            className={addressFormErrors.fullName ? "border-red-500" : ""}
-                          />
-                          {addressFormErrors.fullName && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.fullName}</span>}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteAddress(addr._id, e); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="newMobileNo">Mobile Number <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="newMobileNo"
-                            value={newAddress.mobileNo}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 10) {
-                                setNewAddress({ ...newAddress, mobileNo: val });
-                                if (addressFormErrors.mobileNo) {
-                                  setAddressFormErrors({ ...addressFormErrors, mobileNo: '' });
-                                }
-                              }
-                            }}
-                            placeholder="10-digit mobile number"
-                            className={addressFormErrors.mobileNo ? "border-red-500" : ""}
-                          />
-                          {addressFormErrors.mobileNo && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.mobileNo}</span>}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="pincode"
-                            value={newAddress.pincode}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 6) {
-                                setNewAddress({ ...newAddress, pincode: val });
-                                if (addressFormErrors.pincode) {
-                                  setAddressFormErrors({ ...addressFormErrors, pincode: '' });
-                                }
-                              }
-                            }}
-                            placeholder="6-digit [0-9] PIN code"
-                            className={addressFormErrors.pincode ? "border-red-500" : ""}
-                          />
-                          {addressFormErrors.pincode && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.pincode}</span>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="houseNo">Flat, House no., Building, Company, Apartment <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="houseNo"
-                            value={newAddress.houseNo}
-                            onChange={(e) => {
-                              setNewAddress({ ...newAddress, houseNo: e.target.value });
-                              if (addressFormErrors.houseNo) {
-                                setAddressFormErrors({ ...addressFormErrors, houseNo: '' });
-                              }
-                            }}
-                            className={addressFormErrors.houseNo ? "border-red-500" : ""}
-                          />
-                          {addressFormErrors.houseNo && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.houseNo}</span>}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="area">Area, Street, Sector, Village <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="area"
-                          value={newAddress.area}
-                          onChange={(e) => {
-                            setNewAddress({ ...newAddress, area: e.target.value });
-                            if (addressFormErrors.area) {
-                              setAddressFormErrors({ ...addressFormErrors, area: '' });
-                            }
-                          }}
-                          className={addressFormErrors.area ? "border-red-500" : ""}
-                        />
-                        {addressFormErrors.area && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.area}</span>}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="landmark">Landmark</Label>
-                          <Input
-                            id="landmark"
-                            value={newAddress.landmark}
-                            onChange={(e) => setNewAddress({ ...newAddress, landmark: e.target.value })}
-                            placeholder="e.g. near Apollo Hospital"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="city">Town/City <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="city"
-                            value={newAddress.city}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
-                                setNewAddress({ ...newAddress, city: val });
-                                if (addressFormErrors.city) {
-                                  setAddressFormErrors({ ...addressFormErrors, city: '' });
-                                }
-                              }
-                            }}
-                            className={addressFormErrors.city ? "border-red-500" : ""}
-                          />
-                          {addressFormErrors.city && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.city}</span>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="state"
-                            value={newAddress.state}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
-                                setNewAddress({ ...newAddress, state: val });
-                                if (addressFormErrors.state) {
-                                  setAddressFormErrors({ ...addressFormErrors, state: '' });
-                                }
-                              }
-                            }}
-                            className={addressFormErrors.state ? "border-red-500" : ""}
-                          />
-                          {addressFormErrors.state && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.state}</span>}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2 pt-2">
-                        <input
-                          type="checkbox"
-                          id="isPrimary"
-                          checked={newAddress.isPrimary}
-                          onChange={(e) => setNewAddress({ ...newAddress, isPrimary: e.target.checked })}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                        <Label htmlFor="isPrimary">Make this my default address</Label>
-                      </div>
-
-                      <div className="pt-4">
-                        <Button className="w-full md:w-auto px-8" onClick={handleSaveNewAddress}>
-                          {editingAddressId ? 'Save changes' : 'Use this address'}
-                        </Button>
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+
+              {(savedAddresses.length === 0 || showAddressForm) && (
+                <div className="space-y-4 border p-6 rounded-xl bg-white">
+                  <div className="mb-6">
+                    <h2 className="text-[17px] font-bold text-gray-900 mb-1">Shipping & Contact Details</h2>
+                    <p className="text-[14px] text-gray-500">Please confirm where you should send your order.</p>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-lg">{editingAddressId ? 'Edit shipping address' : 'Enter a new shipping address'}</h3>
+                    {savedAddresses.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowAddressForm(false);
+                          setEditingAddressId(null);
+                          setAddressFormErrors({});
+                          setNewAddress({
+                            fullName: '', mobileNo: '', pincode: '', houseNo: '',
+                            area: '', landmark: '', city: '', state: '', isPrimary: false
+                          });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name (First and Last name) <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="fullName"
+                        value={newAddress.fullName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
+                            setNewAddress({ ...newAddress, fullName: val });
+                            if (addressFormErrors.fullName) {
+                              setAddressFormErrors({ ...addressFormErrors, fullName: '' });
+                            }
+                          }
+                        }}
+                        placeholder="e.g. John Doe"
+                        className={addressFormErrors.fullName ? "border-red-500" : ""}
+                      />
+                      {addressFormErrors.fullName && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.fullName}</span>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newMobileNo">Mobile Number <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="newMobileNo"
+                        value={newAddress.mobileNo}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 10) {
+                            setNewAddress({ ...newAddress, mobileNo: val });
+                            if (addressFormErrors.mobileNo) {
+                              setAddressFormErrors({ ...addressFormErrors, mobileNo: '' });
+                            }
+                          }
+                        }}
+                        placeholder="10-digit mobile number"
+                        className={addressFormErrors.mobileNo ? "border-red-500" : ""}
+                      />
+                      {addressFormErrors.mobileNo && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.mobileNo}</span>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="pincode"
+                        value={newAddress.pincode}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 6) {
+                            setNewAddress({ ...newAddress, pincode: val });
+                            if (addressFormErrors.pincode) {
+                              setAddressFormErrors({ ...addressFormErrors, pincode: '' });
+                            }
+                          }
+                        }}
+                        placeholder="6-digit [0-9] PIN code"
+                        className={addressFormErrors.pincode ? "border-red-500" : ""}
+                      />
+                      {addressFormErrors.pincode && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.pincode}</span>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="houseNo">Flat, House no., Building, Company, Apartment <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="houseNo"
+                        value={newAddress.houseNo}
+                        onChange={(e) => {
+                          setNewAddress({ ...newAddress, houseNo: e.target.value });
+                          if (addressFormErrors.houseNo) {
+                            setAddressFormErrors({ ...addressFormErrors, houseNo: '' });
+                          }
+                        }}
+                        className={addressFormErrors.houseNo ? "border-red-500" : ""}
+                      />
+                      {addressFormErrors.houseNo && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.houseNo}</span>}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="area">Area, Street, Sector, Village <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="area"
+                      value={newAddress.area}
+                      onChange={(e) => {
+                        setNewAddress({ ...newAddress, area: e.target.value });
+                        if (addressFormErrors.area) {
+                          setAddressFormErrors({ ...addressFormErrors, area: '' });
+                        }
+                      }}
+                      className={addressFormErrors.area ? "border-red-500" : ""}
+                    />
+                    {addressFormErrors.area && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.area}</span>}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="landmark">Landmark</Label>
+                      <Input
+                        id="landmark"
+                        value={newAddress.landmark}
+                        onChange={(e) => setNewAddress({ ...newAddress, landmark: e.target.value })}
+                        placeholder="e.g. near Apollo Hospital"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Town/City <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="city"
+                        value={newAddress.city}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
+                            setNewAddress({ ...newAddress, city: val });
+                            if (addressFormErrors.city) {
+                              setAddressFormErrors({ ...addressFormErrors, city: '' });
+                            }
+                          }
+                        }}
+                        className={addressFormErrors.city ? "border-red-500" : ""}
+                      />
+                      {addressFormErrors.city && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.city}</span>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="state"
+                        value={newAddress.state}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
+                            setNewAddress({ ...newAddress, state: val });
+                            if (addressFormErrors.state) {
+                              setAddressFormErrors({ ...addressFormErrors, state: '' });
+                            }
+                          }
+                        }}
+                        className={addressFormErrors.state ? "border-red-500" : ""}
+                      />
+                      {addressFormErrors.state && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.state}</span>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="isPrimary"
+                      checked={newAddress.isPrimary}
+                      onChange={(e) => setNewAddress({ ...newAddress, isPrimary: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="isPrimary">Make this my default address</Label>
+                  </div>
+
+                  <div className="pt-4">
+                    <Button className="w-full md:w-auto px-8" onClick={handleSaveNewAddress}>
+                      {editingAddressId ? 'Save changes' : 'Use this address'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Payment Details</CardTitle>
+          <div>
+            <Card className="lg:sticky lg:top-24 w-full min-h-[446px] rounded-[11px] border border-gray-200 bg-white shadow-sm overflow-hidden">
+              <CardHeader className="pb-4 pt-5 px-6 border-b-0">
+                <CardTitle className="text-[16px] font-bold text-gray-900">Payment Details ({product?.isCartOrder ? cartItems.length : product.quantity} Items)</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
+              <CardContent className="space-y-0 p-0">
+                <div className="space-y-3 text-[14px] px-6 pb-5">
                   {totalSavings > 0 ? (
                     <>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Original Price</span>
-                        <span className="text-muted-foreground line-through">₹{originalSubtotal.toFixed(2)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Original Price :</span>
+                        <span className="text-gray-900 font-medium">₹ {originalSubtotal.toFixed(2)}/-</span>
                       </div>
-                      <div className="flex justify-between text-green-600 font-medium">
-                        <span>Discount</span>
-                        <span>-₹{totalSavings.toFixed(2)}</span>
+                      <div className="flex justify-between items-center text-green-600 font-medium">
+                        <span>Total Discount :</span>
+                        <span>- ₹ {totalSavings.toFixed(2)}/-</span>
                       </div>
-                      <div className="flex justify-between font-medium">
-                        <span>Subtotal</span>
-                        <span>₹{subtotal.toFixed(2)}</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Subtotal :</span>
+                        <span className="text-gray-900 font-medium">₹ {subtotal.toFixed(2)}/-</span>
                       </div>
                     </>
                   ) : (
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>₹{subtotal.toFixed(2)}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Subtotal :</span>
+                      <span className="text-gray-900 font-medium">₹ {subtotal.toFixed(2)}/-</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700">Shipping :</span>
                     {isShippingLoading ? (
                       <span className="text-xs text-muted-foreground italic animate-pulse">Calculating...</span>
                     ) : (
-                      <span>₹{shipping.toFixed(2)}</span>
+                      <span className="text-gray-900 font-medium">₹ {shipping.toFixed(2)}/-</span>
                     )}
                   </div>
                   {productGSTEnabled && (
-                    <div className="flex justify-between">
-                      <span>GST ({productGSTType === 'percentage' ? `${productGST}%` : '₹' + productGST})</span>
-                      <span>₹{gst.toFixed(2)}</span>
+                    <div className="flex justify-between items-center text-green-600 font-medium">
+                      <span>GST ({productGSTType === 'percentage' ? `${productGST}%` : '₹' + productGST}) :</span>
+                      <span>₹ {gst.toFixed(2)}/-</span>
                     </div>
                   )}
                   {productPlatformFeeEnabled && (
-                    <div className="flex justify-between">
-                      <span>Platform Fee ({productPlatformFeeType === 'percentage' ? `${productPlatformFee}%` : '₹' + productPlatformFee})</span>
-                      <span>₹{platformFee.toFixed(2)}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Platform Fee ({productPlatformFeeType === 'percentage' ? `${productPlatformFee}%` : '₹' + productPlatformFee}) :</span>
+                      <span className="text-gray-900 font-medium">₹ {platformFee.toFixed(2)}/-</span>
                     </div>
                   )}
-                  <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>₹{total.toFixed(2)}</span>
+                  <div className="border-t border-gray-200 mt-4 pt-4 flex justify-between font-bold text-[15px] text-gray-900">
+                    <span>Total Amount :</span>
+                    <span>₹ {total.toFixed(2)}/-</span>
                   </div>
                 </div>
 
-                <div>
-                  <Label className="font-semibold">Payment Method</Label>
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 space-y-2">
-                    <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all has-[:checked]:bg-primary/5 has-[:checked]:border-primary hover:bg-gray-50 group">
-                      <RadioGroupItem value="pay-online" id="pay-online" className="mt-1" />
+                <div className="border-t border-gray-200 w-full"></div>
+
+                <div className="p-6">
+                  <Label className="font-bold text-[15px] text-gray-900">Payment Method</Label>
+                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-4 space-y-3">
+                    <Label className="flex items-center space-x-4 p-3.5 border border-gray-800 rounded-lg cursor-pointer transition-all has-[:checked]:border-black hover:bg-gray-50 group bg-white">
+                      <RadioGroupItem value="pay-online" id="pay-online" className="mt-0 border-gray-400 text-gray-800" />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">Pay Online Securely</span>
-                          <div className="flex items-center gap-1.5 opacity-60 group-has-[:checked]:opacity-100 transition-opacity">
-                            <CreditCard className="h-4 w-4" />
-                            <Landmark className="h-4 w-4" />
-                            <Shield className="h-4 w-4 text-green-600" />
+                          <span className="font-semibold text-gray-900 text-[14.5px]">Pay Online Securely</span>
+                          <div className="flex items-center gap-1.5 opacity-90">
+                            <div className="h-[18px] w-7 bg-blue-500 rounded flex items-center justify-center"><CreditCard className="h-2.5 w-2.5 text-white" /></div>
+                            <div className="h-[18px] w-7 bg-teal-500 rounded flex items-center justify-center"><Landmark className="h-2.5 w-2.5 text-white" /></div>
+                            <div className="h-[18px] w-7 bg-green-500 rounded flex items-center justify-center"><Shield className="h-2.5 w-2.5 text-white" /></div>
                           </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">Pay via UPI, Cards, or Net Banking</p>
+                        <p className="text-[13px] text-gray-400 mt-0.5">Pay via UPI, Cards or Net Banking</p>
                       </div>
                     </Label>
-                    <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all has-[:checked]:bg-primary/5 has-[:checked]:border-primary hover:bg-gray-50 group">
-                      <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" className="mt-1" />
+                    <Label className="flex items-center space-x-4 p-3.5 border border-gray-800 rounded-lg cursor-pointer transition-all has-[:checked]:border-black hover:bg-gray-50 group bg-white">
+                      <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" className="mt-0 border-gray-400 text-gray-800" />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">Cash on Delivery</span>
-                          <Wallet className="h-4 w-4 opacity-60 group-has-[:checked]:opacity-100 transition-opacity" />
+                          <span className="font-semibold text-gray-900 text-[14.5px]">Cash on Delivery</span>
+                          <div className="flex items-center gap-1.5 opacity-90">
+                            <div className="h-[18px] w-7 bg-green-500 rounded flex items-center justify-center"><Wallet className="h-2.5 w-2.5 text-white" /></div>
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">Pay when your order arrives</p>
+                        <p className="text-[13px] text-gray-400 mt-0.5">Pay when your order arrives</p>
                       </div>
                     </Label>
                   </RadioGroup>
                 </div>
               </CardContent>
-              <CardFooter className="flex-col gap-4">
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={handlePlaceOrder}
-                  disabled={isLoading || isSubscriptionExpired}
-                >
-                  {isLoading ? 'Processing...' :
-                    isSubscriptionExpired ? 'Salon Temporarily Closed' :
-                      paymentMethod === 'pay-online' ? 'Pay & Place Order' : 'Place Order'
-                  }
-                </Button>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Shield className="h-4 w-4 mr-2" />
+              <CardFooter className="flex-col gap-4 px-6 pb-6 pt-0 border-t-0">
+                <div className="flex justify-center w-full">
+                  <Button
+                    size="lg"
+                    className="bg-[#463143] hover:bg-[#342431] text-white font-medium rounded-lg h-[42px] px-10"
+                    onClick={handlePlaceOrder}
+                    disabled={isLoading || isSubscriptionExpired}
+                  >
+                    {isLoading ? 'Processing...' :
+                      isSubscriptionExpired ? 'Salon Temporarily Closed' :
+                        paymentMethod === 'pay-online' ? 'Pay & Place Order' : 'Place Order'
+                    }
+                  </Button>
+                </div>
+                <div className="flex items-center justify-center text-[12.5px] text-gray-400 mt-1">
+                  <Shield className="h-4 w-4 mr-1.5 opacity-70" />
                   <span>Secure Checkout Guaranteed</span>
                 </div>
               </CardFooter>

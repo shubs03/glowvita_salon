@@ -62,17 +62,37 @@ const Testimonials = () => {
   const allTestimonials = [...testimonials, ...testimonials];
 
   return (
-    <section className="py-20 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-0 pb-12 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
-      <div className="mb-16">
-        <div className="flex items-center gap-4 mb-4">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+      <div className="mb-12">
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');`}</style>
+        <div style={{ display: 'inline-block' }}>
+          <h2
+            style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 700,
+              fontSize: '28px',
+              lineHeight: '38px',
+              color: '#000000',
+              width: '390px',
+              height: '38px',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+            }}
+          >
             What Our Customers Say
           </h2>
+          <div
+            style={{
+              width: '390px',
+              height: '3px',
+              marginTop: '6px',
+              background: 'linear-gradient(90deg, #422A3C 0%, #FFFFFF 100%)',
+              border: 'none',
+            }}
+          />
         </div>
-        <p className="text-muted-foreground max-w-2xl">
-          Hear from real customers who love shopping with us. Their experiences speak for our quality, service, and commitment to your beauty journey.
-        </p>
       </div>
 
       {/* Scrolling Testimonials Container */}
