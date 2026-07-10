@@ -11,7 +11,7 @@ import {
   buildE164,
   validateDialCode,
   validateLocalNumber,
-} from "@repo/lib/utils/phoneUtils.js";
+} from "@repo/lib/utils/phoneUtils";
 
 export async function POST(request) {
   try {

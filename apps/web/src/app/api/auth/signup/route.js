@@ -6,7 +6,7 @@ import { hashPassword } from '@repo/lib/hashing';
 import { cookies } from 'next/headers';
 import { ReferralModel, C2CSettingsModel } from '@repo/lib/models/admin/Reffer';
 import { NotificationService } from '@repo/lib';
-import { buildE164 } from '@repo/lib/utils/phoneUtils.js';
+import { buildE164 } from '@repo/lib/utils/phoneUtils';
 
 // Function to generate unique referral code
 const generateReferralCode = async (firstName, lastName) => {
