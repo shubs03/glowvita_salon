@@ -200,18 +200,38 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl py-12 md:py-20 lg:py-0">
         {/* Logo/Brand Name */}
         <div className="mb-4 md:mb-8">
-          <h3 className="text-amber-100 text-xs sm:text-sm font-light tracking-[0.2em] sm:tracking-[0.3em] uppercase">
+          <h3 className="text-amber-100 text-xs sm:text-sm font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase">
             GLOWVITA SHOP
           </h3>
         </div>
 
         {/* Main Heading */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-amber-50 mb-4 md:mb-6 max-w-3xl leading-tight">
+        <h1
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 700,
+            fontSize: "clamp(32px, 6vw, 70px)",
+            lineHeight: "115%",
+            letterSpacing: "-0.01em",
+            color: "#F7E5C1",
+          }}
+          className="mb-4 md:mb-6"
+        >
           Choose the Best<br />for Your Routine
         </h1>
 
         {/* Description */}
-        <p className="text-gray-200 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed mb-8 md:mb-10">
+        <p
+          style={{
+            fontFamily: "'Manrope', sans-serif",
+            fontWeight: 400,
+            fontSize: "clamp(14px, 2vw, 18px)",
+            lineHeight: "170%",
+            letterSpacing: "0%",
+            textAlign: "justify",
+          }}
+          className="text-gray-200 mb-8 md:mb-10 max-w-xl"
+        >
           Explore high-quality beauty products crafted to elevate your daily self-care with trusted formulas and reliable performance.
         </p>
 
@@ -235,7 +255,15 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <div className="relative flex-1 flex items-center gap-3 px-4 md:border-r border-gray-200 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!productInput && (
-                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
+                <label
+                  className="font-medium mb-1"
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: "clamp(11px, 1.2vw, 13px)",
+                    color: "#BA7894",
+                  }}
+                >
                   Product Name
                 </label>
               )}
@@ -246,7 +274,13 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 onChange={(e) => setProductInput(e.target.value)}
                 onFocus={() => setIsProductFocused(true)}
                 onBlur={() => setTimeout(() => setIsProductFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full bg-transparent"
+                className="outline-none text-gray-800 placeholder-gray-400 w-full bg-transparent"
+                style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 400,
+                  fontSize: "clamp(13px, 1.5vw, 15px)",
+                  lineHeight: "160%",
+                }}
               />
             </div>
             <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -256,7 +290,15 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <div className="relative flex-1 flex items-center gap-3 px-4 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!locationInput && (
-                <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
+                <label
+                  className="font-medium mb-1"
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: "clamp(11px, 1.2vw, 13px)",
+                    color: "#BA7894",
+                  }}
+                >
                   Location
                 </label>
               )}
@@ -267,7 +309,13 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 onChange={(e) => handleLocationInputChange(e.target.value)}
                 onFocus={() => setIsLocationFocused(true)}
                 onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full bg-transparent"
+                className="outline-none text-gray-800 placeholder-gray-400 w-full bg-transparent"
+                style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 400,
+                  fontSize: "clamp(13px, 1.5vw, 15px)",
+                  lineHeight: "160%",
+                }}
               />
             </div>
 
@@ -296,10 +344,26 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                       <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-gray-900 font-bold text-xs sm:text-sm tracking-tight truncate">
+                      <span
+                        className="text-gray-900 font-bold tracking-tight truncate"
+                        style={{
+                          fontFamily: "'Poppins', sans-serif",
+                          fontWeight: 600,
+                          fontSize: "clamp(12px, 1.5vw, 14px)",
+                          lineHeight: "160%",
+                        }}
+                      >
                         {isLocating ? "Locating…" : "Use Current Location"}
                       </span>
-                      <span className="text-[8px] sm:text-[9px] text-gray-400 font-black uppercase">
+                      <span
+                        className="text-gray-400 font-black uppercase"
+                        style={{
+                          fontFamily: "'Poppins', sans-serif",
+                          fontWeight: 700,
+                          fontSize: "clamp(8px, 1vw, 10px)",
+                          lineHeight: "160%",
+                        }}
+                      >
                         Instant Locate
                       </span>
                     </div>
@@ -319,10 +383,26 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                       <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-amber-600" />
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-gray-800 font-bold text-xs sm:text-sm tracking-tight truncate">
+                      <span
+                        className="text-gray-800 font-bold tracking-tight truncate"
+                        style={{
+                          fontFamily: "'Poppins', sans-serif",
+                          fontWeight: 600,
+                          fontSize: "clamp(12px, 1.5vw, 14px)",
+                          lineHeight: "160%",
+                        }}
+                      >
                         {prediction.structured_formatting?.main_text || prediction.description}
                       </span>
-                      <span className="text-[9px] text-gray-400 truncate">
+                      <span
+                        className="text-gray-400 truncate"
+                        style={{
+                          fontFamily: "'Poppins', sans-serif",
+                          fontWeight: 400,
+                          fontSize: "clamp(11px, 1.2vw, 13px)",
+                          lineHeight: "160%",
+                        }}
+                      >
                         {prediction.structured_formatting?.secondary_text || ""}
                       </span>
                     </div>
@@ -336,12 +416,16 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <button
             onClick={handleSearchClick}
             disabled={isSearching}
-            className="text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
+            className="text-white transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
             style={{
               width: "127px",
               height: "35px",
               borderRadius: "21px",
               backgroundColor: "#BA7894",
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 500,
+              fontSize: "clamp(12px, 1.5vw, 14px)",
+              lineHeight: "160%",
             }}
           >
             {isSearching ? "Searching…" : "Search"}
@@ -366,7 +450,13 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                   onClick={() => {
                     setProductInput(cat.label);
                   }}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-white/20 text-white px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0"
+                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-white/20 text-white px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full font-medium transition-all duration-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0"
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: "clamp(12px, 1.5vw, 14px)",
+                    lineHeight: "160%",
+                  }}
                 >
                   <cat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {cat.label}
@@ -379,26 +469,104 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
         {/* Stats Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-4xl">
           <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
-            <p className="text-xl sm:text-2xl font-bold text-amber-50">
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 700,
+                fontSize: "clamp(24px, 4vw, 32px)",
+                lineHeight: "115%",
+              }}
+              className="text-amber-50"
+            >
               {isLoading ? "..." : uniqueVendors > 0 ? `${uniqueVendors}+` : "0"}
             </p>
-            <p className="text-[10px] sm:text-xs md:text-sm text-amber-100/60 uppercase tracking-wider mt-1">Vendors</p>
+            <p
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: "clamp(11px, 1.2vw, 13px)",
+                lineHeight: "160%",
+                color: "#AF9A9A",
+              }}
+              className="uppercase tracking-wider mt-2"
+            >
+              Vendors
+            </p>
           </div>
           <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
-            <p className="text-xl sm:text-2xl font-bold text-amber-50">
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 700,
+                fontSize: "clamp(24px, 4vw, 32px)",
+                lineHeight: "115%",
+              }}
+              className="text-amber-50"
+            >
               {isLoading ? "..." : totalProducts > 0 ? `${totalProducts.toLocaleString()}+` : "0"}
             </p>
-            <p className="text-[10px] sm:text-xs md:text-sm text-amber-100/60 uppercase tracking-wider mt-1">Products</p>
+            <p
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: "clamp(11px, 1.2vw, 13px)",
+                lineHeight: "160%",
+                color: "#AF9A9A",
+              }}
+              className="uppercase tracking-wider mt-2"
+            >
+              Products
+            </p>
           </div>
           <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
-            <p className="text-xl sm:text-2xl font-bold text-amber-50">
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 700,
+                fontSize: "clamp(24px, 4vw, 32px)",
+                lineHeight: "115%",
+              }}
+              className="text-amber-50"
+            >
               {isLoading ? "..." : averageRating}/5
             </p>
-            <p className="text-[10px] sm:text-xs md:text-sm text-amber-100/60 uppercase tracking-wider mt-1">Avg Rating</p>
+            <p
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: "clamp(11px, 1.2vw, 13px)",
+                lineHeight: "160%",
+                color: "#AF9A9A",
+              }}
+              className="uppercase tracking-wider mt-2"
+            >
+              Avg Rating
+            </p>
           </div>
           <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
-            <p className="text-xl sm:text-2xl font-bold text-amber-50">Secure</p>
-            <p className="text-[10px] sm:text-xs md:text-sm text-amber-100/60 uppercase tracking-wider mt-1">Guarantee</p>
+            <p
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontWeight: 700,
+                fontSize: "clamp(24px, 4vw, 32px)",
+                lineHeight: "115%",
+              }}
+              className="text-amber-50"
+            >
+              Secure
+            </p>
+            <p
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: "clamp(11px, 1.2vw, 13px)",
+                lineHeight: "160%",
+                color: "#AF9A9A",
+              }}
+              className="uppercase tracking-wider mt-2"
+            >
+              Guarantee
+            </p>
           </div>
         </div>
       </div>
