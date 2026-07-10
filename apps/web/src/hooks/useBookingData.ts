@@ -103,6 +103,7 @@ export interface SalonInfo {
   id: string;
   name: string;
   address: string;
+  email?: string;
   rating?: number;
   reviews?: number;
   image?: string;

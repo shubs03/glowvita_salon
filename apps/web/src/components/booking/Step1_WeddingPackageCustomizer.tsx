@@ -214,7 +214,7 @@ export function Step1_WeddingPackageCustomizer({
             // Case 1: s is an object with a name field
             if (typeof s === 'object') {
                 if (s.name) return s.name;
-                const id = s.id || (s as any)._id;
+                const id = s._id || (s as any).id;
                 if (id) {
                     const found = allStaff?.find(staff => staff.id === id || (staff as any)._id === id);
                     if (found) return found.name;
