@@ -20,7 +20,6 @@
     "benchmark": "node packages/lib/src/benchmarks/performanceBenchmark.js"
   },
   "devDependencies": {
-    "@next/swc-win32-x64-msvc": "^14.2.31",
     "@repo/eslint-config-custom": "*",
     "@types/jest": "^30.0.0",
     "@types/qrcode": "^1.5.6",

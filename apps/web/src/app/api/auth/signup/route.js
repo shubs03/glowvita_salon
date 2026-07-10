@@ -6,6 +6,7 @@ import { hashPassword } from '@repo/lib/hashing';
 import { cookies } from 'next/headers';
 import { ReferralModel, C2CSettingsModel } from '@repo/lib/models/admin/Reffer';
 import { NotificationService } from '@repo/lib';
+import { buildE164 } from '@repo/lib/utils/phoneUtils.js';
 
 // Function to generate unique referral code
 const generateReferralCode = async (firstName, lastName) => {
@@ -41,12 +42,15 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Invalid request format. Please check your input.' }, { status: 400 });
     }
 
-    const { firstName, lastName, email, mobileNo, location, address, state, city, pincode, referralCode, password, gender, birthdayDate } = body;
+    const { firstName, lastName, email, mobileNo, countryCode, location, address, state, city, pincode, referralCode, password, gender, birthdayDate } = body;
 
     // Required fields validation (referralCode is optional)
     if (!firstName || !lastName || !email || !mobileNo || !state || !city || !pincode || !password) {
       return NextResponse.json({ message: 'All required fields must be filled' }, { status: 400 });
     }
+
+    // Build the final E.164 mobile number
+    const finalMobileNo = buildE164(countryCode || '91', mobileNo);
 
     // Birthday validation
     if (birthdayDate) {
@@ -69,7 +73,7 @@ export async function POST(req) {
 
     // Check for existing user with same mobile number
     try {
-      const existingUserByMobile = await User.findOne({ mobileNo });
+      const existingUserByMobile = await User.findOne({ mobileNo: finalMobileNo });
       if (existingUserByMobile) {
         return NextResponse.json({ message: 'User already registered with this mobile number' }, { status: 409 });
       }
@@ -94,7 +98,7 @@ export async function POST(req) {
       firstName,
       lastName,
       emailAddress: email, // Map email to emailAddress
-      mobileNo,
+      mobileNo: finalMobileNo,
       address,
       state,
       city,
@@ -104,6 +108,7 @@ export async function POST(req) {
       role: 'USER', // Default role for web signup
       gender: gender || '',
       birthdayDate: birthdayDate || null,
+      isPhoneVerified: true,
     };
 
     // Add location if provided

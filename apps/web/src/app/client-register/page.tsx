@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
+import { PhoneInput, type PhoneInputValue } from '@repo/ui/phone-input';
 import { Calendar, Eye, EyeOff, Map as MapIcon, Gift, MapPin, ShieldCheck, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import Image from 'next/image';
-import customerImage from '../../../public/images/web_registration.jpg';
-
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import { Dialog, DialogContent, DialogDescription,DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+// import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import { validateLocalNumber } from '@repo/lib/utils/phoneUtils';
 
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
@@ -28,7 +28,7 @@ function ClientRegisterForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobileNo, setMobileNo] = useState('');
+  const [phoneValue, setPhoneValue] = useState<PhoneInputValue>({ countryCode: '91', phone: '' });
   const [gender, setGender] = useState('');
   const [birthdayDate, setBirthdayDate] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -66,7 +66,7 @@ function ClientRegisterForm() {
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
-  
+
   const [isEmailOtpSent, setIsEmailOtpSent] = useState(false);
   const [emailOtp, setEmailOtp] = useState('');
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -76,6 +76,7 @@ function ClientRegisterForm() {
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
 
   const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [phoneOtpAttemptedNumber, setPhoneOtpAttemptedNumber] = useState('');  // tracks countryCode+phone to prevent duplicate auto-sends
 
   // New state to track confirmed location
   const [confirmedLocation, setConfirmedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -135,17 +136,32 @@ function ClientRegisterForm() {
   };
 
   const handleSendPhoneOtp = async () => {
-    if (!mobileNo || mobileNo.length !== 10) {
-      toast.error('Please enter a valid 10-digit mobile number');
+    const { countryCode, phone } = phoneValue;
+    if (!phone || phone.length < 5) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+    // India-specific: require exactly 10 digits
+    if (countryCode === '91' && phone.length !== 10) {
+      toast.error('Please enter a valid 10-digit Indian mobile number');
       return;
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setIsPhoneOtpSent(true);
-      toast.success("OTP sent securely! (Test mode: use 123456)");
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, countryCode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsPhoneOtpSent(true);
+        toast.success(data.message || 'OTP sent to your mobile number');
+      } else {
+        toast.error(data.message || 'Failed to send OTP');
+      }
     } catch (err) {
-      toast.error("Failed to send phone OTP");
+      toast.error('Network error. Please try again.');
     } finally {
       setIsOtpLoading(false);
     }
@@ -153,32 +169,41 @@ function ClientRegisterForm() {
 
   const handleVerifyPhoneOtp = async () => {
     if (!phoneOtp || phoneOtp.length < 6) {
-      toast.error("Please enter a valid OTP");
+      toast.error('Please enter a valid 6-digit OTP');
       return;
     }
     setIsOtpLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      if (phoneOtp === "123456") {
-        toast.success("Phone verified successfully!");
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneValue.phone, countryCode: phoneValue.countryCode, otp: phoneOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Phone verified successfully!');
         setIsPhoneVerified(true);
       } else {
-        toast.error("Invalid phone OTP");
+        toast.error(data.message || 'Invalid OTP');
         setPhoneOtp('');
       }
     } catch (err) {
-      toast.error("Failed to verify phone OTP");
+      toast.error('Network error. Please try again.');
     } finally {
       setIsOtpLoading(false);
     }
   };
 
-  // Auto-send Phone OTP when 10 digits are reached
+  // Auto-send Phone OTP when 10 digits are reached (India default behaviour)
+  const phoneKey = `${phoneValue.countryCode}:${phoneValue.phone}`;
   useEffect(() => {
-    if (mobileNo.length === 10 && !isPhoneOtpSent && !isPhoneVerified && !isOtpLoading) {
+    const { countryCode, phone } = phoneValue;
+    const isIndiaFull = countryCode === '91' && phone.length === 10;
+    if (isIndiaFull && phoneOtpAttemptedNumber !== phoneKey && !isPhoneVerified && !isOtpLoading) {
+      setPhoneOtpAttemptedNumber(phoneKey);
       handleSendPhoneOtp();
     }
-  }, [mobileNo, isPhoneOtpSent, isPhoneVerified, isOtpLoading]);
+  }, [phoneValue, phoneOtpAttemptedNumber, isPhoneVerified, isOtpLoading]);
 
   // Auto-verify Phone OTP when 6 digits are reached
   useEffect(() => {
@@ -214,7 +239,7 @@ function ClientRegisterForm() {
     if (!firstName) missingFields.push('First name');
     if (!lastName) missingFields.push('Last name');
     if (!email) missingFields.push('Email');
-    if (!mobileNo) missingFields.push('Mobile number');
+    if (!phoneValue.phone) missingFields.push('Mobile number');
     if (!confirmedLocation) missingFields.push('Location');
     if (!state) missingFields.push('State');
     if (!city) missingFields.push('City');
@@ -241,11 +266,10 @@ function ClientRegisterForm() {
       return;
     }
 
-    // Mobile number validation - must be exactly 10 digits
-    const mobileRegex = /^\d{10}$/;
-    if (!mobileRegex.test(mobileNo)) {
-      const errorMessage = 'Mobile number must be exactly 10 digits';
-      toast.error(errorMessage);
+    // Mobile number validation
+    const phoneValidation = validateLocalNumber(phoneValue.phone, phoneValue.countryCode);
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.error || 'Please enter a valid phone number');
       return;
     }
 
@@ -271,7 +295,8 @@ function ClientRegisterForm() {
           firstName,
           lastName,
           email,
-          mobileNo,
+          mobileNo: phoneValue.phone,
+          countryCode: phoneValue.countryCode,
           location: confirmedLocation,
           address,
           state,
@@ -578,35 +603,115 @@ function ClientRegisterForm() {
   };
 
   return (
-    <div className="min-h-screen md:h-screen w-full md:overflow-hidden flex flex-col md:flex-row">
+    <div className="min-h-screen w-screen flex items-center justify-center bg-[#422A3C] relative overflow-hidden p-4 md:p-8 select-none">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        {/* Left side diagonal curved white background shape */}
+        <svg className="absolute left-0 top-0 h-full w-full hidden md:block text-gray-50 fill-current" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 0 0 L 65 0 C 80 30, 75 70, 55 100 L 0 100 Z" />
+        </svg>
+
+        {/* Top-left background grey circles */}
+        <div className="absolute top-[10%] left-[-3%] w-24 h-24 rounded-full bg-gray-200/50"></div>
+        <div className="absolute top-[14%] left-[-1%] w-16 h-16 rounded-full bg-gray-200/30"></div>
+
+        {/* Bottom-left background grey circles */}
+        <div className="absolute bottom-[-8%] left-[-8%] w-56 h-56 rounded-full bg-gray-200/50"></div>
+        <div className="absolute bottom-[4%] left-[-4%] w-40 h-40 rounded-full bg-gray-200/30"></div>
+      </div>
+
       {/* Back Button */}
       <button
         onClick={() => showRegistrationForm ? setShowRegistrationForm(false) : router.back()}
         className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
+        aria-label="Go back"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
         </svg>
       </button>
 
-      {/* Left Side - Registration Form */}
-      <div className="flex-1 md:w-1/2 md:overflow-y-auto flex flex-col items-center justify-start md:justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="w-full max-w-md my-auto py-6">
-          {/* Heading - Only show when not on registration form */}
-          {!showRegistrationForm && (
-            <div className="text-center mb-6">
-              <div className="flex justify-center mb-4">
+      {/* Main Registration Card */}
+      <div className="w-full max-w-[970px] bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 min-h-[510px] md:h-[540px]">
+
+        {/* Left Column: Brand & Features */}
+        <div className="md:w-[40%] bg-[#422A3C] text-white p-6 md:p-8 pt-10 md:pt-14 pb-8 flex flex-col justify-start gap-12 relative overflow-hidden">
+          {/* Decorative interior translucent circles */}
+         <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/10 pointer-events-none"></div>
+          <div className="absolute bottom-[39px] left-[29px] right-10 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
+          <div className="absolute bottom-[7px] right-[30px] left-10 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
+
+          {/* User lock icon */}
+          <div className="flex flex-col items-center relative z-10">
+          
+            <div className="w-[80px] h-[80px] flex items-center justify-center filter drop-shadow-sm">
+             <img   src="/images/user-profile.png" alt="User profile" className="w-full h-full object-contain"/>
+            </div>
+          </div>
+
+          {/* Feature checklist */}
+          <div className="space-y-8 relative z-10">
+            <div className="flex items-start gap-2.5">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-white flex items-center justify-center mt-0.5 shadow-sm">
+                <svg className="w-3.5 h-3.5 text-[#422A3C]" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base leading-tight">Create Your Account</h3>
+                <p className="text-white/80 text-xs mt-0.5"> Join Glowvita and start your journey in just a few taps.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-white flex items-center justify-center mt-0.5 shadow-sm">
+                <svg className="w-3.5 h-3.5 text-[#422A3C]" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base leading-tight">Verify Your Number</h3>
+                <p className="text-white/80 text-xs mt-0.5">Securely continue with OTP verification for quick and safe access.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-white flex items-center justify-center mt-0.5 shadow-sm">
+                <svg className="w-3.5 h-3.5 text-[#422A3C]" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base leading-tight">Complete Your Profile</h3>
+                <p className="text-white/80 text-xs mt-0.5">Add your personal details to create your Glowvita account.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Form */}
+        <div className="flex-1 px-6 md:px-16 flex flex-col overflow-hidden h-full max-h-full">
+          {/* Header: logo for step 1, title for step 2 */}
+          {!showRegistrationForm ? (
+            <div className="text-center pt-7 pb-4 flex-shrink-0">
+              <div className="flex justify-center mb-2">
                 <img
                   src="/images/GlowVita%20Salon%20PNG.png"
                   alt="GlowVita Salon"
-                  className="h-16 w-auto object-contain drop-shadow-md"
+                  className="h-14 w-auto object-contain"
                 />
               </div>
-              <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">Glowvita Salon for customers</h1>
-              <p className="text-gray-600 text-l mt-3 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal">Register to access booking and appointment management.</p>
+              <p className="text-gray-600 text-sm mt-1">Register to access booking and appointment management.</p>
+            </div>
+          ) : (
+            <div className="text-center pt-7 pb-3 flex-shrink-0">
+              <h2 className="text-gray-900 font-extrabold text-xl">Create Account</h2>
+              <p className="text-black-500 text-sm mt-1">Complete your details and verify your email to finish registration</p>
             </div>
           )}
 
+          {/* Form centered in remaining space */}
+          <div className="flex-1 flex flex-col justify-center pb-6 overflow-hidden">
           {!showRegistrationForm ? (
             <div className="space-y-5">
               <form onSubmit={handleProceedToForm} className="space-y-6">
@@ -615,7 +720,7 @@ function ClientRegisterForm() {
                   <div className="flex justify-between items-center">
                     <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       Mobile Number <span className="text-red-500">*</span>
-                      {!isPhoneOtpSent && !isPhoneVerified && mobileNo.length < 10 && (
+                      {!isPhoneOtpSent && !isPhoneVerified && phoneValue.phone.length < 10 && phoneValue.countryCode === '91' && (
                         <span className="text-[10px] font-normal text-gray-400 ml-auto">OTP sends automatically</span>
                       )}
                     </Label>
@@ -625,48 +730,44 @@ function ClientRegisterForm() {
                       </span>
                     )}
                   </div>
-                  
-                  <div className="relative group">
-                    <Input
-                      id="mobileNo"
-                      type="tel"
-                      placeholder="Enter 10-digit mobile number"
-                      required
-                      value={mobileNo}
-                      maxLength={10}
-                      disabled={isPhoneVerified || isOtpLoading}
-                      onChange={(e) => {
-                        setMobileNo(e.target.value.replace(/\D/g, '').slice(0, 10));
+
+                  <PhoneInput
+                    value={phoneValue}
+                    disabled={isPhoneVerified || isOtpLoading}
+                    onChange={(val) => {
+                      const changed = val.phone !== phoneValue.phone || val.countryCode !== phoneValue.countryCode;
+                      setPhoneValue(val);
+                      if (changed) {
                         setIsPhoneVerified(false);
                         setIsPhoneOtpSent(false);
-                      }}
-                      className="w-full h-12 px-4 text-base font-semibold bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                    />
-                  </div>
+                        setPhoneOtpAttemptedNumber('');
+                      }
+                    }}
+                    placeholder={phoneValue.countryCode === '91' ? 'Enter 10-digit mobile number' : 'Enter phone number'}
+                  />
 
                   {isPhoneOtpSent && !isPhoneVerified && (
-                    <div className="space-y-3 pt-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center justify-between px-1">
+                    <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-center justify-between">
                         <Label className="text-xs font-semibold text-gray-700">Enter Security Code</Label>
-                        <button 
-                          type="button" 
-                          onClick={handleSendPhoneOtp} 
+                        <button
+                          type="button"
+                          onClick={handleSendPhoneOtp}
                           disabled={isOtpLoading}
-                          className="text-[10px] font-bold text-blue-600 hover:underline disabled:text-gray-400"
+                          className="text-[11px] font-bold text-blue-600 hover:underline disabled:text-gray-400"
                         >
                           Resend Code
                         </button>
                       </div>
-                      
-                      <Input 
-                        type="text" 
-                        placeholder="······" 
-                        maxLength={6} 
-                        value={phoneOtp} 
+
+                      <Input
+                        type="text"
+                        placeholder="······"
+                        maxLength={6}
+                        value={phoneOtp}
                         onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         disabled={isOtpLoading}
-                        className="w-full h-12 text-center text-xl tracking-[0.5em] font-medium border border-gray-200 bg-gray-50/30 focus:bg-white rounded-xl transition-all"
-                        autoFocus
+                        className="w-full h-11 text-center text-xl tracking-[0.5em] font-medium border border-gray-200 bg-gray-50/30 focus:bg-white rounded-lg transition-all"
                       />
                     </div>
                   )}
@@ -675,8 +776,8 @@ function ClientRegisterForm() {
                 {/* Main Action Button */}
                 <Button
                   type="submit"
-                  disabled={isOtpLoading || (!isPhoneVerified && mobileNo.length < 10)}
-                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-300 flex items-center justify-center gap-2"
+                  disabled={isOtpLoading || (!isPhoneVerified && phoneValue.phone.length < 10 && phoneValue.countryCode === '91')}
+                  className="w-full h-11 text-base font-bold bg-[#422A3C] hover:bg-[#34202F] text-white rounded-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2"
                 >
                   {isOtpLoading ? (
                     <RefreshCw className="w-5 h-5 animate-spin" />
@@ -689,305 +790,233 @@ function ClientRegisterForm() {
                   )}
                 </Button>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                  <div className="relative flex justify-center text-xs"><span className="px-3 bg-gray-50 text-gray-500 font-medium">OR CONTINUE WITH</span></div>
+                <div className="relative my-4 flex items-center py-0">
+                  <div className="flex-grow border-t border-gray-200"></div>
+                  <span className="px-3 text-sm font-bold text-gray-400">OR</span>
+                  <div className="flex-grow border-t border-gray-200"></div>
                 </div>
 
                 {/* Google Button */}
-                <Button type="button" className="w-full h-12 text-sm font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-all">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <button
+                  type="button"
+                  onClick={() => {/* Add Google OAuth handler */ }}
+                  className="w-full h-10 pt-1 text-sm font-bold bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center gap-3"
+                >
+                  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                   </svg>
                   <span>Sign up with Google</span>
-                </Button>
+                </button>
 
-                <div className="text-center pt-2">
-                  <p className="text-sm text-gray-500">Already have an account? <Link href="/client-login" className="text-blue-600 font-bold hover:underline">Sign in</Link></p>
+                <div className="text-center pt-1 text-sm text-gray-500">
+                  Already have an account?{' '}
+                  <Link href="/client-login" className="text-[#422A3C] font-bold hover:underline">
+                    Sign in
+                  </Link>
                 </div>
               </form>
             </div>
           ) : (
-            <div className="space-y-5">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-extrabold text-gray-900 md:text-xl">Create account</h2>
-                  <p className="text-gray-600 mt-3">Complete your details and verify your email to finish registration</p>
-                </div>
-
-                {/* First Name and Last Name */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                      First name <span className="text-destructive">*</span>
-                    </label>
+              <div className="space-y-4 overflow-y-auto">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* First Name and Last Name */}
+                  <div className="grid grid-cols-2 gap-3">
                     <input
                       id="firstName"
                       placeholder="First Name"
                       required
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value.replace(/[^a-zA-Z]/g, ''))}
-                      className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="h-11 px-3.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Last name <span className="text-destructive">*</span>
-                    </label>
                     <input
                       id="lastName"
                       placeholder="Last Name"
                       required
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value.replace(/[^a-zA-Z]/g, ''))}
-                      className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="h-11 px-3.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                     />
                   </div>
-                </div>
 
-                {/* Email Verification Block */}
-                <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-sm font-semibold flex items-center gap-1">Email <span className="text-red-500">*</span></Label>
-                    {isEmailVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Email Address"
-                      required
-                      value={email}
-                      disabled={isEmailVerified || isOtpLoading}
-                      onChange={(e) => {
-                        setEmail(e.target.value.replace(/[^a-zA-Z0-9@.]/g, ''));
-                        setIsEmailVerified(false);
-                        setIsEmailOtpSent(false);
-                      }}
-                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    {!isEmailVerified && (
-                      <Button 
-                        type="button" 
-                        onClick={handleSendEmailOtp} 
-                        disabled={isOtpLoading || !email}
-                        className="h-11 px-4 rounded-lg font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100 transition-all"
-                      >
-                        {isEmailOtpSent ? "Resend" : "Send OTP"}
-                      </Button>
-                    )}
-                  </div>
-                  {isEmailOtpSent && !isEmailVerified && (
-                    <div className="space-y-3 pt-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div className="flex justify-between items-center px-1">
-                        <Label className="text-xs font-semibold text-gray-700">Enter Verification Code</Label>
-                        <button 
-                          type="button" 
-                          onClick={handleSendEmailOtp}
-                          disabled={isOtpLoading}
-                          className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 underline underline-offset-2"
-                        >
-                          Resend Code
-                        </button>
-                      </div>
-                      
-                      <Input 
-                        type="text" 
-                        placeholder="······" 
-                        maxLength={6} 
-                        value={emailOtp} 
-                        onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        disabled={isOtpLoading}
-                        className="w-full h-12 text-center text-xl tracking-[0.5em] font-medium border border-gray-200 bg-gray-50/30 focus:bg-white rounded-xl transition-all"
+                  {/* Email row — flat, no card */}
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        id="email"
+                        type="email"
+                        placeholder="Email Address"
+                        required
+                        value={email}
+                        disabled={isEmailVerified || isOtpLoading}
+                        onChange={(e) => {
+                          setEmail(e.target.value.replace(/[^a-zA-Z0-9@.]/g, ''));
+                          setIsEmailVerified(false);
+                          setIsEmailOtpSent(false);
+                        }}
+                        className="flex-1 h-11 px-3.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                       />
-                      
-                      {isOtpLoading && (
-                        <p className="text-[10px] text-center text-gray-500 font-bold">Verifying code...</p>
+                      {isEmailVerified ? (
+                        <span className="h-11 px-3 flex items-center gap-1 text-green-600 text-sm font-bold shrink-0">
+                          <ShieldCheck className="w-4 h-4" /> Verified
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={handleSendEmailOtp}
+                          disabled={isOtpLoading || !email}
+                          className="h-11 px-4 rounded-lg font-bold bg-[#422A3C] hover:bg-[#34202F] text-white transition-all text-sm shrink-0"
+                        >
+                          {isEmailOtpSent ? 'Resend' : 'Send OTP'}
+                        </Button>
                       )}
                     </div>
-                  )}
-                </div>
+                    {isEmailOtpSent && !isEmailVerified && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex justify-between items-center">
+                          <Label className="text-xs font-semibold text-gray-700">Enter Verification Code</Label>
+                          <button
+                            type="button"
+                            onClick={handleSendEmailOtp}
+                            disabled={isOtpLoading}
+                            className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 underline underline-offset-2"
+                          >
+                            Resend Code
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="······"
+                          maxLength={6}
+                          value={emailOtp}
+                          onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          disabled={isOtpLoading}
+                          className="w-full h-11 text-center text-xl tracking-[0.5em] font-medium border border-gray-200 bg-gray-50/30 focus:bg-white rounded-lg transition-all"
+                        />
+                        {isOtpLoading && (
+                          <p className="text-[10px] text-center text-gray-500 font-bold">Verifying code...</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Gender and Birthday */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
-                      Gender <span className="font-normal text-gray-400">(Optional)</span>
-                    </label>
+                  {/* Gender and Birthday */}
+                  <div className="grid grid-cols-2 gap-3">
                     <select
                       id="gender"
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="h-11 px-3.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                     >
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
                     </select>
-                  </div>
-                  <div>
-                    <label htmlFor="birthdayDate" className="block text-sm font-medium text-gray-700 mb-1">
-                      Birthday <span className="font-normal text-gray-400">(Optional)</span>
-                    </label>
                     <div className="relative">
-                      <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                      <Input
+                      <input
                         id="birthdayDate"
                         type="date"
                         value={birthdayDate}
                         max={new Date().toISOString().split('T')[0]}
                         onChange={(e) => setBirthdayDate(e.target.value)}
-                        className="h-11 w-full rounded-lg border-gray-300 bg-gray-50 pl-10 pr-3 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:border-gray-400 hover:bg-white hover:shadow-md focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        className="h-11 w-full border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white pr-3 shadow-none px-3.5"
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Location and Referral Code - Same Line */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Location */}
-                  <div>
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                      Location <span className="text-destructive">*</span>
-                    </label>
-                    <div className="flex gap-2">
+                  {/* Location and Referral Code */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex gap-1.5">
                       <input
                         id="location"
-                        value={confirmedLocation ? `${confirmedLocation.lat.toFixed(6)}, ${confirmedLocation.lng.toFixed(6)}` : ''}
-                        placeholder="Select location from map"
+                        value={confirmedLocation ? `${confirmedLocation.lat.toFixed(4)}, ${confirmedLocation.lng.toFixed(4)}` : ''}
+                        placeholder="Select Location"
                         readOnly
                         required
-                        className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                        className="flex-1 h-11 px-3.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none text-sm font-medium bg-white min-w-0"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         size="icon"
                         onClick={() => setIsMapOpen(true)}
-                        className="h-11 w-11"
+                        className="h-11 w-11 shrink-0 border border-gray-300 hover:bg-gray-50"
                       >
-                        <MapIcon className="h-5 w-5" />
+                        <MapIcon className="h-4 w-4 text-gray-500" />
                       </Button>
+                      <input type="hidden" value={state} />
+                      <input type="hidden" value={city} />
+                      <input type="hidden" value={pincode} />
                     </div>
-                    {/* Hidden fields for state, city, pincode - not displayed to user but sent to backend */}
-                    <input type="hidden" value={state} />
-                    <input type="hidden" value={city} />
-                    <input type="hidden" value={pincode} />
-                  </div>
-
-                  {/* Referral Code */}
-                  <div>
-                    <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
-                      Referral Code (Optional)
-                    </label>
                     <div className="relative">
                       <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         id="referralCode"
                         type="text"
-                        placeholder="Enter referral code"
+                        placeholder="Enter Referral Code"
                         value={referralCode}
                         onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                        className="w-full h-11 pl-10 pr-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                        className="w-full h-11 pl-10 pr-3.5 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                       />
                     </div>
-                    {referralCode && (
-                      <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                        <Gift className="h-3 w-3" />
-                        You'll earn rewards when you complete your first booking!
-                      </p>
-                    )}
                   </div>
-                </div>
 
-                {/* Password Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                      Create Password <span className="text-destructive">*</span>
-                    </label>
+                  {/* Password Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="relative">
                       <input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password "
+                        placeholder="Create Password"
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         minLength={8}
-                        className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                        className="w-full h-11 pl-3.5 pr-10 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                  </div>
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm Password <span className="text-destructive">*</span>
-                    </label>
                     <div className="relative">
                       <input
                         id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Confirm password"
+                        placeholder="Confirm Password"
                         required
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         minLength={8}
-                        className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                        className="w-full h-11 pl-3.5 pr-10 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#422A3C]/25 focus:border-[#422A3C] transition-all text-sm font-medium bg-white"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Continue Button */}
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  Continue
-                </Button>
-              </form>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right Side - Background Image with Backdrop */}
-      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/40 z-10"></div>
-        <div className="absolute inset-0">
-          <Image
-            src={customerImage}
-            alt="Salon Customer"
-            fill
-            priority
-            className="object-cover"
-          />
+                  <Button
+                    type="submit"
+                    className="w-full h-11 text-base font-bold bg-[#422A3C] hover:bg-[#34202F] text-white rounded-lg shadow-md transition-all duration-300"
+                  >
+                    Register
+                  </Button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

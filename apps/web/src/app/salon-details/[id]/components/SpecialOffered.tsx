@@ -12,6 +12,7 @@ interface SpecialOfferedProps {
 
 const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: SpecialOfferedProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -138,6 +139,12 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
     }
   };
 
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
   // Add event listeners for mouse and touch events
   useEffect(() => {
     if (isDragging) {
@@ -160,10 +167,20 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
     return (
       <section className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+          <h2
+            className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+            style={{ color: "#252B42" }}
+          >
             Offers Available
+            <span
+              className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+              style={{
+                background:
+                  "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+              }}
+            />
           </h2>
-          <p className="text-muted-foreground mt-3 text-sm">
+          <p className="text-base text-black mb-6">
             Check out our special offers and treatments available now, Don't
             miss out on our limited-time offers and treatments!
           </p>
@@ -194,10 +211,20 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
     <section className="max-w-4xl mx-auto">
       {/* Section Header */}
       <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
+          style={{ color: "#252B42" }}
+        >
           Offers Available
+          <span
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
+          />
         </h2>
-        <p className="text-muted-foreground mt-3 text-sm">
+        <p className="text-sm md:text-base text-black mb-2">
           Check out our special offers and treatments available now!
         </p>
       </div>
@@ -209,10 +236,10 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
       >
-        <div className="flex flex-col md:flex-row items-stretch gap-6">
+        <div className="flex flex-col md:flex-row items-center gap-6">
           {/* Image */}
-          <div className="flex-shrink-0 w-full md:w-48">
-            <div className="w-full h-full min-h-[12rem] rounded-2xl overflow-hidden">
+          <div className="flex-shrink-0 w-full md:w-44">
+            <div className="w-full h-[13rem] rounded-[70px_70px_0_0] overflow-hidden shadow-sm">
               <img
                 src={currentOffer.image}
                 alt={currentOffer.title}
@@ -222,49 +249,71 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
           </div>
 
           {/* Description Card with discount badge */}
-          <div className="flex-1 w-full bg-card border rounded-2xl p-4 relative flex flex-col justify-center">
-            {/* Title */}
-            <h4 className="text-xl font-bold text-foreground mb-2">
-              {currentOffer.title}
-            </h4>
-
-            {/* Promo Code Tag */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                Use Code:
-              </span>
-              <span className="bg-primary/10 text-primary text-xs font-mono font-bold px-3 py-1 rounded-md border border-primary/20 shadow-sm">
-                {currentOffer.code}
-              </span>
-            </div>
+          <div className="flex-1 w-full bg-[#EBF3FD] border border-gray-200 rounded-2xl p-4 pl-6 md:p-5 md:pl-8 relative flex flex-col justify-center mt-8 md:mt-0 shadow-sm min-h-[9rem]">
 
             {/* Discount Badge - Circle at top right corner of card */}
-            <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
-              {currentOffer.discount}
+            <div
+              className="absolute -top-6 -right-4 w-20 h-20 rounded-full flex flex-col items-center justify-center text-white shadow-lg z-10"
+              style={{ backgroundColor: "#025508" }}
+            >
+              <span className="text-lg font-bold leading-tight">{currentOffer.discount}</span>
+              <span className="text-sm font-medium leading-tight">Off</span>
+            </div>
+
+            {/* Promo Code Tag */}
+            <div className="flex flex-wrap items-center gap-2 mb-2 mt-1">
+              <span className="text-xs font-bold text-black uppercase tracking-wider">
+                USE CODE :
+              </span>
+              <div className="flex items-center bg-white border border-gray-300 rounded overflow-hidden">
+                <span className="text-xs font-bold text-black px-3 py-1">
+                  {currentOffer.code}
+                </span>
+                <button
+                  onClick={() => handleCopyCode(currentOffer.code)}
+                  className="bg-gray-200 hover:bg-gray-300 transition-colors text-[10px] text-black font-bold px-2 py-1 flex items-center gap-1 border-l border-gray-300"
+                >
+                  {copiedCode === currentOffer.code ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      COPIED
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      COPY
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Description */}
-            <p className="text-muted-foreground text-sm mb-2 leading-relaxed max-w-[90%]">
-              {currentOffer.description}
+            <p className="text-sm md:text-base text-black leading-relaxed mb-2">
+              {currentOffer.description
+                .split(/(₹\d+[+]?)/g)
+                .map((part: string, i: number) =>
+                  /₹\d+/.test(part)
+                    ? <strong key={i} className="font-bold">{part}</strong>
+                    : part
+                )}
             </p>
 
-            {/* Applicable Services */}
+            {/* Applicable Services (Transform text) */}
             {currentOffer.applicableServices && currentOffer.applicableServices.length > 0 && (
-              <div className="mb-2">
-                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Applicable on: </span>
-                <span className="text-sm text-muted-foreground">{currentOffer.applicableServices.join(", ")}</span>
-              </div>
+              <p className="text-sm md:text-base text-black leading-relaxed mb-1">
+                Transform your style with our{" "}
+                <strong className="font-bold">{currentOffer.applicableServices.join(", ")}</strong>{" "}
+                service.
+              </p>
             )}
 
-            {/* Spacer to push validity to bottom if needed */}
-            <div className="flex-grow"></div>
-
             {/* Validity and Button */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2 pt-3 border-t border-dashed">
+            <div className="flex flex-row items-center justify-between gap-2 mt-2">
               <div className="space-y-1">
                 {currentOffer.validity && (
-                  <p className="text-xs text-muted-foreground">
-                    {currentOffer.validity}
+                  <p className="text-xs md:text-sm text-black font-medium">
+                    *{currentOffer.validity.replace('Valid until:', 'Valid untill')}
                   </p>
                 )}
                 {isSubscriptionExpired && (
@@ -274,7 +323,8 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
                 )}
               </div>
               <button
-                className={`bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90'}`}
+                className={`text-white px-3 py-1.5 md:px-5 md:py-2 rounded-lg text-[10px] md:text-xs font-semibold whitespace-nowrap transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+                style={{ backgroundColor: "#422A3C" }}
                 disabled={isSubscriptionExpired}
                 onClick={() => onBookNow?.(currentOffer)}
               >

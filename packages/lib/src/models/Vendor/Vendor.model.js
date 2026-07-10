@@ -409,6 +409,10 @@ const vendorSchema = new mongoose.Schema({
       default: Date.now,
     },
   }],
+  isPhoneVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Add validation to ensure rejection reasons are provided when status is rejected

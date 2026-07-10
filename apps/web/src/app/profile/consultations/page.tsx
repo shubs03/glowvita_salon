@@ -396,8 +396,8 @@ export default function ConsultationsPage() {
                         <div className="lg:col-span-1 space-y-4">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>My Consultations</CardTitle>
-                                    <CardDescription>Select a consultation to view details.</CardDescription>
+                                    <CardTitle className="text-2xl sm:text-3xl leading-tight">My Consultations</CardTitle>
+                                    <CardDescription className="mt-1 text-sm sm:text-base">Select a consultation to view details.</CardDescription>
                                     <div className="pt-4 space-y-4">
                                         <div className="relative">
                                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

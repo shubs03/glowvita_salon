@@ -9,58 +9,11 @@ import { toast } from 'react-toastify';
 import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
 import { format, addDays } from 'date-fns';
 
-// Breadcrumb navigation component
-const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage, isHomeService }: {
-  currentStep: number;
-  setCurrentStep: (step: number) => void;
-  isWeddingPackage?: boolean;
-  isHomeService?: boolean;
-}) => {
-  const steps = isWeddingPackage
-    ? [
-      { name: 'Select Package', step: 1 },
-      { name: 'Select Location', step: 3 },
-      { name: 'Select Date & Time', step: 4 }
-    ]
-    : isHomeService
-      ? [
-        { name: 'Services', step: 1 },
-        { name: 'Select Professionals', step: 2 },
-        { name: 'Select Location', step: 3 },
-        { name: 'Select Date & Time', step: 4 }
-      ]
-      : [
-        { name: 'Services', step: 1 },
-        { name: 'Select Professionals', step: 2 },
-        { name: 'Select Date & Time', step: 3 }
-      ];
-
-  return (
-    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-      {steps.map((stepObj, index) => (
-        <React.Fragment key={stepObj.name}>
-          <button
-            onClick={() => currentStep > stepObj.step && setCurrentStep(stepObj.step)}
-            className={cn(
-              "transition-colors",
-              currentStep > stepObj.step ? "hover:text-primary cursor-pointer" : "cursor-default",
-              currentStep === stepObj.step && "text-primary font-semibold"
-            )}
-          >
-            {stepObj.name}
-          </button>
-          {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-        </React.Fragment>
-      ))}
-    </nav>
-  );
-};
-
 // Skeleton loader for time slots
 const TimeSlotSkeleton = memo(() => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
     {Array.from({ length: 12 }).map((_, i) => (
-      <div key={i} className="h-16 bg-gray-200 animate-pulse rounded-lg" />
+      <div key={i} className="h-10 bg-gray-200 animate-pulse rounded-[7px]" />
     ))}
   </div>
 ));
@@ -187,6 +140,10 @@ export const Step3_TimeSlot = memo(({
 
   const dateScrollerRef = useRef<HTMLDivElement>(null);
   const previousSlotsRef = useRef<TimeSlot[]>([]);
+
+  const selectedSlot = useMemo(() => {
+    return slots.find((slot) => slot.startTime === selectedTime) || null;
+  }, [slots, selectedTime]);
 
   // Use salonId or vendorId (they're the same)
   const effectiveVendorId = vendorId || salonId;
@@ -541,134 +498,257 @@ export const Step3_TimeSlot = memo(({
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
   const handleDateScroll = (direction: 'left' | 'right') => {
-    if (dateScrollerRef.current) {
+    const container = document.getElementById('date-scroller');
+    if (container) {
       const scrollAmount = direction === 'left' ? -200 : 200;
-      dateScrollerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
 
-  return (
-    <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 bg-primary/10 rounded-full text-primary">
-            <Clock className="h-6 w-6" />
-          </div>
-          <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
+  // Reusable back-arrow + title header (matches MultiService design)
+  const PageHeader = () => (
+    <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit"
+      onClick={() => {
+        if (lockedSlot) {
+          handleReleaseLock(true);
+        } else {
+          onSelectTime(null);
+        }
+        setCurrentStep(currentStep - 1);
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+      <h2 className="text-2xl font-bold font-headline text-black">
+        Select Time Slot
+      </h2>
+    </div>
+  );
+
+  // Loading state
+  if (parentLoading || (isLoadingSlots && slots.length === 0)) {
+    return (
+      <div className="w-full">
+        <PageHeader />
+        <div className="mb-6 px-[26px]">
+          <p className="text-sm text-black mt-1">
+            Pick the perfect date and time that suits your schedule, so your appointment feels effortless and well-timed.
+          </p>
         </div>
-        <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
-      </div>
 
-      {/* Date Scroller (Matching Existing UI Style) */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
-          <div className="flex gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
-          {dates.map((date: Date) => {
-            const isToday = date.toDateString() === new Date().toDateString();
-            const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
-            const isAvailable = isDateAvailable(date);
-            const isSelected = selectedDate.toDateString() === date.toDateString();
-
-            return (
-              <Button
-                key={date.toISOString()}
-                variant={isSelected ? 'default' : 'outline'}
-                className={cn(
-                  'flex-shrink-0 flex flex-col items-center justify-center h-20 w-16 rounded-lg transition-all',
-                  isSelected && 'ring-2 ring-primary ring-offset-2',
-                  (isPast || !isAvailable) && 'opacity-50 cursor-not-allowed'
-                )}
-                onClick={() => !isPast && isAvailable && onSelectDate(date)}
-                disabled={isPast || !isAvailable}
-              >
-                <span className="text-[10px] font-medium uppercase">
-                  {isToday ? 'Today' : format(date, 'EEE')}
-                </span>
-                <span className="text-2xl font-bold">{format(date, 'd')}</span>
-                <span className="text-[10px] font-medium uppercase">{format(date, 'MMM')}</span>
-              </Button>
-            );
-          })}
+        <div className="flex items-center justify-center py-12 rounded-[11px] bg-[#EBF3FD]">
+          <Loader2 className="h-10 w-10 animate-spin text-[#422A3C]" />
+          <span className="ml-4 text-black/70">Loading available slots...</span>
         </div>
       </div>
+    );
+  }
 
-      {/* Time Slots */}
-      <div className="mt-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-primary/10 rounded-full text-primary">
-            <Clock className="h-5 w-5" />
-          </div>
-          <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
-          <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={isLoadingSlots} className="ml-auto">
-            <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin")} />
+  // Error state
+  if (parentError) {
+    return (
+      <div className="w-full">
+        <PageHeader />
+        <div className="mb-6 px-[26px]">
+          <p className="text-sm text-black mt-1">
+            Pick the perfect date and time that suits your schedule, so your appointment feels effortless and well-timed.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center py-12 rounded-[11px] bg-[#EBF3FD]">
+          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+          <p className="text-destructive mb-4">{parentError?.message || 'An error occurred'}</p>
+          <Button onClick={() => fetchSlots()} variant="outline" className="border-[#422A3C] text-[#422A3C] hover:bg-white">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
           </Button>
         </div>
+      </div>
+    );
+  }
 
-        {isLoadingSlots ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
-            <span className="text-muted-foreground">Checking availability...</span>
-          </div>
-        ) : slotsError ? (
-          <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-200 p-8 shadow-sm max-w-lg mx-auto">
-            <div className="p-3 bg-amber-100 rounded-full text-amber-600 w-fit mx-auto mb-4">
-              <AlertCircle className="h-8 w-8" />
+  return (
+    <div className="w-full">
+      <PageHeader />
+
+      {/* Page subheading */}
+      <div className="mb-6 px-[26px]">
+        <p className="text-black mt-1">
+          Pick the perfect date and time that suits your schedule, so your appointment feels effortless and well-timed.
+        </p>
+
+        {lockCountdown !== null && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-amber-800 animate-pulse">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span className="font-medium">Slot reserved! Complete booking in:</span>
             </div>
-            <h3 className="text-lg font-semibold text-amber-900 mb-2">Service Area Range</h3>
-            <p className="text-amber-700 mb-6 text-sm">{slotsError}</p>
-            <Button onClick={() => setCurrentStep(3)} className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2 rounded-lg">
-              Select Another Location
-            </Button>
-          </div>
-        ) : slots.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-            <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">No available slots</h3>
-            <p className="text-muted-foreground">We couldn't find any available time slots for {format(selectedDate, 'MMMM d')}.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {slots.map((slot) => (
-              <Button
-                key={slot.startTime}
-                variant={selectedTime === slot.startTime ? 'default' : 'outline'}
-                className={cn(
-                  "h-14 rounded-lg flex flex-col items-center justify-center transition-all",
-                  selectedTime === slot.startTime && "ring-2 ring-primary ring-offset-2"
-                )}
-                onClick={() => handleTimeSelect(slot)}
-                disabled={isLocking}
-              >
-                <span className="text-lg font-bold">{slot.startTime}</span>
-                <span className="text-[10px] opacity-70 uppercase tracking-tighter">Available</span>
-              </Button>
-            ))}
+            <span className="text-xl font-bold tabular-nums">
+              {Math.floor(lockCountdown / 60)}:{(lockCountdown % 60).toString().padStart(2, '0')}
+            </span>
           </div>
         )}
       </div>
 
-      {isLocking && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl flex items-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="font-medium">Locking slot...</span>
+      {/* Card wrapper — bg #eff5fcff, rounded-[11px] */}
+      <div className="rounded-[11px] px-[26px] py-5">
+        <div className="bg-[#eff5fcff] rounded-[11px] px-3 py-2 mb-3 shadow-sm">
+
+          {/* Select Date label */}
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="h-[17px] w-[17px] text-black" strokeWidth={1.75} />
+            <span className="text-black">Select Date</span>
+          </div>
+
+          <div className="flex items-center mb-6">
+            <button
+              type="button"
+              onClick={() => handleDateScroll('left')}
+              className="flex-shrink-0 flex items-center justify-center h-6 w-6 mr-1 text-black/70 hover:text-black transition-colors"
+              aria-label="Scroll dates left"
+            >
+              <ChevronLeft className="h-6 w-6" strokeWidth={1.5} />
+            </button>
+
+            <div id="date-scroller" className="flex gap-6 overflow-y-visible pt-4 overflow-x-auto no-scrollbar scroll-smooth">
+              {dates.map((date: Date) => {
+                const isToday = date.toDateString() === new Date().toDateString();
+                const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                const isAvailable = isDateAvailable(date);
+                const isSelected = selectedDate.toDateString() === date.toDateString();
+                const isDisabled = isPast || !isAvailable;
+                const isHighlighted = isToday || isSelected;
+
+                return (
+                  <div key={date.toISOString()} className="relative flex-shrink-0">
+                    {isToday && (
+                      <span className="absolute -top-2 -right-2 z-20 rounded-full bg-[#422A3C] px-[9px] py-[3px] text-[10px] font-medium text-white whitespace-nowrap">
+                        Today
+                      </span>
+                    )}
+                    <button
+                      id={`date-${format(date, 'yyyy-MM-dd')}`}
+                      type="button"
+                      onClick={() => !isPast && isAvailable && onSelectDate(date)}
+                      disabled={isDisabled}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-1.5 h-[91px] w-[85px] rounded-lg border bg-transparent transition-colors",
+                        isDisabled
+                          ? "border-black/35 text-black/35 cursor-not-allowed"
+                          : isHighlighted
+                            ? "border-[#422A3C] text-[#422A3C]"
+                            : "border-black text-black"
+                      )}
+                    >
+                      <span className="text-sm font-medium leading-none">
+                        {isToday ? 'Today' : format(date, 'EEE')}
+                      </span>
+                      <span className="text-base font-semibold leading-none">{format(date, 'd')}</span>
+                      <span className="text-sm font-medium leading-none">{format(date, 'MMM')}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleDateScroll('right')}
+              className="flex-shrink-0 flex items-center justify-center h-6 w-6 ml-1 text-black/70 hover:text-black transition-colors"
+              aria-label="Scroll dates right"
+            >
+              <ChevronRight className="h-6 w-6" strokeWidth={1.5} />
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Select Time label */}
+        <div className="flex items-center justify-between mb-4 mt-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-[17px] w-[17px] text-black" strokeWidth={1.75} />
+            <span className="text-black">Select Time</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isLoadingSlots}
+            className="flex items-center justify-center h-6 w-6 text-black/50 hover:text-black transition-colors disabled:opacity-50"
+            aria-label="Refresh slots"
+          >
+            <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin", isBackgroundRefreshing && "opacity-50")} />
+          </button>
+        </div>
+
+        {isLoadingSlots ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-[#422A3C] mr-3" />
+            <span className="text-[#141414]/70">Checking availability...</span>
+          </div>
+        ) : slotsError ? (
+          <div className="text-center py-10 bg-white rounded-[11px] border border-amber-200 p-8 shadow-sm max-w-lg mx-auto">
+            <div className="p-3 bg-amber-100 rounded-full text-amber-600 w-fit mx-auto mb-4">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-semibold text-amber-900 mb-2">Availability issue</h3>
+            <p className="text-amber-700 mb-6 text-sm">{slotsError}</p>
+            <Button onClick={() => setCurrentStep(3)} className="bg-[#422A3C] hover:bg-[#3a2434] text-white font-medium px-6 py-2 rounded-lg">
+              Select Another Location
+            </Button>
+          </div>
+        ) : isSalonClosedEveryDay ? (
+          <div className="text-center py-10 bg-white rounded-[11px] border border-red-100 p-8">
+            <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-red-800 mb-2">Salon is Currently Closed</h3>
+          </div>
+        ) : !isDateAvailable(selectedDate) ? (
+          <div className="text-center py-10 bg-white rounded-[11px] border border-amber-100 p-8 shadow-sm">
+            <Clock className="h-10 w-10 text-amber-500 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-amber-800 mb-2">Salon is Closed Today</h3>
+            <p className="text-amber-600 mb-4">
+              The salon is closed on this particular day ({format(selectedDate, 'EEEE')}). Please select another date from the calendar above to see available times.
+            </p>
+          </div>
+        ) : slots.length === 0 ? (
+          <div className="text-center py-10 bg-white rounded-[11px] border border-dashed border-gray-200">
+            <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-gray-700 mb-1">No available slots</h3>
+            <p className="text-sm text-muted-foreground">We couldn't find any available time slots for {format(selectedDate, 'MMMM d')}.</p>
+            <p className="text-xs text-muted-foreground mt-2">Try selecting a different date or a different professional.</p>
+          </div>
+        ) : (
+          <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {slots.map((slot, index) => {
+                const isSelected = selectedTime === slot.startTime;
+                return (
+                  <button
+                    key={`${slot.startTime}-${index}`}
+                    type="button"
+                    onClick={() => !isLocking && handleTimeSelect(slot)}
+                    disabled={isLocking}
+                    className={cn(
+                      "py-2 px-2 border rounded-lg transition-colors text-center relative overflow-hidden",
+                      isSelected ? "bg-[#EBF3FD] border-black" : "bg-white border-black/40",
+                      isLocking && "opacity-50 cursor-wait"
+                    )}
+                  >
+                    {isLocking && isSelected && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                        <Loader2 className="h-5 w-5 animate-spin text-[#422A3C]" />
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-black">
+                      {slot.startTime} - {slot.endTime}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 });

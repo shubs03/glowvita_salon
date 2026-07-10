@@ -8,6 +8,7 @@
     "./card": "./src/card.tsx",
     "./input": "./src/input.tsx",
     "./label": "./src/label.tsx",
+    "./phone-input": "./src/phone-input.tsx",
     "./table": "./src/table.tsx",
     "./pagination": "./src/pagination.tsx",
     "./select": "./src/select.tsx",

@@ -13,30 +13,45 @@ interface TemplateCanvasThumbnailProps {
  * Resolves the best available preview image URL for a template card.
  *
  * Priority:
- *  1. `imageUrl` from the DB  — rewritten to current origin so the CRM
- *     can load images that were saved with the admin server's port.
- *  2. `jsonData.backgroundImage.src`  (Fabric.js canvas background) — same rewrite.
+ *  1. `imageUrl` from the DB  — normalized so the CRM can load it.
+ *  2. `jsonData.backgroundImage.src`  (Fabric.js canvas background) — same.
  *  3. null  → show placeholder icon
  *
- * Absolute URLs are rewritten to `window.location.origin + pathname` so that
- * the same image path works regardless of which port (admin vs CRM) the file
- * was originally saved with.
+ * URL normalisation rules:
+ *  - Relative /uploads/… paths  → used as-is (CRM rewrite proxies to admin:3002)
+ *  - localhost /uploads/… URLs  → stripped to relative path (same rewrite applies)
+ *  - https://glowvitasalon.com/glowvita/uploads/… (legacy VPS URLs) → /uploads/…
+ *  - Other absolute URLs        → used as-is (external CDN, etc.)
  */
 function normalizeImageUrl(src: string): string {
   if (!src || src.startsWith("data:")) return src;
+
   if (src.startsWith("http")) {
     try {
       const u = new URL(src);
-      // If the stored URL has a different origin (e.g. admin on :3000, CRM on :3001)
-      // rewrite it to the current origin so the browser fetches from the right server.
-      return `${window.location.origin}${u.pathname}`;
+
+      // Any localhost URL with /uploads/ → relative path (goes through CRM rewrite proxy)
+      if ((u.hostname === "localhost" || u.hostname === "127.0.0.1") && u.pathname.includes("/uploads/")) {
+        return u.pathname; // → /uploads/filename.png
+      }
+
+      // Legacy production URL: https://glowvitasalon.com/glowvita/uploads/filename
+      // Convert to /uploads/filename so the CRM rewrite proxy handles it
+      if (u.pathname.includes("/uploads/")) {
+        const uploadsIdx = u.pathname.indexOf("/uploads/");
+        return u.pathname.slice(uploadsIdx); // → /uploads/filename.png
+      }
+
+      return src; // Other absolute URLs (CDN, etc.) — use as-is
     } catch {
       return src;
     }
   }
-  // Relative path — prefix with current origin
-  return `${window.location.origin}${src.startsWith("/") ? "" : "/"}${src}`;
+
+  // Already a relative path — use as-is
+  return src.startsWith("/") ? src : `/${src}`;
 }
+
 
 function resolvePreviewUrl(
   imageUrl?: string,
@@ -64,6 +79,7 @@ function resolvePreviewUrl(
   return null;
 }
 
+
 export default function TemplateCanvasThumbnail({
   imageUrl,
   jsonData,
@@ -86,13 +102,22 @@ export default function TemplateCanvasThumbnail({
   }
 
   const handleError = () => {
-    // If it failed on the current localhost port, try the local proxy route
-    // which reads the file directly from the admin app's public directory.
-    if (!fallbackSrc && src && src.includes("localhost")) {
-      try {
-        const proxyUrl = `/api/local-image?url=${encodeURIComponent(src)}`;
-        setFallbackSrc(proxyUrl);
-      } catch {
+    if (!fallbackSrc && src) {
+      // src may be either a relative /uploads/… path (after normalizeImageUrl)
+      // or an absolute localhost URL. Build a full URL for the proxy.
+      const isUploadPath = src.includes("/uploads/");
+      if (isUploadPath) {
+        try {
+          // Resolve relative paths to full URL for the proxy
+          const fullUrl = src.startsWith("http")
+            ? src
+            : `${window.location.origin}${src}`;
+          const proxyUrl = `/api/local-image?url=${encodeURIComponent(fullUrl)}`;
+          setFallbackSrc(proxyUrl);
+        } catch {
+          setImgError(true);
+        }
+      } else {
         setImgError(true);
       }
     } else {
