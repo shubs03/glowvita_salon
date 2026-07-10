@@ -337,79 +337,160 @@ export function BookingSummary({
   if (isMobileFooter) {
     return (
       <div className={cn(
-        "bg-background/80 backdrop-blur-sm border-t transition-all duration-300",
-        isExpanded ? "h-96" : "h-24"
+        "bg-white border-t shadow-lg transition-all duration-300 fixed bottom-0 left-0 right-0 z-50",
+        isExpanded ? "h-[80vh]" : "h-24"
       )}>
-        <div className="p-4 flex flex-col h-full">
+        <div className="flex flex-col h-full">
+          {/* Expanded Details Panel */}
           {isExpanded && (
-            <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
-              <div className="relative w-12 h-12 flex-shrink-0">
-                <Image
-                  src={currentSalonInfo.image || "/images/salon-placeholder.png"}
-                  alt={currentSalonInfo.name}
-                  fill
-                  className="rounded-lg shadow-md object-cover"
-                  data-ai-hint="salon exterior"
-                />
-              </div>
-              <div>
-                <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
-                {/* Salon address removed as per request */}
-              </div>
-              <Separator />
-              {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
-                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
-                  <div key={assignment.service.id} className="flex justify-between items-center text-sm">
-                    <span className="line-clamp-2">{assignment.service.name}</span>
-                    <span className="font-medium">₹{assignment.service.price}</span>
-                  </div>
-                ))
-              ) : (
-                selectedServices.map((service: Service) => (
-                  <div key={service.id} className="space-y-1">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="line-clamp-2">{service.name}</span>
-                      <span className="font-medium">₹{service.price}</span>
-                    </div>
-                    {/* Display Add-ons */}
-                    {service.selectedAddons && service.selectedAddons.length > 0 && (
-                      <div className="pl-3 border-l-2 border-primary/20 space-y-1">
-                        {service.selectedAddons.map((addon) => (
-                          <div key={addon._id} className="flex justify-between items-center text-xs text-black group">
-                            <span>+ {addon.name}</span>
-                            <div className="flex items-center gap-1">
-                              <span>₹{addon.price}</span>
-                              {onRemoveAddon && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRemoveAddon(service.id, addon._id);
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
-                                  title="Remove addon"
-                                >
-                                  <X className="h-3 w-3 text-destructive" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+            <div className="overflow-y-auto flex-1 p-4 space-y-3 pb-2">
+              {/* Header */}
+              <div className="flex items-center gap-3 pb-2 border-b">
+                <div className="relative w-10 h-10 flex-shrink-0">
+                  <Image
+                    src={currentSalonInfo.image || "/images/salon-placeholder.png"}
+                    alt={currentSalonInfo.name}
+                    fill
+                    className="rounded-lg shadow-md object-cover"
+                    data-ai-hint="salon exterior"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-base truncate">{currentSalonInfo.name}</h4>
+                  {/* Star Rating */}
+                  {(() => {
+                    const rating = parseFloat(String(currentSalonInfo.rating || '0'));
+                    const full = Math.floor(rating);
+                    const half = rating - full >= 0.25 && rating - full < 0.75;
+                    const empty = 5 - full - (half ? 1 : 0);
+                    return (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: full }).map((_, i) => (
+                            <svg key={`f${i}`} className="h-3 w-3 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                          {half && (
+                            <svg key="half" className="h-3 w-3" viewBox="0 0 20 20">
+                              <defs><linearGradient id="mobileHalfStar"><stop offset="50%" stopColor="#facc15" /><stop offset="50%" stopColor="#6b7280" stopOpacity="0.4" /></linearGradient></defs>
+                              <path fill="url(#mobileHalfStar)" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          )}
+                          {Array.from({ length: Math.max(0, empty) }).map((_, i) => (
+                            <svg key={`e${i}`} className="h-3 w-3 text-gray-300 fill-gray-300" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span className="text-xs text-black">({currentSalonInfo.reviews} reviews)</span>
                       </div>
-                    )}
+                    );
+                  })()}
+                </div>
+              </div>
+
+
+              {/* Services */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-black uppercase tracking-wide">Services</p>
+                {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                  serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                    <div key={assignment.service.id} className="flex justify-between items-center text-sm">
+                      <span className="flex-1 pr-2">{assignment.service.name}</span>
+                      <span className="font-medium">₹{assignment.service.price}</span>
+                    </div>
+                  ))
+                ) : (
+                  selectedServices.map((service: Service) => (
+                    <div key={service.id} className="space-y-1">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="flex-1 pr-2">{service.name}</span>
+                        <span className="font-medium">₹{service.price}</span>
+                      </div>
+                      {service.selectedAddons && service.selectedAddons.length > 0 && (
+                        <div className="pl-3 border-l-2 border-primary/20 space-y-1">
+                          {service.selectedAddons.map((addon) => (
+                            <div key={addon._id} className="flex justify-between items-center text-xs text-black group">
+                              <span>+ {addon.name}</span>
+                              <div className="flex items-center gap-1">
+                                <span>₹{addon.price}</span>
+                                {onRemoveAddon && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onRemoveAddon(service.id, addon._id);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
+                                    title="Remove addon"
+                                  >
+                                    <X className="h-3 w-3 text-destructive" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Staff */}
+              {currentStep > 1 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-black uppercase tracking-wide">Professional</p>
+                  {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                    serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                      <p key={assignment.service.id} className="text-sm">With: <span className="font-medium">{assignment.staff?.name || 'Any Professional'}</span></p>
+                    ))
+                  ) : (
+                    selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
+                  )}
+                </div>
+              )}
+
+              {/* Date & Time */}
+              {selectedTime && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-black uppercase tracking-wide">Date & Time</p>
+                  <p className="text-sm font-medium">{format(selectedDate, 'MMM d, yyyy')} at {selectedTime}</p>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Price summary */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-black">Subtotal</span>
+                  <span className="font-medium">₹{Math.round(subtotal)}</span>
+                </div>
+                {priceBreakdown?.discountAmount != null && priceBreakdown.discountAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-black">Discount</span>
+                    <span className="font-medium text-green-600">-₹{Math.round(priceBreakdown.discountAmount)}</span>
                   </div>
-                ))
-              )}
-              {currentStep > 1 && serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
-                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
-                  <p key={assignment.service.id} className="text-sm">With: <span className="font-medium">{assignment.staff?.name || 'Any Professional'}</span></p>
-                ))
-              ) : (
-                currentStep > 1 && selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
-              )}
-              {selectedTime && <p className="text-sm">On: <span className="font-medium">{format(selectedDate, 'MMM d')} at {selectedTime}</span></p>}
+                )}
+                {priceBreakdown?.totalTax != null && priceBreakdown.totalTax > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-black">Tax & Fees</span>
+                    <span className="font-medium">₹{Math.round(priceBreakdown.totalTax)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-bold border-t pt-2 mt-1">
+                  <span>Total</span>
+                  <span>₹{Math.round(total)}</span>
+                </div>
+              </div>
             </div>
           )}
-          <div className="flex items-center justify-between mt-auto">
+
+          {/* Bottom Bar */}
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-white flex-shrink-0">
             <div>
               <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1">
                 <span className="text-lg font-bold">₹{Math.round(total)}</span>
@@ -418,7 +499,7 @@ export function BookingSummary({
               <p className="text-xs text-black">Total (incl. tax)</p>
             </div>
             <Button
-              className="w-40 h-12"
+              className="w-36 sm:w-40 h-11"
               size="lg"
               disabled={!isButtonEnabled}
               onClick={onNextStep}

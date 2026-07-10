@@ -1137,7 +1137,7 @@ export default function SalonDetailsPage() {
 
           {/* Compact Bento Grid Hero Gallery */}
           <section className="py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 auto-rows-fr h-[500px] md:h-[480px] lg:h-[560px]">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 auto-rows-fr h-[420px] md:h-[480px] lg:h-[560px]">
               {/* Box 1 (Main Square) */}
               <div
                 className="col-span-2 md:col-span-2 lg:col-span-2 row-span-2 rounded-md overflow-hidden group cursor-pointer"
@@ -1356,7 +1356,7 @@ export default function SalonDetailsPage() {
             </div>
 
             {/* Right Sticky Column */}
-            <div ref={sidebarRef} className="lg:col-start-3 lg:col-span-1 lg:row-start-1 lg:row-span-2 lg:sticky top-28 self-start space-y-2 pt-10 z-0">
+            <div ref={sidebarRef} className="lg:col-start-3 lg:col-span-1 lg:row-start-1 lg:row-span-2 lg:sticky top-28 self-start space-y-2 pt-10 z-0 mb-10 lg:mb-0">
               <div
                 className="w-full shadow-lg rounded-2xl overflow-hidden bg-white border border-gray-100 flex flex-col"
                 style={{ clipPath: sidebarOffset > 0 ? `inset(0 0 ${sidebarOffset}px 0)` : 'none' }}

@@ -261,7 +261,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
             </div>
 
             {/* Promo Code Tag */}
-            <div className="flex items-center gap-2 mb-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2 mt-1">
               <span className="text-xs font-bold text-black uppercase tracking-wider">
                 USE CODE :
               </span>
@@ -309,7 +309,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
             )}
 
             {/* Validity and Button */}
-            <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 mt-0">
+            <div className="flex flex-row items-center justify-between gap-2 mt-2">
               <div className="space-y-1">
                 {currentOffer.validity && (
                   <p className="text-xs md:text-sm text-black font-medium">
@@ -323,7 +323,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
                 )}
               </div>
               <button
-                className={`text-white px-5 py-2 rounded-lg text-xs font-semibold transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+                className={`text-white px-3 py-1.5 md:px-5 md:py-2 rounded-lg text-[10px] md:text-xs font-semibold whitespace-nowrap transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
                 style={{ backgroundColor: "#422A3C" }}
                 disabled={isSubscriptionExpired}
                 onClick={() => onBookNow?.(currentOffer)}

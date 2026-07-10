@@ -469,10 +469,10 @@ export function Step1_Services({
 
       {/* View Mode Tabs */}
       {hasWeddingPackages && (
-        <div className="flex gap-4 mb-6">
+        <div className="flex gap-2 md:gap-4 mb-6 overflow-x-auto pb-1">
           <button
             onClick={() => setViewMode('services')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors"
             style={{
               background: viewMode === 'services' ? '#422A3C' : '#ffffff',
               color: viewMode === 'services' ? '#ffffff' : '#374151',
@@ -480,12 +480,12 @@ export function Step1_Services({
               borderRadius: '0.375rem'
             }}
           >
-            <Image src="/images/customer (2) 1.png" alt="Individual" width={16} height={16} className={viewMode === 'services' ? 'brightness-0 invert' : ''} />
+            <Image src="/images/customer (2) 1.png" alt="Individual" width={14} height={14} className={viewMode === 'services' ? 'brightness-0 invert' : ''} />
             Individual Services
           </button>
           <button
             onClick={() => setViewMode('packages')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors"
             style={{
               background: viewMode === 'packages' ? '#422A3C' : '#ffffff',
               color: viewMode === 'packages' ? '#ffffff' : '#374151',
@@ -493,7 +493,7 @@ export function Step1_Services({
               borderRadius: '0.375rem'
             }}
           >
-            <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} className={viewMode === 'packages' ? 'brightness-0 invert' : ''} />
+            <Image src="/images/like (1) 1.png" alt="Wedding" width={14} height={14} className={viewMode === 'packages' ? 'brightness-0 invert' : ''} />
             Wedding Packages
             {displayWeddingPackages.length > 0 && (
               <span className="ml-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
@@ -636,12 +636,12 @@ export function Step1_Services({
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSelectService(service); }}
                           className={cn(
-                            'border h-8 px-4 text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl',
+                            'border h-7 md:h-8 px-2.5 md:px-4 text-[11px] md:text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl whitespace-nowrap',
                             isSelected ? 'bg-[#087326]/10 border-[#087326] text-[#087326]' : 'hover:bg-gray-50'
                           )}
                           style={isSelected ? { color: '#087326', borderColor: '#087326', backgroundColor: 'rgba(8, 115, 38, 0.1)' } : { borderColor: '#422A3C', color: '#422A3C' }}
                         >
-                          {isSelected ? <><Image src="/images/check 1.png" alt="Selected" width={16} height={16} /> Selected</> : <><Plus className="w-4 h-4" /> Add</>}
+                          {isSelected ? <><Image src="/images/check 1.png" alt="Selected" width={14} height={14} /> <span className="hidden sm:inline">Selected</span></> : <><Plus className="w-3 h-3 md:w-4 md:h-4" /> Add</>}
                         </button>
                       </div>
                     </div>
