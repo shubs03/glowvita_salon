@@ -441,8 +441,8 @@ export default function OrdersPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle>My Orders</CardTitle>
-              <CardDescription>Your product order history.</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl leading-tight">My Orders</CardTitle>
+              <CardDescription className="mt-1 text-sm sm:text-base">Your product order history.</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2 items-end">
               <div className="flex flex-col gap-1">

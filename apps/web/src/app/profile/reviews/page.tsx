@@ -173,8 +173,8 @@ export default function ReviewsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>My Reviews</CardTitle>
-          <CardDescription>Your feedback on our products and services.</CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl leading-tight">My Reviews</CardTitle>
+          <CardDescription className="mt-1 text-sm sm:text-base">Your feedback on our products and services.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center p-8">
@@ -189,8 +189,8 @@ export default function ReviewsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>My Reviews</CardTitle>
-          <CardDescription>Your feedback on our products and services.</CardDescription>
+          <CardTitle className="text-2xl sm:text-3xl leading-tight">My Reviews</CardTitle>
+          <CardDescription className="mt-1 text-sm sm:text-base">Your feedback on our products and services.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center text-red-500 py-8">
@@ -288,8 +288,8 @@ export default function ReviewsPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle>My Reviews</CardTitle>
-              <CardDescription>Your feedback on our products and services.</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl leading-tight">My Reviews</CardTitle>
+              <CardDescription className="mt-1 text-sm sm:text-base">Your feedback on our products and services.</CardDescription>
             </div>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
