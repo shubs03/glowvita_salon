@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { MapPin, Loader2, ChevronRight, Home, Edit2, Info, CheckCircle, Trash2 } from 'lucide-react';
+import { MapPin, Loader2, ChevronRight, Home, Edit2, Info, CheckCircle, Trash2, Briefcase, MoreHorizontal } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { toast } from 'sonner';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
@@ -73,14 +73,16 @@ export function Step3_LocationSelection({
   onVenueTypeChange,
   onRemoveAddress
 }: Step3LocationSelectionProps) {
-  const [showMapSelector, setShowMapSelector] = useState(false);
+  // showMapModal is the single unified modal state for ALL three flows
+  const [showMapModal, setShowMapModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [registeredAddress, setRegisteredAddress] = useState<HomeServiceLocation | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const autocompleteInstanceRef = useRef<any>(null); // Track autocomplete instance
-  const hasInitiallyLoadedAddress = useRef(false); // Track if we've loaded address on mount
+  const autocompleteInstanceRef = useRef<any>(null);
+  const hasInitiallyLoadedAddress = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ show: boolean; addressId: string | null; addressLabel: string }>({
     show: false,
     addressId: null,
@@ -124,7 +126,6 @@ export function Step3_LocationSelection({
             setLocationForm(addressData);
 
             // Only auto-select on initial load if no address is already selected
-            // This prevents overwriting user's manual selection
             if (!hasInitiallyLoadedAddress.current && !serviceLocation) {
               console.log('[Step3_Location] Auto-selecting registered address on initial load');
               onLocationConfirm(addressData);
@@ -148,12 +149,10 @@ export function Step3_LocationSelection({
     fetchUserAddress();
   }, [isAuthenticated, selectedWeddingPackage]);
 
-  // Initialize Google Places Autocomplete — keyed on showMapSelector so it
-  // re-runs every time the map panel opens. A short timeout ensures the input
-  // is actually mounted in the DOM before we attach the autocomplete.
+  // Initialize Google Places Autocomplete whenever the modal opens
   useEffect(() => {
-    if (!showMapSelector) {
-      // Cleanup when map is hidden
+    if (!showMapModal) {
+      // Cleanup when modal is closed
       if (autocompleteInstanceRef.current) {
         window.google?.maps?.event?.clearInstanceListeners(autocompleteInstanceRef.current);
         autocompleteInstanceRef.current = null;
@@ -220,7 +219,7 @@ export function Step3_LocationSelection({
           city,
           state,
           pincode,
-          landmark: '', // Clear landmark for a new search
+          landmark: '',
           lat,
           lng
         });
@@ -233,7 +232,7 @@ export function Step3_LocationSelection({
     return () => {
       clearTimeout(timer);
     };
-  }, [showMapSelector]);
+  }, [showMapModal]);
 
   // Handle location form field changes
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,8 +255,7 @@ export function Step3_LocationSelection({
     fetchAddressFromCoordinates(lat, lng);
   };
 
-  // Reverse geocoding — uses the Google Maps JS API Geocoder (avoids HTTP
-  // referrer restrictions that block the REST endpoint in production).
+  // Reverse geocoding — uses the Google Maps JS API Geocoder
   const fetchAddressFromCoordinates = useCallback((lat: number, lng: number) => {
     const parseAndSet = (results: any[]) => {
       const result = results[0];
@@ -297,7 +295,7 @@ export function Step3_LocationSelection({
       }));
     };
 
-    // Prefer JS API Geocoder (respects the Maps JS API key restrictions properly)
+    // Prefer JS API Geocoder
     if (window.google?.maps) {
       const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
@@ -309,7 +307,7 @@ export function Step3_LocationSelection({
         }
       });
     } else {
-      // Fallback: HTTP REST endpoint (works on localhost without key restrictions)
+      // Fallback: HTTP REST endpoint
       fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
       )
@@ -331,7 +329,7 @@ export function Step3_LocationSelection({
     if (registeredAddress) {
       console.log('[Step3_Location] Using registered address:', registeredAddress);
       onLocationConfirm(registeredAddress);
-      hasInitiallyLoadedAddress.current = true; // Mark to prevent auto-overwrite
+      hasInitiallyLoadedAddress.current = true;
       toast.success('Address selected!');
     }
   };
@@ -350,14 +348,15 @@ export function Step3_LocationSelection({
     };
     console.log('[Step3_Location] Using saved address:', locationData);
     onLocationConfirm(locationData);
-    hasInitiallyLoadedAddress.current = true; // Mark to prevent auto-overwrite
+    hasInitiallyLoadedAddress.current = true;
     toast.success(`${savedAddress.label} address selected!`);
   };
 
-  // Handle selecting new address from map
-  const handleSelectNewAddress = () => {
-    setShowMapSelector(true);
-    // Clear form for new selection
+  // Open the unified map modal (clears form for fresh selection)
+  const openMapModal = () => {
+    setShowMapModal(true);
+    setSearchQuery('');
+    setAddressLabel('Home');
     setLocationForm({
       address: '',
       city: '',
@@ -370,7 +369,7 @@ export function Step3_LocationSelection({
   };
 
   // Save new address to user profile (called when proceeding to next step)
-  const saveAddressToProfile = async (locationData: HomeServiceLocation) => {
+  const saveAddressToProfile = async (locationData: HomeServiceLocation, label: string = 'Home') => {
     // Don't save addresses for wedding packages - they're one-time events
     if (isAuthenticated && !selectedWeddingPackage) {
       try {
@@ -382,7 +381,7 @@ export function Step3_LocationSelection({
             ...locationData,
             fullName: user ? `${user.firstName} ${user.lastName}`.trim() : 'Guest User',
             mobileNo: user?.mobileNo || '0000000000',
-            label: 'Home',
+            label,
             isPrimary: savedAddresses.length === 0
           })
         });
@@ -421,24 +420,22 @@ export function Step3_LocationSelection({
   // Helper function to check if an address is currently selected
   const isAddressSelected = (address: HomeServiceLocation) => {
     if (!serviceLocation) return false;
-    // Check if coordinates match
     if (address.lat && address.lng && serviceLocation.lat && serviceLocation.lng) {
       return Math.abs(address.lat - serviceLocation.lat) < 0.0001 &&
         Math.abs(address.lng - serviceLocation.lng) < 0.0001;
     }
-    // Fallback to address string comparison
     return address.address === serviceLocation.address &&
       address.city === serviceLocation.city &&
       address.pincode === serviceLocation.pincode;
   };
 
   // Handle opening delete confirmation modal
-  const handleRemoveAddress = (addressId: string, addressLabel: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent triggering the card click
+  const handleRemoveAddress = (addressId: string, label: string, event: React.MouseEvent) => {
+    event.stopPropagation();
     setDeleteConfirmModal({
       show: true,
       addressId,
-      addressLabel
+      addressLabel: label
     });
   };
 
@@ -460,7 +457,6 @@ export function Step3_LocationSelection({
         setSavedAddresses(result.savedAddresses || []);
         toast.success('Address removed successfully');
 
-        // If the removed address was selected, clear the selection
         if (serviceLocation) {
           const removedAddr = savedAddresses.find(a => (a as any)._id === deleteConfirmModal.addressId);
           if (removedAddr && isAddressSelected({
@@ -487,32 +483,66 @@ export function Step3_LocationSelection({
     }
   };
 
+  // Handler for the unified modal confirm button
+  const handleModalConfirm = async () => {
+    if (!locationForm.lat || !locationForm.lng || !locationForm.address) {
+      toast.error('Please pin a location on the map and enter an address');
+      return;
+    }
+    const locationData: HomeServiceLocation = {
+      address: locationForm.address,
+      city: locationForm.city || '',
+      state: locationForm.state || '',
+      pincode: locationForm.pincode || '',
+      landmark: locationForm.landmark || '',
+      lat: Number(locationForm.lat),
+      lng: Number(locationForm.lng),
+      coordinates: {
+        lat: Number(locationForm.lat),
+        lng: Number(locationForm.lng)
+      }
+    };
+    onLocationConfirm(locationData);
+    await saveAddressToProfile(locationData, addressLabel);
+    hasInitiallyLoadedAddress.current = true;
+    toast.success('Address confirmed!');
+    setShowMapModal(false);
+  };
+
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit" onClick={() => setCurrentStep(currentStep - 1)}>
+        <div
+          className="flex items-center gap-2 mb-1 cursor-pointer w-fit"
+          onClick={() => {
+            // Reset venue type when navigating back from wedding location step
+            if (selectedWeddingPackage && weddingVenueType) {
+              onVenueTypeChange?.(undefined as any);
+            }
+            setCurrentStep(currentStep - 1);
+          }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
-          <h2 className="text-2xl font-bold font-headline text-black">
-            {selectedWeddingPackage ? 'Wedding Location' : 'Select Service Location'}
-          </h2>
+          <h2 className="text-xl font-medium font-headline text-black">Back</h2>
         </div>
-        <p className="text-black pl-7">
-          {selectedWeddingPackage
-            ? 'Choose where the wedding service will take place'
-            : "Choose where you'd like the service to be provided"}
-        </p>
       </div>
 
       {/* Wedding Package Venue Selection */}
       {selectedWeddingPackage && (
         <Card className="mb-6 border-2 border-primary/20 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              Where will the wedding service take place?
+            <CardTitle className="text-lg flex flex-col items-start gap-1">
+              <div className="flex items-center gap-2">
+                <img src="/uploads/MapPin.png" alt="location" className="h-5 w-5" />
+                <span className='font-bold'>Where will the wedding service take place?</span>
+              </div>
+              <p className="text-gray-500 text-sm font-normal pl-7">
+                {selectedWeddingPackage
+                  ? 'Wedding services can be provided at your venue or at our salon. Please select your preferred location'
+                  : "Choose where you'd like the service to be provided"}
+              </p>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -524,8 +554,8 @@ export function Step3_LocationSelection({
               className={cn(
                 "p-4 border-2 rounded-lg cursor-pointer transition-all",
                 weddingVenueType === 'salon'
-                  ? "border-primary bg-primary/5"
-                  : "border-gray-200 hover:border-primary/50"
+                  ? "border-primary  bg-[#EBF3FD]"
+                  : "border-gray-200 hover:bg-[#EBF3FD] hover:border-primary/50"
               )}
             >
               <div className="flex items-start gap-3">
@@ -546,16 +576,17 @@ export function Step3_LocationSelection({
               </div>
             </div>
 
-            {/* Option 2: At Venue */}
+            {/* Option 2: At Venue — opens the unified map modal */}
             <div
               onClick={() => {
                 onVenueTypeChange?.('venue');
+                openMapModal();
               }}
               className={cn(
                 "p-4 border-2 rounded-lg cursor-pointer transition-all",
                 weddingVenueType === 'venue'
-                  ? "border-primary bg-primary/5"
-                  : "border-gray-200 hover:border-primary/50"
+                  ? "border-primary  bg-[#EBF3FD]"
+                  : "border-gray-200 hover:bg-[#EBF3FD] hover:border-primary/50"
               )}
             >
               <div className="flex items-start gap-3">
@@ -621,7 +652,13 @@ export function Step3_LocationSelection({
                     {(serviceLocation as any).city}, {(serviceLocation as any).state} - {(serviceLocation as any).pincode}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <button
+                  onClick={openMapModal}
+                  className="text-xs text-primary font-medium underline underline-offset-2 hover:opacity-75 transition-opacity"
+                >
+                  Change Venue
+                </button>
+                <p className="text-xs text-muted-foreground mt-2">
                   Click <span className="font-semibold text-foreground">"Select Time Slot"</span> button to continue
                 </p>
               </div>
@@ -630,7 +667,7 @@ export function Step3_LocationSelection({
         </Card>
       )}
 
-      {/* Show address collection only for: home service OR wedding at venue */}
+      {/* Show address collection only for: home service OR wedding at venue (no address yet) */}
       {(!selectedWeddingPackage || weddingVenueType === 'venue') && (
         <>
 
@@ -643,7 +680,7 @@ export function Step3_LocationSelection({
           )}
 
           {/* Show Registered Address and Saved Addresses (ONLY for non-wedding bookings) */}
-          {!isLoading && !showMapSelector && (registeredAddress || savedAddresses.length > 0) && !selectedWeddingPackage && (
+          {!isLoading && (registeredAddress || savedAddresses.length > 0) && !selectedWeddingPackage && (
             <div className="space-y-6 mb-6">
               {/* Registered Address */}
               {registeredAddress && (
@@ -710,6 +747,17 @@ export function Step3_LocationSelection({
                   </Card>
                 </div>
               )}
+
+              {/* Add New Address Button — placed ABOVE saved addresses so no scrolling needed */}
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={openMapModal}
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Add New Address from Map
+              </Button>
 
               {/* Saved Addresses */}
               {savedAddresses.length > 0 && (
@@ -788,22 +836,11 @@ export function Step3_LocationSelection({
                   </div>
                 </div>
               )}
-
-              {/* Add New Address Button */}
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full"
-                onClick={handleSelectNewAddress}
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Add New Address from Map
-              </Button>
             </div>
           )}
 
-          {/* No Saved Addresses (Only for non-wedding bookings) */}
-          {!isLoading && !showMapSelector && !registeredAddress && savedAddresses.length === 0 && !selectedWeddingPackage && (
+          {/* No Saved Addresses (Only for non-wedding bookings) — opens unified map modal */}
+          {!isLoading && !registeredAddress && savedAddresses.length === 0 && !selectedWeddingPackage && (
             <Card className="border-2 border-dashed">
               <CardContent className="p-8 text-center">
                 <div className="flex justify-center mb-4">
@@ -817,7 +854,7 @@ export function Step3_LocationSelection({
                 </p>
                 <Button
                   size="lg"
-                  onClick={handleSelectNewAddress}
+                  onClick={openMapModal}
                 >
                   <MapPin className="h-4 w-4 mr-2" />
                   Select Address from Map
@@ -826,8 +863,8 @@ export function Step3_LocationSelection({
             </Card>
           )}
 
-          {/* For Wedding Packages: Show map selector button when venue is selected */}
-          {selectedWeddingPackage && weddingVenueType === 'venue' && !showMapSelector && (
+          {/* For Wedding Packages: Show button to open map modal if no address yet */}
+          {selectedWeddingPackage && weddingVenueType === 'venue' && !serviceLocation?.address && (
             <Card className="border-2 border-primary/20">
               <CardContent className="p-8 text-center">
                 <div className="flex justify-center mb-4">
@@ -841,7 +878,7 @@ export function Step3_LocationSelection({
                 </p>
                 <Button
                   size="lg"
-                  onClick={handleSelectNewAddress}
+                  onClick={openMapModal}
                   className="min-w-[250px]"
                 >
                   <MapPin className="h-4 w-4 mr-2" />
@@ -849,184 +886,6 @@ export function Step3_LocationSelection({
                 </Button>
               </CardContent>
             </Card>
-          )}
-
-          {/* Map Selector and Form */}
-          {showMapSelector && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">Select Location on Map</h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleGetCurrentLocation}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Current Location
-                </Button>
-              </div>
-
-              {/* Location Search Bar */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Location
-                </label>
-                <div className="relative">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search for an address or place..."
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Google Map */}
-              <div className="h-96 border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <GoogleMapSelector
-                  onLocationSelect={handleMapLocationSelect}
-                  initialLat={locationForm.lat || registeredAddress?.lat || 19.0760}
-                  initialLng={locationForm.lng || registeredAddress?.lng || 72.8777}
-                />
-              </div>
-
-              {locationForm.lat && locationForm.lng && (
-                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Location pinned:</span>
-                  <span className="text-muted-foreground">{locationForm.lat.toFixed(4)}, {locationForm.lng.toFixed(4)}</span>
-                </div>
-              )}
-
-              {/* Address Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Address Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Address <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={locationForm.address}
-                      onChange={handleLocationChange}
-                      placeholder="Full street address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        City <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={locationForm.city}
-                        onChange={handleLocationChange}
-                        placeholder="City"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        State <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={locationForm.state}
-                        onChange={handleLocationChange}
-                        placeholder="State"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Pincode <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="pincode"
-                        value={locationForm.pincode}
-                        onChange={handleLocationChange}
-                        placeholder="Pincode"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Landmark (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        name="landmark"
-                        value={locationForm.landmark}
-                        onChange={handleLocationChange}
-                        placeholder="Nearby landmark"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Confirm address button — lets users manually confirm typed details */}
-              {locationForm.lat && locationForm.lng && locationForm.address && locationForm.city && locationForm.state && locationForm.pincode && (
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={async () => {
-                    const locationData: HomeServiceLocation = {
-                      address: locationForm.address,
-                      city: locationForm.city,
-                      state: locationForm.state,
-                      pincode: locationForm.pincode,
-                      landmark: locationForm.landmark || '',
-                      lat: Number(locationForm.lat),
-                      lng: Number(locationForm.lng),
-                      coordinates: {
-                        lat: Number(locationForm.lat),
-                        lng: Number(locationForm.lng)
-                      }
-                    };
-                    onLocationConfirm(locationData);
-                    await saveAddressToProfile(locationData);
-                    hasInitiallyLoadedAddress.current = true;
-                    toast.success('Address confirmed!');
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Confirm This Address
-                </Button>
-              )}
-
-              {/* Info message about using summary button */}
-              <div className="bg-muted border rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    Pin your location on the map and fill in the address details. Then tap <span className="font-semibold text-foreground">"Confirm This Address"</span> to proceed.
-                  </p>
-                </div>
-              </div>
-            </div>
           )}
 
         </>
@@ -1067,6 +926,259 @@ export function Step3_LocationSelection({
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          UNIFIED MAP MODAL
+          Used by: Home Service (Add New Address / No Saved Addresses)
+                   Wedding Package (At Venue)
+          ───────────────────────────────────────────────────────────── */}
+      {showMapModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full overflow-hidden"
+            style={{ maxWidth: '1140px', maxHeight: '92vh' }}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <button
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={() => {
+                  setShowMapModal(false);
+                  // For wedding venue: reset to salon if no address confirmed
+                  if (selectedWeddingPackage && weddingVenueType === 'venue' && !serviceLocation?.address) {
+                    onVenueTypeChange?.('salon');
+                  }
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+                <span className="font-medium text-base">Back</span>
+              </button>
+              <button
+                className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+                onClick={() => {
+                  setShowMapModal(false);
+                  if (selectedWeddingPackage && weddingVenueType === 'venue' && !serviceLocation?.address) {
+                    onVenueTypeChange?.('salon');
+                  }
+                }}
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body — split layout */}
+            <div
+              className="flex overflow-hidden"
+              style={{ height: 'calc(92vh - 73px)' }}
+            >
+              {/* LEFT: Map */}
+              <div className="relative flex-1 min-w-0">
+                {/* Search bar overlay */}
+                <div className="absolute top-3 left-3 right-3 z-10">
+                  <div className="relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
+                    </svg>
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search for area or location..."
+                      className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg shadow-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 12h10M11 20h2" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Map */}
+                <div className="w-full h-full">
+                  <GoogleMapSelector
+                    onLocationSelect={handleMapLocationSelect}
+                    initialLat={locationForm.lat || 19.0760}
+                    initialLng={locationForm.lng || 72.8777}
+                  />
+                </div>
+
+                {/* Current Location button overlay */}
+                <div className="absolute bottom-4 left-4 z-10">
+                  <button
+                    onClick={handleGetCurrentLocation}
+                    className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm font-medium shadow-md hover:shadow-lg transition-all hover:bg-gray-50"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+                    Current Location
+                  </button>
+                </div>
+              </div>
+
+              {/* RIGHT: Address Form Panel */}
+              <div
+                className="bg-white border-l border-gray-100 flex flex-col"
+                style={{ width: '400px', flexShrink: 0 }}
+              >
+                {/* Panel Header */}
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+                  <h2 className="text-xl font-bold text-gray-900">Select Address</h2>
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    {locationForm.lat && locationForm.lng
+                      ? 'Location pinned — review and complete the address below'
+                      : 'Pin a location on the map, then fill in the details'}
+                  </p>
+                </div>
+
+                {/* Scrollable form body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+                  {/* Pinned location indicator */}
+                  {locationForm.lat && locationForm.lng && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                      <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span className="text-primary font-medium">Location pinned on map</span>
+                    </div>
+                  )}
+
+                  {/* Address Line */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Address Line <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={locationForm.address}
+                      onChange={handleLocationChange}
+                      placeholder="Full street address"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50 placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* Landmark */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Landmark <span className="text-gray-400 font-normal normal-case">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="landmark"
+                      value={locationForm.landmark}
+                      onChange={handleLocationChange}
+                      placeholder="Nearby landmark"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50 placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* City & State */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={locationForm.city}
+                        onChange={handleLocationChange}
+                        placeholder="City"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        State <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="state"
+                        value={locationForm.state}
+                        onChange={handleLocationChange}
+                        placeholder="State"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50 placeholder:text-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pincode */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Pincode <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={locationForm.pincode}
+                      onChange={handleLocationChange}
+                      placeholder="Pincode"
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-50 placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {/* Address Type — only shown for non-wedding bookings (weddings don't save) */}
+                  {!selectedWeddingPackage && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        Address Type
+                      </label>
+                      <div className="flex gap-2">
+                        {(['Home', 'Work', 'Other'] as const).map((type) => {
+                          const icons = {
+                            Home: <Home className="h-3.5 w-3.5" />,
+                            Work: <Briefcase className="h-3.5 w-3.5" />,
+                            Other: <MoreHorizontal className="h-3.5 w-3.5" />
+                          };
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setAddressLabel(type)}
+                              className={cn(
+                                "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-sm font-medium transition-all",
+                                addressLabel === type
+                                  ? "border-primary bg-primary text-white shadow-sm"
+                                  : "border-gray-200 text-gray-600 hover:border-primary/50 hover:bg-gray-50"
+                              )}
+                            >
+                              {icons[type]}
+                              {type}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Confirm & Continue */}
+                <div className="px-6 py-4 border-t border-gray-100 bg-white">
+                  <button
+                    disabled={!locationForm.lat || !locationForm.lng || !locationForm.address}
+                    onClick={handleModalConfirm}
+                    className="w-full py-3.5 border border-primary bg-primary hover:bg-primary/80 disabled:bg-primary/40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm"
+                  >
+                    Confirm &amp; Continue
+                  </button>
+                  {(!locationForm.lat || !locationForm.lng) && (
+                    <p className="text-center text-xs text-gray-400 mt-2">
+                      Pin a location on the map to continue
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
