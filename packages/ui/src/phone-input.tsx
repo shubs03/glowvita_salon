@@ -83,7 +83,7 @@ export function PhoneInput({
         value={value.countryCode}
         onChange={handleCodeChange}
         disabled={disabled}
-        className="bg-transparent border-r border-gray-200 px-2 py-0 text-sm font-semibold text-gray-700 cursor-pointer focus:outline-none min-w-[5.5rem] disabled:cursor-not-allowed disabled:opacity-60"
+        className="bg-transparent border-r border-gray-200 px-2 py-0 text-sm font-semibold text-gray-700 cursor-pointer focus:outline-none min-w-0 w-[4.5rem] shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
         aria-label="Country code"
       >
         {COUNTRY_CODES.map((c) => (
@@ -102,7 +102,7 @@ export function PhoneInput({
         onChange={handlePhoneChange}
         disabled={disabled}
         maxLength={selected.maxLength}
-        className="flex-1 h-12 px-3 text-base font-semibold bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 min-w-0"
+        className="flex-1 h-12 px-2 text-sm sm:text-base font-semibold bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 min-w-0 w-0"
         aria-label="Phone number"
       />
     </div>
