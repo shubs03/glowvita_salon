@@ -208,8 +208,8 @@ export default function CartPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle>My Cart Items</CardTitle>
-              <CardDescription>Review and manage your cart items before checkout.</CardDescription>
+                            <CardTitle className="text-2xl sm:text-3xl leading-tight">My Cart Items</CardTitle>
+                            <CardDescription className="mt-1 text-sm sm:text-base">Review and manage your cart items before checkout.</CardDescription>
             </div>
             <div className="flex gap-2">
               <div className="relative">
@@ -354,7 +354,7 @@ export default function CartPage() {
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl flex items-center gap-2">
-                      <Package className="h-5 w-5 text-primary" />
+                      <Package className="h-5 w-5" style={{ color: '#422A3c' }} />
                       Order Summary
                     </CardTitle>
                   </div>
@@ -365,12 +365,12 @@ export default function CartPage() {
                     <div className="lg:col-span-2">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <div className="text-center border-r md:border-r border-border/50">
-                          <div className="text-2xl font-bold text-primary">₹{subtotal.toFixed(2)}</div>
+                          <div className="text-2xl font-bold" style={{ color: '#422A3c' }}>₹{subtotal.toFixed(2)}</div>
                           <div className="text-sm text-muted-foreground">Subtotal</div>
                           <div className="text-xs text-muted-foreground mt-1">({itemCount} items)</div>
                         </div>
                         <div className="text-center border-r md:border-r border-border/50">
-                          <div className="text-2xl font-bold text-green-600">
+                          <div className="text-2xl font-bold" style={{ color: '#422A3c' }}>
                             {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
                           </div>
                           <div className="text-sm text-muted-foreground">Shipping</div>
@@ -379,11 +379,11 @@ export default function CartPage() {
                           </div>
                         </div>
                         <div className="text-center border-r md:border-r border-border/50">
-                          <div className="text-2xl font-bold text-orange-600">₹{gst.toFixed(2)}</div>
+                          <div className="text-2xl font-bold" style={{ color: '#422A3c' }}>₹{gst.toFixed(2)}</div>
                           <div className="text-sm text-muted-foreground">GST ({productGST}%)</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">₹{platformFee.toFixed(2)}</div>
+                          <div className="text-2xl font-bold" style={{ color: '#422A3c' }}>₹{platformFee.toFixed(2)}</div>
                           <div className="text-sm text-muted-foreground">Platform Fee ({productPlatformFee}%)</div>
                         </div>
                       </div>
@@ -394,22 +394,18 @@ export default function CartPage() {
                       <div className="bg-white/60 border border-border/40 rounded-lg p-6 text-center">
                         <div className="mb-4">
                           <div className="text-sm text-muted-foreground mb-2">Total Amount</div>
-                          <div className="text-4xl font-bold text-primary mb-2">₹{total.toFixed(2)}</div>
+                          <div className="text-3xl font-bold mb-2" style={{ color: '#422A3c' }}>₹{total.toFixed(2)}</div>
                         </div>
 
                         <Button
-                          size="lg"
-                          className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all duration-200 mb-4"
+                          size="md"
+                          className="w-full h-10 text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200 mb-4"
                           onClick={handleCheckout}
                           disabled={cartItems.length === 0}
                         >
-                          <ShoppingCart className="mr-2 h-5 w-5" />
+                          <ShoppingCart className="mr-2 h-4 w-4" />
                           Proceed to Checkout
                         </Button>
-
-                        <p className="text-xs text-muted-foreground">
-                          By proceeding, you agree to our Terms of Service and Privacy Policy
-                        </p>
                       </div>
                     </div>
                   </div>

@@ -1,0 +1,130 @@
+[2026-07-09T11:54:15.658Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1783588037453-social-media-template-preview-1783588037453.jpeg
+ - filename extracted: 1783588037453-social-media-template-preview-1783588037453.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:54:15.668Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1782392146454-social-media-template-preview-1782392146454.jpeg
+ - filename extracted: 1782392146454-social-media-template-preview-1782392146454.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:54:16.451Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1783588037453-social-media-template-preview-1783588037453.jpeg
+ - filename extracted: 1783588037453-social-media-template-preview-1783588037453.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:54:16.453Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1782392146454-social-media-template-preview-1782392146454.jpeg
+ - filename extracted: 1782392146454-social-media-template-preview-1782392146454.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:54:53.499Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1783588037453-social-media-template-preview-1783588037453.jpeg
+ - filename extracted: 1783588037453-social-media-template-preview-1783588037453.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:54:53.504Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1782392146454-social-media-template-preview-1782392146454.jpeg
+ - filename extracted: 1782392146454-social-media-template-preview-1782392146454.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:55:38.727Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1783588037453-social-media-template-preview-1783588037453.jpeg
+ - filename extracted: 1783588037453-social-media-template-preview-1783588037453.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T11:55:38.730Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1782392146454-social-media-template-preview-1782392146454.jpeg
+ - filename extracted: 1782392146454-social-media-template-preview-1782392146454.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T12:00:11.397Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1782392146454-social-media-template-preview-1782392146454.jpeg
+ - filename extracted: 1782392146454-social-media-template-preview-1782392146454.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1782392146454-social-media-template-preview-1782392146454.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+
+[2026-07-09T12:00:11.663Z] GET /api/local-image
+ - url parameter: http://localhost:3001/glowvita/uploads/1783588037453-social-media-template-preview-1783588037453.jpeg
+ - filename extracted: 1783588037453-social-media-template-preview-1783588037453.jpeg
+ - process.cwd(): F:\MERN Project\glowvita_salon\apps\crm
+ - checked paths:
+   * F:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * F:\MERN Project\glowvita_salon\apps\crm\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\admin\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+   * f:\MERN Project\glowvita_salon\apps\crm\public\uploads\1783588037453-social-media-template-preview-1783588037453.jpeg -> NOT FOUND
+ - resolved filePath: NONE
+

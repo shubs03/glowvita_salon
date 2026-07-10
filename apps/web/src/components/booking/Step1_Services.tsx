@@ -682,7 +682,7 @@ export function Step1_Services({
                     key={pkg.id || pkg._id}
                     className={cn(
                       'overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer group relative',
-                      'bg-card flex flex-col h-full',
+                      'bg-card flex flex-col h-full rounded-tl-lg rounded-tr-[24px] rounded-bl-[24px] rounded-br-lg',
                       isSelected
                         ? 'ring-2 ring-primary shadow-lg'
                         : 'shadow-sm hover:shadow-md border'
@@ -690,20 +690,21 @@ export function Step1_Services({
                   >
                     {/* Discount Badge */}
                     {discount > 0 && (
-                      <div className="absolute top-3 left-3 z-10 bg-primary text-primary-foreground px-3 py-1 rounded-md text-xs font-semibold shadow-sm">
-                        {discount}% OFF
+                      <div className="absolute top-0 left-0 z-10 bg-[#3a2b38] text-white px-3 py-2 rounded-br-2xl rounded-tl-lg text-xs font-bold shadow-sm flex flex-col items-center leading-tight">
+                        <span>{discount}%</span>
+                        <span>OFF</span>
                       </div>
                     )}
 
                     {/* Selected Badge */}
                     {isSelected && (
-                      <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
+                      <div className="absolute top-4 right-4 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
                         <Check className="h-4 w-4" />
                       </div>
                     )}
 
                     {/* Image Header */}
-                    <div className="relative w-full h-40 sm:h-48 overflow-hidden bg-muted">
+                    <div className="relative w-full h-40 sm:h-44 overflow-hidden bg-muted">
                       <Image
                         src={pkg.image || '/images/wedding package placeholder.png'}
                         alt={pkg.name}
@@ -714,115 +715,79 @@ export function Step1_Services({
                           target.src = '/images/wedding package placeholder.png';
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                      {/* Title Overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                        <h4 className="font-bold text-lg sm:text-xl text-white mb-1.5 line-clamp-2">
-                          {pkg.name}
-                        </h4>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
-                            <List className="h-3 w-3 mr-1" />
-                            {displayServicesCount} Services
+                      {/* Tags Overlay */}
+                      <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
+                          <img src="/images/menu (1) 1.png" alt="Services" className="h-3 w-3 mr-1" />
+                          {displayServicesCount} Services
+                        </span>
+                        <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
+                          <img src="/images/clock (10) 4.png" alt="Duration" className="h-3 w-3 mr-1" />
+                          {displayDuration >= 60
+                            ? `${Math.floor(displayDuration / 60)}hr ${displayDuration % 60 > 0 ? (displayDuration % 60) + 'min' : ''}`
+                            : `${displayDuration} min`}
+                        </span>
+                        {pkg.staffCount && (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
+                            <img src="/images/group (4) 1.png" alt="Staff" className="h-3 w-3 mr-1" />
+                            {pkg.staffCount} Staff
                           </span>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {displayDuration}m
-                          </span>
-                          {pkg.staffCount && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
-                              <Users className="h-3 w-3 mr-1" />
-                              {pkg.staffCount} Staff
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Content Section */}
-                    <div className="p-4 space-y-3 flex-1">
-                      {/* Description */}
-                      {pkg.description && (
-                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">{pkg.description}</p>
-                      )}
+                    <div className="p-3 flex-1 flex flex-col">
+                      {/* Title */}
+                      <h4 className="font-bold text-base text-foreground mb-1 line-clamp-1">
+                        {pkg.name}
+                      </h4>
+
+                      {/* Pricing */}
+                      <div className="flex items-baseline gap-2 mb-2">
+                        {displayDiscountedPrice && displayDiscountedPrice !== displayTotalPrice ? (
+                          <>
+                            <span className="font-bold text-lg" style={{ color: "#422A3C" }}>
+                              ₹ {displayDiscountedPrice?.toLocaleString('en-IN')}/-
+                            </span>
+                            <span className="text-muted-foreground line-through text-sm">
+                              ₹ {displayTotalPrice?.toLocaleString('en-IN')}/-
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-bold text-lg" style={{ color: "#422A3C" }}>
+                            ₹ {displayTotalPrice?.toLocaleString('en-IN')}/-
+                          </span>
+                        )}
+                      </div>
 
                       {/* Services Preview */}
                       {(isCustomized ? selectedWeddingPackage.services : pkg.services) && (isCustomized ? selectedWeddingPackage.services : pkg.services).length > 0 && (
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-semibold text-foreground">What's Included</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {(isCustomized ? selectedWeddingPackage.services : pkg.services).slice(0, 3).map((service: any, idx: number) => (
-                              <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border">
-                                <span className="line-clamp-1">{service.serviceName || service.name}</span>
-                              </span>
-                            ))}
-                            {(isCustomized ? selectedWeddingPackage.services : pkg.services).length > 3 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
-                                +{(isCustomized ? selectedWeddingPackage.services : pkg.services).length - 3} more
-                              </span>
-                            )}
-                          </div>
+                        <div className="mb-2">
+                          <p className="text-sm font-bold text-foreground mb-1">What's Included</p>
+                          <p className="text-sm text-foreground/80 truncate">
+                            • {(isCustomized ? selectedWeddingPackage.services : pkg.services).map((s: any) => s.serviceName || s.name).join(', ')}
+                          </p>
                         </div>
                       )}
 
                       {/* Staff Preview */}
                       {pkg.assignedStaff && pkg.assignedStaff.length > 0 && (
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-semibold text-foreground">Expert Staff</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {pkg.assignedStaff.slice(0, 2).map((staff, idx) => {
-                              const staffName = getStaffName(staff);
-
-                              return (
-                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
-                                  <User className="h-3 w-3 mr-1" />
-                                  <span className="line-clamp-1">{staffName}</span>
-                                </span>
-                              );
-                            })}
-                            {pkg.assignedStaff.length > 2 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
-                                +{pkg.assignedStaff.length - 2} more
-                              </span>
-                            )}
-                          </div>
+                        <div className="mb-2">
+                          <p className="text-sm font-bold text-foreground mb-1">Expert Staff</p>
+                          <p className="text-sm text-foreground/80 truncate">
+                            {pkg.assignedStaff.map((staff: any) => `• ${getStaffName(staff)}`).join('   ')}
+                          </p>
                         </div>
                       )}
-                    </div>
-
-                    {/* Footer Section */}
-                    <div className="px-4 pb-4 space-y-3 mt-auto">
-                      {/* Divider */}
-                      <div className="border-t"></div>
-
-                      {/* Pricing */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">Package Price</p>
-                          {displayDiscountedPrice && displayDiscountedPrice !== displayTotalPrice ? (
-                            <div className="flex items-baseline gap-2">
-                              <span className="font-bold text-xl sm:text-2xl text-foreground">
-                                ₹{displayDiscountedPrice?.toLocaleString('en-IN')}
-                              </span>
-                              <span className="text-muted-foreground line-through text-sm">
-                                ₹{displayTotalPrice?.toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="font-bold text-xl sm:text-2xl text-foreground">
-                              ₹{displayTotalPrice?.toLocaleString('en-IN')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 mt-auto pt-1">
                         <Button
-                          size="sm"
                           variant="outline"
-                          className="flex-1 text-xs"
+                          className="flex-[1] min-w-0 rounded-md border-gray-300 font-bold hover:bg-gray-50 text-xs py-1.5 whitespace-nowrap"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedPackageForDetails(pkg);
@@ -830,33 +795,19 @@ export function Step1_Services({
                         >
                           Details
                         </Button>
-                        {isSelected ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectWeddingPackage(null);
-                            }}
-                          >
-                            <X className="h-3.5 w-3.5 mr-1" />
-                            Remove
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="flex-1 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectWeddingPackage(pkg);
-                            }}
-                          >
-                            <Heart className="h-3.5 w-3.5 mr-1" />
-                            Select
-                          </Button>
-                        )}
+                        <button
+                          className={`flex-[2] min-w-0 rounded-tl-md rounded-tr-[14px] rounded-bl-[14px] rounded-br-md text-xs font-bold px-3 py-1.5 transition-colors border whitespace-nowrap ${isSelected
+                              ? 'bg-[#422A3C] text-white border-[#422A3C]'
+                              : 'bg-transparent text-[#422A3C] border-[#422A3C] hover:bg-[#422A3C]/5'
+                            }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isSelected) handleSelectWeddingPackage(null);
+                            else handleSelectWeddingPackage(pkg);
+                          }}
+                        >
+                          {isSelected ? 'Remove' : 'Select Package'}
+                        </button>
                       </div>
                     </div>
                   </Card>

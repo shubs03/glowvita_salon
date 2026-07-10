@@ -7,13 +7,11 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/local-image?url=<encoded-url>
  *
- * Fallback image proxy used by TemplateCanvasThumbnail when the primary
- * /uploads/* rewrite fails (e.g. admin container is temporarily unreachable).
+ * Universal image-serving proxy for uploaded files.
+ * Works both in local dev and in production Docker containers.
  *
- * Search order:
- *  1. Production Docker shared volume: /home/glowvita/uploads/
- *  2. Local dev – admin's public/uploads (relative from apps/crm → ../admin)
- *  3. Local dev – this app's own public/uploads
+ * Local dev:  files are in apps/admin/public/uploads/
+ * Production: files are in /home/glowvita/uploads/ (shared Docker volume)
  */
 export async function GET(request: Request) {
   try {
@@ -31,10 +29,15 @@ export async function GET(request: Request) {
       // Strip query parameters and hash to get the actual file name on disk
       filename = filename.split('?')[0].split('#')[0];
 
+      // Search candidate directories in priority order:
+      // 1. Production VPS shared volume
+      // 2. Local dev — admin's public/uploads (relative from apps/admin)
+      // 3. Local dev — absolute fallback
       const candidateDirs = [
-        '/home/glowvita/uploads',                              // Production Docker shared volume
-        path.join(process.cwd(), '../admin/public/uploads'),   // Local dev (cwd = apps/crm)
-        path.join(process.cwd(), 'public/uploads'),            // This app's own public folder
+        '/home/glowvita/uploads',                                    // Production Docker volume
+        path.join(process.cwd(), 'public/uploads'),                  // Local dev (cwd = apps/admin)
+        path.join(process.cwd(), '../admin/public/uploads'),         // Alternate local dev path
+        path.join(process.cwd(), 'apps/admin/public/uploads'),       // Monorepo root fallback
       ];
 
       let filePath = '';
@@ -66,10 +69,10 @@ export async function GET(request: Request) {
       }
     }
 
-    console.warn(`[CRM local-image] File not found for URL: ${fileUrl}`);
+    console.warn(`[local-image] File not found for URL: ${fileUrl}`);
     return new NextResponse('File not found', { status: 404 });
   } catch (error) {
-    console.error('[CRM local-image] Error:', error);
+    console.error('[local-image] Error serving image:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
