@@ -6,7 +6,7 @@ import {
   normalizeDialCode,
   cleanLocalNumber,
   buildE164,
-} from "@repo/lib/utils/phoneUtils.js";
+} from "@repo/lib/utils/phoneUtils";
 
 await _db();
 
