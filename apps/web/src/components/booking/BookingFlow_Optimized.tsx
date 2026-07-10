@@ -488,6 +488,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
         <Step1_WeddingPackageCustomizer
           weddingPackage={selectedWeddingPackage}
           allServices={baseData.services}
+          allStaff={baseData.staff}
           onPackageUpdate={handlePackageUpdate}
           onBack={handleBackToPackages}
           currentStep={currentStep}
