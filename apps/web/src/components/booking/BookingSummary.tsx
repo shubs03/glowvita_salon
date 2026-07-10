@@ -540,40 +540,40 @@ export function BookingSummary({
             <h3 className="font-bold text-xl truncate flex-1 text-left text-white">{currentSalonInfo.name}</h3>
           </div>
           <div className="flex items-center gap-1.5 mt-0 ml-[50px]">
-              {(() => {
-                const rating = parseFloat(String(currentSalonInfo.rating || '0'));
-                const full = Math.floor(rating);
-                const half = rating - full >= 0.25 && rating - full < 0.75;
-                const empty = 5 - full - (half ? 1 : 0);
-                return (
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: full }).map((_, i) => (
-                      <svg key={`f${i}`} className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                    {half && (
-                      <svg key="half" className="h-3.5 w-3.5" viewBox="0 0 20 20">
-                        <defs>
-                          <linearGradient id="halfStarGrad">
-                            <stop offset="50%" stopColor="#facc15" />
-                            <stop offset="50%" stopColor="#6b7280" stopOpacity="0.4" />
-                          </linearGradient>
-                        </defs>
-                        <path fill="url(#halfStarGrad)" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    )}
-                    {Array.from({ length: Math.max(0, empty) }).map((_, i) => (
-                      <svg key={`e${i}`} className="h-3.5 w-3.5 text-gray-400/40 fill-gray-400/40" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                    <span className="text-sm opacity-90 text-white ml-1">
-                      ({currentSalonInfo.reviews} reviews)
-                    </span>
-                  </div>
-                );
-              })()}
+            {(() => {
+              const rating = parseFloat(String(currentSalonInfo.rating || '0'));
+              const full = Math.floor(rating);
+              const half = rating - full >= 0.25 && rating - full < 0.75;
+              const empty = 5 - full - (half ? 1 : 0);
+              return (
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: full }).map((_, i) => (
+                    <svg key={`f${i}`} className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                  {half && (
+                    <svg key="half" className="h-3.5 w-3.5" viewBox="0 0 20 20">
+                      <defs>
+                        <linearGradient id="halfStarGrad">
+                          <stop offset="50%" stopColor="#facc15" />
+                          <stop offset="50%" stopColor="#6b7280" stopOpacity="0.4" />
+                        </linearGradient>
+                      </defs>
+                      <path fill="url(#halfStarGrad)" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  )}
+                  {Array.from({ length: Math.max(0, empty) }).map((_, i) => (
+                    <svg key={`e${i}`} className="h-3.5 w-3.5 text-gray-400/40 fill-gray-400/40" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                  <span className="text-sm opacity-90 text-white ml-1">
+                    ({currentSalonInfo.reviews} reviews)
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -586,56 +586,39 @@ export function BookingSummary({
             {weddingPackage ? (
               <div className="p-3 rounded-xl" style={{ background: '#EBF3FD' }}>
                 <div className="w-full">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs text-black">Wedding Package</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-semibold text-black mb-1">Wedding Package</p>
                     {weddingPackageMode === 'customized' && (
                       <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">Customized</span>
                     )}
                   </div>
-                  <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
-                  {weddingPackage.description && (
-                    <p className="text-xs text-black mb-3 line-clamp-2">{weddingPackage.description}</p>
-                  )}
+                  <p className="font-semibold text-base text-black truncate mb-3">{weddingPackage.name}</p>
 
-                  <div className="space-y-2 pt-3 border-t">
+                  <div className="h-[1px] w-full bg-black mb-3"></div>
+
+
+                  <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-black">Services Included</span>
+                      <span className="text-black">Services Included :</span>
                       <span className="font-medium">
                         {weddingPackageMode === 'customized' && customizedPackageServices
                           ? customizedPackageServices.length
                           : weddingPackage.services?.length || 0}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-black">Total Duration</span>
-                      <span className="font-medium">{totalDuration} min</span>
-                    </div>
                     {weddingPackage.staffCount && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-black">Staff Required</span>
+                        <span className="text-black">Staff Required :</span>
                         <span className="font-medium">
                           {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
                         </span>
                       </div>
                     )}
-                    {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
-                      <div className="text-sm">
-                        <span className="text-black block mb-1.5">Available Staff</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
-                            <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
-                              {getStaffName(staff)}
-                            </span>
-                          ))}
-                          {weddingPackage.assignedStaff.length > 3 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground">
-                              +{weddingPackage.assignedStaff.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-black">Total Duration :</span>
+                      <span className="font-medium">{totalDuration} min</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold border-t border-black pt-2 mt-2">
                       <span>Package Price</span>
                       <span className="text-primary">₹{subtotal.toFixed(2)}</span>
                     </div>
