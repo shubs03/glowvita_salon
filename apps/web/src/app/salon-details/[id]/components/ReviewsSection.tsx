@@ -32,7 +32,7 @@ const StarRating = ({ rating }: { rating: number }) => {
       {[...Array(5)].map((_, i) => (
         <Star
           key={i}
-          className={`h-4 w-4 ${i < rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+          className={`h-4 w-4 ${i < rating ? "text-yellow-400 fill-current" : "text-black"}`}
         />
       ))}
     </div>
@@ -158,10 +158,10 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                     )}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-sm">
+                    <p className="font-bold text-black text-sm">
                       {review.userName || "Anonymous"}
                     </p>
-                    <div className="bg-gray-100 rounded text-[10px] text-gray-500 px-2 py-0.5 mt-0.5 inline-block">
+                    <div className="bg-gray-100 rounded text-[10px] text-black px-2 py-0.5 mt-0.5 inline-block">
                       {new Date(review.createdAt).toLocaleDateString(
                         "en-US",
                         {
@@ -185,7 +185,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                     {review.entityLabel || (review.serviceName ? `Service review • ${review.serviceName}` : "Service review")}
                   </p>
                 )}
-                <p className="text-sm text-gray-700 leading-relaxed">
+                <p className="text-sm text-black leading-relaxed">
                   {review.comment || "No review text available"}
                 </p>
               </div>
@@ -193,9 +193,9 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
           ))
         ) : (
           <div className="text-center py-12 border border-gray-200 rounded-[2rem] bg-white">
-            <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No reviews yet</p>
-            <p className="text-sm text-muted-foreground mt-2">Be the first to leave a review!</p>
+            <Star className="h-12 w-12 mx-auto text-black mb-4" />
+            <p className="text-black">No reviews yet</p>
+            <p className="text-sm text-black mt-2">Be the first to leave a review!</p>
           </div>
         )}
       </div>

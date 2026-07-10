@@ -169,7 +169,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {product.name}
         </h4>
         
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+        <p className="text-xs text-black line-clamp-2 mb-2">
           {product.description}
         </p>
         
@@ -179,10 +179,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <p className="font-bold text-primary">
                 ₹{product.salePrice.toFixed(2)}
               </p>
-              <p className="text-xs text-muted-foreground line-through">
+              <p className="text-xs text-black line-through">
                 ₹{product.price.toFixed(2)}
               </p>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+              <Badge variant="secondary" className="bg-green-100 text-black text-[10px] px-1 py-0 h-4 hover:bg-green-100">
                 {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
               </Badge>
             </div>
@@ -200,6 +200,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             className={`rounded-none rounded-tr-xl rounded-bl-xl text-xs px-6 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
             onClick={handleBuyNow}
             disabled={isSubscriptionExpired}
+            style={!isSubscriptionExpired ? { borderColor: '#422A3C', color: '#422A3C' } : {}}
           >
             {isSubscriptionExpired ? 'Unavailable' : 'Buy Now'}
           </Button>
@@ -215,7 +216,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               ) : (
                 <>
                   <img src="/images/heart 3 (1).png" alt="heart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
-                  <Heart className="w-4 h-4 hidden text-gray-500" />
+                  <Heart className="w-4 h-4 hidden text-black" />
                 </>
               )}
             </button>
@@ -226,13 +227,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
               disabled={isSubscriptionExpired}
             >
               <img src="/images/add-to-cart (1) 1.png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
-              <ShoppingCart className="h-4 w-4 hidden text-gray-500" />
+              <ShoppingCart className="h-4 w-4 hidden text-black" />
             </button>
           </div>
         </div>
 
         {isSubscriptionExpired && (
-          <p className="text-[10px] text-red-600 mt-2 text-center font-medium">
+          <p className="text-[10px] text-black mt-2 text-center font-medium">
             This product is temporarily closed
           </p>
         )}

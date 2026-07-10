@@ -491,16 +491,15 @@ export function Step3_LocationSelection({
     <div className="w-full">
       <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 bg-primary/10 rounded-full text-primary">
-            <MapPin className="h-6 w-6" />
-          </div>
-          <h2 className="text-3xl font-bold font-headline">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1 cursor-pointer w-fit" onClick={() => setCurrentStep(currentStep - 1)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/back 1.png" alt="back" className="h-5 w-5" />
+          <h2 className="text-2xl font-bold font-headline text-black">
             {selectedWeddingPackage ? 'Wedding Location' : 'Select Service Location'}
           </h2>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-black pl-7">
           {selectedWeddingPackage
             ? 'Choose where the wedding service will take place'
             : "Choose where you'd like the service to be provided"}

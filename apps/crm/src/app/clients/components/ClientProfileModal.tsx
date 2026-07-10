@@ -56,8 +56,8 @@ const AppointmentsSection = ({
             <button
               onClick={() => setActiveTab('upcoming')}
               className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${activeTab === 'upcoming'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <span className="truncate">Upcoming ({upcoming.length})</span>
@@ -65,8 +65,8 @@ const AppointmentsSection = ({
             <button
               onClick={() => setActiveTab('past')}
               className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${activeTab === 'past'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <span className="truncate">Past ({past.length})</span>
@@ -136,10 +136,10 @@ const AppointmentsSection = ({
                           </p>
                           <span
                             className={`inline-block mt-1 text-xs px-2 py-1 rounded capitalize ${appt.status === 'completed'
-                                ? 'bg-green-500/10 text-green-700'
-                                : appt.status === 'cancelled'
-                                  ? 'bg-destructive/10 text-destructive'
-                                  : 'bg-muted text-muted-foreground'
+                              ? 'bg-green-500/10 text-green-700'
+                              : appt.status === 'cancelled'
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'bg-muted text-muted-foreground'
                               }`}
                           >
                             {appt.status || 'Completed'}
@@ -201,6 +201,7 @@ export default function ClientProfileModal({
   handleAddAppointment,
 }: ClientProfileModalProps) {
   const [appointmentTab, setAppointmentTab] = useState('upcoming');
+  const [paymentTab, setPaymentTab] = useState<'appointments' | 'orders'>('appointments');
 
   // Hide scrollbar styles
   useEffect(() => {
@@ -224,17 +225,32 @@ export default function ClientProfileModal({
 
   if (!profileClient) return null;
 
-  const clientReviews = (allReviews || []).filter((review: Review) => {
-    if (profileClient?._id && review.userId && String(review.userId) === String(profileClient._id)) {
+  const clientReviews = (allReviews || []).filter((review: any) => {
+    // 1. Exact ID match
+    const rUserId = String(review.userId || review.user?._id || review.client || "");
+    if (profileClient?._id && rUserId && rUserId === String(profileClient._id)) {
       return true;
     }
+
+    // 2. Name match
+    const rUserName = (review.userName || review.user?.fullName || review.reviewerName || "").toLowerCase().trim();
     if (
       profileClient?.fullName &&
-      review.userName &&
-      review.userName.toLowerCase().trim() === profileClient.fullName.toLowerCase().trim()
+      rUserName &&
+      rUserName === profileClient.fullName.toLowerCase().trim()
     ) {
       return true;
     }
+
+    // 3. Email and Phone match
+    const rEmail = (review.userEmail || review.user?.email || "").toLowerCase().trim();
+    const cEmail = (profileClient?.email || "").toLowerCase().trim();
+    if (cEmail && rEmail && cEmail === rEmail) return true;
+
+    const rPhone = (review.userPhone || review.user?.phone || "").replace(/\D/g, "");
+    const cPhone = (profileClient?.phone || "").replace(/\D/g, "");
+    if (cPhone && rPhone && cPhone === rPhone) return true;
+
     return false;
   });
 
@@ -283,8 +299,8 @@ export default function ClientProfileModal({
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex flex-col items-center justify-center py-3 px-4 rounded-md text-xs font-medium transition-colors md:w-full ${activeTab === tab.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                       >
                         <IconComponent className="h-5 w-5 mb-1" />
@@ -438,82 +454,81 @@ export default function ClientProfileModal({
                       ]
                         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         .map((item: any, i: number) => (
-                        <div key={item._id || i} className="bg-card p-4 rounded-lg border hover:shadow-sm transition-shadow">
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <Package className="w-4 h-4 text-primary flex-shrink-0" />
-                                <p className="font-medium text-foreground truncate">
-                                  {item._type === 'billing' ? "Sale" : "Order"} #{String(item.invoiceNumber || item._id || '').slice(-6).toUpperCase()}
-                                </p>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {new Date(item.createdAt).toLocaleDateString(undefined, {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  (item.status === 'Delivered' || item.paymentStatus === 'Completed')
-                                    ? 'bg-green-500/10 text-green-700'
-                                    : (item.status === 'Cancelled' || item.paymentStatus === 'Cancelled')
-                                      ? 'bg-destructive/10 text-destructive'
-                                      : 'bg-muted text-muted-foreground'
-                                  }`}
-                              >
-                                {item.status || item.paymentStatus || 'Pending'}
-                              </span>
-                              <p className="font-medium text-foreground">
-                                ₹{Number(item.totalAmount || 0).toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            {(item.items || []).map((prod: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground flex-shrink-0">
-                                    {prod.image || prod.productImage ? (
-                                      <img
-                                        src={prod.image || prod.productImage}
-                                        alt={prod.name}
-                                        className="w-full h-full object-cover rounded"
-                                      />
-                                    ) : (
-                                      <ShoppingBag className="w-4 h-4" />
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">
-                                      {prod.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      Qty: {prod.quantity} {prod.price ? `@ ₹${prod.price}` : ''}
-                                    </p>
-                                  </div>
+                          <div key={item._id || i} className="bg-card p-4 rounded-lg border hover:shadow-sm transition-shadow">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <Package className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <p className="font-medium text-foreground truncate">
+                                    {item._type === 'billing' ? "Sale" : "Order"} #{String(item.invoiceNumber || item._id || '').slice(-6).toUpperCase()}
+                                  </p>
                                 </div>
-                                <p className="text-sm font-medium text-foreground sm:text-right">
-                                  ₹{Number(prod.totalPrice || (prod.price * prod.quantity) || 0).toFixed(2)}
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {new Date(item.createdAt).toLocaleDateString(undefined, {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                  })}
                                 </p>
                               </div>
-                            ))}
-                          </div>
-                          {item.billingType && (
-                            <div className="mt-4 pt-2 flex justify-between items-center text-xs text-muted-foreground">
-                              <span>Type: {item.billingType}</span>
-                              <span>Method: {item.paymentMethod}</span>
+                              <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                                <span
+                                  className={`px-2 py-1 rounded text-xs font-medium ${(item.status === 'Delivered' || item.paymentStatus === 'Completed')
+                                      ? 'bg-green-500/10 text-green-700'
+                                      : (item.status === 'Cancelled' || item.paymentStatus === 'Cancelled')
+                                        ? 'bg-destructive/10 text-destructive'
+                                        : 'bg-muted text-muted-foreground'
+                                    }`}
+                                >
+                                  {item.status || item.paymentStatus || 'Pending'}
+                                </span>
+                                <p className="font-medium text-foreground">
+                                  ₹{Number(item.totalAmount || 0).toFixed(2)}
+                                </p>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
+
+                            <div className="space-y-2">
+                              {(item.items || []).map((prod: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground flex-shrink-0">
+                                      {prod.image || prod.productImage ? (
+                                        <img
+                                          src={prod.image || prod.productImage}
+                                          alt={prod.name}
+                                          className="w-full h-full object-cover rounded"
+                                        />
+                                      ) : (
+                                        <ShoppingBag className="w-4 h-4" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {prod.name}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Qty: {prod.quantity} {prod.price ? `@ ₹${prod.price}` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm font-medium text-foreground sm:text-right">
+                                    ₹{Number(prod.totalPrice || (prod.price * prod.quantity) || 0).toFixed(2)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            {item.billingType && (
+                              <div className="mt-4 pt-2 flex justify-between items-center text-xs text-muted-foreground">
+                                <span>Type: {item.billingType}</span>
+                                <span>Method: {item.paymentMethod}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                     </div>
                   ) : (
                     <div className="bg-card p-8 rounded-lg border text-center">
@@ -565,8 +580,8 @@ export default function ClientProfileModal({
                                     <Star
                                       key={i}
                                       className={`w-4 h-4 ${i < review.rating
-                                          ? 'text-yellow-500 fill-yellow-500'
-                                          : 'text-muted-foreground'
+                                        ? 'text-yellow-500 fill-yellow-500'
+                                        : 'text-muted-foreground'
                                         }`}
                                     />
                                   ))}
@@ -587,12 +602,12 @@ export default function ClientProfileModal({
                             <div className="flex items-center gap-2 mb-3">
                               <div
                                 className={`p-1 rounded flex-shrink-0 ${review.entityType === 'product'
+                                  ? 'bg-primary/10 text-primary'
+                                  : review.entityType === 'service'
                                     ? 'bg-primary/10 text-primary'
-                                    : review.entityType === 'service'
+                                    : review.entityType === 'doctor'
                                       ? 'bg-primary/10 text-primary'
-                                      : review.entityType === 'doctor'
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'bg-primary/10 text-primary'
+                                      : 'bg-primary/10 text-primary'
                                   }`}
                               >
                                 {review.entityType === 'product' ? (
@@ -648,27 +663,59 @@ export default function ClientProfileModal({
                   </div>
 
                   <div className="bg-card rounded-lg border">
-                    <div className="p-3 border-b flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-primary flex-shrink-0" />
-                      <h4 className="font-medium text-foreground truncate">Transaction History</h4>
+                    <div className="p-3 border-b flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-primary flex-shrink-0" />
+                        <h4 className="font-medium text-foreground truncate">Transaction History</h4>
+                      </div>
+                    </div>
+
+                    <div className="border-b">
+                      <nav className="flex" aria-label="Tabs">
+                        <button
+                          onClick={() => setPaymentTab('appointments')}
+                          className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${paymentTab === 'appointments'
+                              ? 'text-primary border-b-2 border-primary'
+                              : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                          <span className="truncate">Appointments</span>
+                        </button>
+                        <button
+                          onClick={() => setPaymentTab('orders')}
+                          className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${paymentTab === 'orders'
+                              ? 'text-primary border-b-2 border-primary'
+                              : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                          <span className="truncate">Orders</span>
+                        </button>
+                      </nav>
                     </div>
 
                     <div className="p-3 space-y-3">
                       {(() => {
-                        const apptItems = profileClientAppointments
-                          .filter((appt: any) => String(appt?.status || '').toLowerCase() === 'completed')
-                          .map(i => ({ ...i, _type: 'appointment' }));
-                        
-                        const billItems = profileClientBillings
-                          .filter((bill: any) => String(bill?.paymentStatus || '').toLowerCase() === 'completed')
-                          .map(i => ({ ...i, _type: 'billing' }));
+                        let items: any[] = [];
 
-                        const items = [...apptItems, ...billItems]
-                          .sort((a: any, b: any) => {
-                            const ad = new Date(a?.date || a?.createdAt || 0).getTime();
-                            const bd = new Date(b?.date || b?.createdAt || 0).getTime();
-                            return bd - ad;
-                          });
+                        if (paymentTab === 'appointments') {
+                          items = profileClientAppointments
+                            .filter((appt: any) => String(appt?.status || '').toLowerCase() === 'completed')
+                            .map(i => ({ ...i, _type: 'appointment' }));
+                        } else {
+                          const billItems = profileClientBillings
+                            .filter((bill: any) => String(bill?.paymentStatus || '').toLowerCase() === 'completed')
+                            .map(i => ({ ...i, _type: 'billing' }));
+                          const orderItems = profileClientOrders
+                            .filter((order: any) => String(order?.paymentStatus || '').toLowerCase() === 'completed' || String(order?.status || '').toLowerCase() === 'delivered')
+                            .map(i => ({ ...i, _type: 'order' }));
+                          items = [...billItems, ...orderItems];
+                        }
+
+                        items.sort((a: any, b: any) => {
+                          const ad = new Date(a?.date || a?.createdAt || 0).getTime();
+                          const bd = new Date(b?.date || b?.createdAt || 0).getTime();
+                          return bd - ad;
+                        });
 
                         if (items.length === 0) {
                           return (
@@ -698,16 +745,39 @@ export default function ClientProfileModal({
                             item?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
                           const amount =
                             Number(item?.finalAmount ?? item?.totalAmount ?? item?.amount ?? item?.price ?? 0) || 0;
-                          const title = item?._type === 'billing' ? (item.billingType || 'Sale') : (item?.serviceName || item?.service?.name || 'Appointment');
+                          
+                          let title = '';
+                          if (item._type === 'billing') title = item.billingType || 'Sale';
+                          else if (item._type === 'order') title = 'Order';
+                          else title = item?.serviceName || item?.service?.name || 'Appointment';
+
+                          let orderDetails = null;
+                          if (item._type === 'order' && Array.isArray(item.items) && item.items.length > 0) {
+                            orderDetails = item.items.map((i: any) => `${i.name || i.productName || 'Product'} (x${i.quantity || 1})`).join(', ');
+                          } else if (item._type === 'billing') {
+                            const bItems: string[] = [];
+                            if (Array.isArray(item.services)) {
+                              item.services.forEach((s: any) => bItems.push(`${s.serviceName || s.name || 'Service'}`));
+                            }
+                            if (Array.isArray(item.products)) {
+                              item.products.forEach((p: any) => bItems.push(`${p.productName || p.name || 'Product'} (x${p.quantity || 1})`));
+                            }
+                            if (bItems.length > 0) orderDetails = bItems.join(', ');
+                          }
 
                           return (
                             <div key={item?._id || item?.id || idx} className="p-4 bg-background rounded-lg border">
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-foreground truncate">
-                                    {title} {item.invoiceNumber && `(#${item.invoiceNumber})`}
+                                    {title} {(item.invoiceNumber || (item._type === 'order' && item._id)) && `(#${String(item.invoiceNumber || item._id).slice(-6).toUpperCase()})`}
                                   </p>
-                                  <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                  {orderDetails && (
+                                    <p className="text-sm text-foreground/80 mt-1 line-clamp-2">
+                                      {orderDetails}
+                                    </p>
+                                  )}
+                                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
                                     <p>{dateStr}</p>
                                     <span>•</span>
                                     <p>{timeStr}</p>
@@ -722,7 +792,7 @@ export default function ClientProfileModal({
                                 <div className="text-right">
                                   <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                                     <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">
-                                      {item?._type === 'billing' ? "Paid" : "Completed"}
+                                      {item?._type === 'billing' || item?._type === 'order' ? "Paid" : "Completed"}
                                     </span>
                                     <p className="font-medium text-foreground">₹{amount.toFixed(2)}</p>
                                   </div>
