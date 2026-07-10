@@ -6,7 +6,7 @@ import {
   normalizeDialCode,
   cleanLocalNumber,
   buildE164,
-} from "@repo/lib/utils/phoneUtils.js";
+} from "@repo/lib/utils/phoneUtils";
 
 const MAX_FAILED_ATTEMPTS = 5;
 

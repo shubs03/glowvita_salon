@@ -4800,12 +4800,18 @@ function BookingPageContent() {
                       : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)}/-
                   </div>
                 </div>
-                {(weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services || []).map((service, idx) => (
-                  <div key={service.id || idx} className="flex flex-nowrap items-center justify-between py-3 pl-2 gap-3">
-                    <span className="text-sm truncate">{service.name || service.serviceName}</span>
-                    {service.price && <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">₹{service.price}/-</span>}
-                  </div>
-                ))}
+                {(weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services || []).map((service, idx) => {
+                  const isFullService = 'id' in service;
+                  const key = isFullService ? (service as any).id : (service as any).serviceId;
+                  const displayName = isFullService ? (service as any).name : (service as any).serviceName;
+                  const displayPrice = isFullService ? (service as any).price : undefined;
+                  return (
+                    <div key={key || idx} className="flex flex-nowrap items-center justify-between py-3 pl-2 gap-3">
+                      <span className="text-sm truncate">{displayName}</span>
+                      {displayPrice && <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">₹{displayPrice}/-</span>}
+                    </div>
+                  );
+                })}
               </>
             ) : (
               selectedServices.map((service) => (

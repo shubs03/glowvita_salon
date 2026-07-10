@@ -8,6 +8,7 @@
     "./auth": "./src/auth.js",
     "./utils/upload": "./src/utils/upload.js",
     "./utils/phoneUtils": "./src/utils/phoneUtils.js",
+    "./utils/phoneUtils.js": "./src/utils/phoneUtils.js",
     "./generateTokens": "./src/generateTokens.js",
     "./emailService": "./src/emailService.js",
     "./models/Notification.model": "./src/models/Notification.model.js",

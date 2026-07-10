@@ -398,7 +398,7 @@ export default function CartPage() {
                         </div>
 
                         <Button
-                          size="md"
+                          size="default"
                           className="w-full h-10 text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-200 mb-4"
                           onClick={handleCheckout}
                           disabled={cartItems.length === 0}

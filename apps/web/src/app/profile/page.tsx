@@ -465,108 +465,110 @@ function OverviewContent() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* OFFERS */}
-        <Card className="overflow-hidden">
-          <CardHeader className="pb-2 px-4 pt-4">
+        <Card>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl sm:text-3xl leading-tight">Current Offers</CardTitle>
-                <CardDescription className="mt-1 text-sm sm:text-base">Don't miss out on these special deals.</CardDescription>
+                <CardTitle className="text-lg sm:text-xl font-bold leading-tight">Current Offers</CardTitle>
+                <CardDescription className="mt-0.5 text-xs sm:text-sm">Don't miss out on these special deals.</CardDescription>
               </div>
               <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
                 {currentOffers.length} Active
               </span>
             </div>
           </CardHeader>
-          <CardContent className="px-4 pb-3 pt-1">
-            <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5 custom-scrollbar">
-              {isLoadingOffers ? (
-                <div className="flex items-center justify-center py-6 gap-2">
-                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span className="text-[11px] text-muted-foreground">Loading offers...</span>
-                </div>
-              ) : currentOffers.length > 0 ? (
-                currentOffers.map((offer, idx) => (
-                  <div key={offer.title + idx} className="flex items-center gap-2 p-2 bg-secondary/40 hover:bg-secondary/70 border border-border/40 rounded-lg relative transition-colors group">
-                    {/* Thumbnail */}
-                    <div className="w-9 h-9 flex-shrink-0 rounded-md overflow-hidden border border-border/30">
-                      <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pr-9">
-                      {/* Title + code row */}
-                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                        <span className="font-semibold text-[11px] text-foreground leading-none truncate max-w-[120px]">{offer.title}</span>
-                        <span className="bg-primary/10 text-primary text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border border-primary/20 leading-none flex-shrink-0">
-                          {offer.code}
-                        </span>
-                      </div>
-
-                      {/* Description */}
-                      <p className="text-[9px] text-muted-foreground line-clamp-1 leading-tight">{offer.description}</p>
-
-                      {/* Applicable tags */}
-                      {((offer.applicableServices && offer.applicableServices.length > 0) ||
-                        (offer.applicableSpecialties && offer.applicableSpecialties.length > 0) ||
-                        (offer.applicableCategories && offer.applicableCategories.length > 0)) && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {offer.applicableServices?.slice(0, 2).map((s: string) => (
-                              <span key={s} className="text-[8px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-blue-200/50">
-                                {s}
-                              </span>
-                            ))}
-                            {offer.applicableSpecialties?.slice(0, 1).map((s: string) => (
-                              <span key={s} className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-purple-200/50">
-                                {s}
-                              </span>
-                            ))}
-                            {offer.applicableCategories?.slice(0, 1).map((c: string) => (
-                              <span key={c} className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-green-200/50">
-                                {c}
-                              </span>
-                            ))}
-                            {((offer.applicableServices?.length ?? 0) > 2) && (
-                              <span className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium leading-none">
-                                +{(offer.applicableServices?.length ?? 0) - 2} more
-                              </span>
-                            )}
-                          </div>
-                        )}
-                    </div>
-
-                    {/* Discount Badge */}
-                    <div className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground min-w-[32px] h-8 px-1.5 rounded-lg flex items-center justify-center text-[9px] font-bold shadow-sm flex-shrink-0 leading-none">
-                      {offer.discount}
-                    </div>
+          <CardContent className="space-y-4 pt-2">
+            {isLoadingOffers ? (
+              <div className="flex items-center justify-center py-8 gap-2">
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-muted-foreground">Loading offers...</span>
+              </div>
+            ) : currentOffers.length > 0 ? (
+              currentOffers.map((offer, idx) => (
+                <div key={offer.title + idx} className="flex items-center gap-4 p-3 rounded-lg relative border border-[#c8dff7]" style={{ backgroundColor: '#EBF3FD' }}>
+                  {/* Thumbnail */}
+                  <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded-md">
+                    <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-[11px] text-muted-foreground">No offers available at the moment.</p>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title + code row */}
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <h4 className="font-semibold truncate text-sm">{offer.title}</h4>
+                      <span className="bg-primary/10 text-primary text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-primary/20 leading-none flex-shrink-0">
+                        {offer.code}
+                      </span>
+                    </div>
+
+                    {/* Applicable services — horizontal bullet list */}
+                    {(() => {
+                      const uniqueServices: string[] = [];
+                      const seen = new Set<string>();
+                      [
+                        ...(offer.applicableServices || []),
+                        ...(offer.applicableSpecialties || []),
+                        ...(offer.applicableCategories || []),
+                      ].forEach((s: string) => {
+                        if (s) {
+                          const trimmed = s.trim();
+                          const lower = trimmed.toLowerCase();
+                          if (!seen.has(lower)) {
+                            seen.add(lower);
+                            uniqueServices.push(trimmed);
+                          }
+                        }
+                      });
+
+                      return uniqueServices.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
+                          {uniqueServices.map((s: string, i: number) => (
+                            <span key={s + i} className="flex items-center gap-1 text-[11px] text-foreground">
+                              <span className="text-primary font-bold leading-none">•</span>
+                              <span className="font-bold">{s}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <span className="text-primary font-bold text-[11px] leading-none">•</span>
+                          <span className="text-[11px] font-bold text-foreground">All services</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Discount Badge */}
+                  <div className="bg-primary text-primary-foreground px-2.5 py-1.5 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm flex-shrink-0">
+                    {offer.discount}
+                  </div>
                 </div>
-              )}
-            </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No offers available at the moment.</p>
+            )}
           </CardContent>
         </Card>
         {/* NEW PRODUCTS */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl sm:text-3xl leading-tight">New Products</CardTitle>
-            <CardDescription className="mt-1 text-sm sm:text-base">Check out the latest arrivals.</CardDescription>
+          <CardHeader className="pb-3">
+            <div>
+              <CardTitle className="text-lg sm:text-xl font-bold leading-tight">New Products</CardTitle>
+              <CardDescription className="mt-0.5 text-xs sm:text-sm">Check out the latest arrivals.</CardDescription>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-2">
             {isLoadingProducts ? (
               <p className="text-muted-foreground text-center py-8">Loading products...</p>
             ) : newProducts.length > 0 ? (
               newProducts.map((product) => (
-                <div key={product.name} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
-                  <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-md relative">
+                <div key={product.name} className="flex items-center gap-4 p-3 rounded-lg border border-[#c8dff7]" style={{ backgroundColor: '#EBF3FD' }}>
+                  <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded-md relative">
                     <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold">{product.name}</h4>
-                    <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
+                    <h4 className="font-semibold text-sm leading-tight">{product.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1.5">₹{product.price.toFixed(2)}</p>
                   </div>
                   <div className="flex gap-2 ml-auto">
                     <div
@@ -614,39 +616,39 @@ function OverviewContent() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* UPCOMING APPOINTMENTS */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div
-              onClick={() => router.push("/profile/appointments")}
-              className="hover:opacity-70 transition-opacity cursor-pointer"
-            >
-              <CardTitle className="text-2xl sm:text-3xl leading-tight">Upcoming Appointments ({upcomingAppointments.length})</CardTitle>
-              <CardDescription className="mt-1 text-sm sm:text-base">Your next scheduled appointments.</CardDescription>
-            </div>
-            {upcomingAppointments.length > 3 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllAppointments(!showAllAppointments)}
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div
+                onClick={() => router.push("/profile/appointments")}
+                className="hover:opacity-70 transition-opacity cursor-pointer"
               >
-                {showAllAppointments ? "Show Less" : "View All"}
-              </Button>
-            )}
+                <CardTitle className="text-lg sm:text-xl font-bold leading-tight">Upcoming Appointments ({upcomingAppointments.length})</CardTitle>
+                <CardDescription className="mt-0.5 text-xs sm:text-sm">Your next scheduled appointments.</CardDescription>
+              </div>
+              {upcomingAppointments.length > 3 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllAppointments(!showAllAppointments)}
+                >
+                  {showAllAppointments ? "Show Less" : "View All"}
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4 pt-2">
             {isLoadingAppointments ? (
               <p className="text-muted-foreground text-center py-8">Loading appointments...</p>
             ) : displayUpcomingAppointments.length > 0 ? (
-              <div className="space-y-4 pt-4">
-                {displayUpcomingAppointments.map(appt => (
-                  <div
-                    key={appt.id}
-                    onClick={() => router.push("/profile/appointments")}
-                    className="block cursor-pointer hover:shadow-md transition-shadow rounded-lg"
-                  >
-                    <AppointmentCard appointment={appt} />
-                  </div>
-                ))}
-              </div>
+              displayUpcomingAppointments.map(appt => (
+                <div
+                  key={appt.id}
+                  onClick={() => router.push("/profile/appointments")}
+                  className="block cursor-pointer hover:shadow-md transition-shadow rounded-lg"
+                >
+                  <AppointmentCard appointment={appt} />
+                </div>
+              ))
             ) : (
               <p className="text-muted-foreground text-center py-8">No upcoming appointments.</p>
             )}
@@ -655,56 +657,56 @@ function OverviewContent() {
 
         {/* UPCOMING ORDERS */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div
-              onClick={() => router.push("/profile/orders")}
-              className="hover:opacity-70 transition-opacity cursor-pointer"
-            >
-              <CardTitle className="text-2xl sm:text-3xl leading-tight">Upcoming Orders ({upcomingOrders.length})</CardTitle>
-              <CardDescription className="mt-1 text-sm sm:text-base">Your active and pending orders.</CardDescription>
-            </div>
-            {upcomingOrders.length > 3 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllOrders(!showAllOrders)}
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div
+                onClick={() => router.push("/profile/orders")}
+                className="hover:opacity-70 transition-opacity cursor-pointer"
               >
-                {showAllOrders ? "Show Less" : "View All"}
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent>
-            {displayUpcomingOrders.length > 0 ? (
-              <div className="space-y-4 pt-4">
-                {displayUpcomingOrders.map((order: any) => {
-                  const orderId = order._id || order.id;
-                  const status = order.orderStatus || order.status || 'Pending';
-                  const date = order.createdAt || order.date;
-                  const total = order.totalAmount || 0;
-                  const itemCount = (order.items || order.products || []).length;
-                  return (
-                    <div
-                      key={orderId}
-                      onClick={() => router.push("/profile/orders")}
-                      className="block p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold">{itemCount} item{itemCount !== 1 ? 's' : ''}</h4>
-                          <p className="text-sm text-muted-foreground">Order #{orderId?.slice(-6)?.toUpperCase()}</p>
-                        </div>
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{status}</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-3">
-                        <p className="text-sm text-muted-foreground">
-                          {date ? new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
-                        </p>
-                        <p className="text-lg font-bold text-primary">₹{total.toFixed(2)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+                <CardTitle className="text-lg sm:text-xl font-bold leading-tight">Upcoming Orders ({upcomingOrders.length})</CardTitle>
+                <CardDescription className="mt-0.5 text-xs sm:text-sm">Your active and pending orders.</CardDescription>
               </div>
+              {upcomingOrders.length > 3 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllOrders(!showAllOrders)}
+                >
+                  {showAllOrders ? "Show Less" : "View All"}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-2">
+            {displayUpcomingOrders.length > 0 ? (
+              displayUpcomingOrders.map((order: any) => {
+                const orderId = order._id || order.id;
+                const status = order.orderStatus || order.status || 'Pending';
+                const date = order.createdAt || order.date;
+                const total = order.totalAmount || 0;
+                const itemCount = (order.items || order.products || []).length;
+                return (
+                  <div
+                    key={orderId}
+                    onClick={() => router.push("/profile/orders")}
+                    className="block p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold text-sm">{itemCount} item{itemCount !== 1 ? 's' : ''}</h4>
+                        <p className="text-xs text-muted-foreground">Order #{orderId?.slice(-6)?.toUpperCase()}</p>
+                      </div>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 capitalize">{status}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2.5">
+                      <p className="text-xs text-muted-foreground">
+                        {date ? new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                      </p>
+                      <p className="text-base font-bold text-primary">₹{total.toFixed(2)}</p>
+                    </div>
+                  </div>
+                );
+              })
             ) : (
               <p className="text-muted-foreground text-center py-8">No upcoming orders.</p>
             )}

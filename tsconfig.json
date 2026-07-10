@@ -2,6 +2,8 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["*"],
