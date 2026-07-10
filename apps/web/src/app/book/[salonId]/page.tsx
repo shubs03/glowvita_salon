@@ -3741,6 +3741,8 @@ function BookingPageContent() {
               bookingMode={bookingMode}
               setBookingMode={handleBookingModeChange}
               initialViewMode={selectedWeddingPackage || searchParams?.get('tab') === 'packages' ? 'packages' : 'services'}
+              priceBreakdown={priceBreakdown}
+              taxFeeSettings={taxFeeSettings}
             />
           );
         case 2:

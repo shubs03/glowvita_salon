@@ -94,6 +94,8 @@ interface Step1ServicesProps {
   setBookingMode: (mode: 'salon' | 'home') => void;
   /** Which tab to show on first render. Defaults to 'services'. Pass 'packages' when navigating from a wedding package Book button. */
   initialViewMode?: 'services' | 'packages';
+  priceBreakdown?: any;
+  taxFeeSettings?: any;
 }
 
 export function Step1_Services({
@@ -114,6 +116,8 @@ export function Step1_Services({
   bookingMode,
   setBookingMode,
   initialViewMode = 'services',
+  priceBreakdown,
+  taxFeeSettings,
 }: Step1ServicesProps) {
   // Get vendor ID from URL params
   const params = useParams();
@@ -797,8 +801,8 @@ export function Step1_Services({
                         </Button>
                         <button
                           className={`flex-[2] min-w-0 rounded-tl-md rounded-tr-[14px] rounded-bl-[14px] rounded-br-md text-xs font-bold px-3 py-1.5 transition-colors border whitespace-nowrap ${isSelected
-                              ? 'bg-[#422A3C] text-white border-[#422A3C]'
-                              : 'bg-transparent text-[#422A3C] border-[#422A3C] hover:bg-[#422A3C]/5'
+                            ? 'bg-[#422A3C] text-white border-[#422A3C]'
+                            : 'bg-transparent text-[#422A3C] border-[#422A3C] hover:bg-[#422A3C]/5'
                             }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -832,59 +836,75 @@ export function Step1_Services({
 
       {/* Confirmation Dialog */}
       <Dialog open={packageToConfirm !== null} onOpenChange={(open) => !open && setPackageToConfirm(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[420px] rounded-2xl p-6 border border-gray-200 shadow-2xl bg-white overflow-hidden">
           {packageToConfirm && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <Heart className="h-6 w-6 text-primary" />
-                  Confirm Package Selection
-                </DialogTitle>
-                <DialogDescription className="text-base pt-2">
-                  Are you sure you want to select <span className="font-semibold">{packageToConfirm.name}</span>?
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-3 py-4">
-                <div className="bg-muted border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Total Services:</span>
-                    <span className="font-semibold">{packageToConfirm.services?.length || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Duration:</span>
-                    <span className="font-semibold">{packageToConfirm.duration || 0} minutes</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="text-base font-bold">Price:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      ₹{(packageToConfirm.discountedPrice || packageToConfirm.totalPrice)?.toLocaleString('en-IN')}
-                    </span>
+            <div className="relative">
+              <div className="flex items-start gap-3 mt-1 pr-6">
+                {/* Green Check Icon */}
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 border border-green-200 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-[#15B048] flex items-center justify-center">
+                    <Check className="h-3.5 w-3.5 text-white stroke-[3.5]" />
                   </div>
                 </div>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  You can change your selection anytime before confirming the booking.
-                </p>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 leading-tight">Confirm Package Selection</h3>
+                  <p className="text-sm text-black font-semibold mt-1.5 leading-normal">
+                    Are you sure you want to select <span className="font-bold">{packageToConfirm.name}</span>?
+                  </p>
+                </div>
               </div>
 
-              <DialogFooter className="gap-2">
-                <Button
-                  variant="outline"
+              {/* Blue Invoice Breakdown Box */}
+              {(() => {
+                const pkgPrice = packageToConfirm.discountedPrice || packageToConfirm.totalPrice || 0;
+
+                // Read rates dynamically from taxFeeSettings (or default to 15% and 18%)
+                const platformFeeRate = taxFeeSettings?.platformFee != null ? parseFloat(taxFeeSettings.platformFee) : 15;
+                const serviceTaxRate = taxFeeSettings?.serviceTax != null ? parseFloat(taxFeeSettings.serviceTax) : 18;
+
+                const platformFee = pkgPrice * (platformFeeRate / 100);
+                const gst = pkgPrice * (serviceTaxRate / 100);
+                const finalTotal = pkgPrice + platformFee + gst;
+
+                return (
+                  <div className="mt-5 bg-[#EBF4FE] border border-[#D5E6FC] rounded-2xl p-5 space-y-3.5">
+                    <div className="flex justify-between items-center text-sm font-semibold text-[#1F2937]">
+                      <span>Platform Fee ({platformFeeRate}%) :</span>
+                      <span>₹ {platformFee.toFixed(2)}/-</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-semibold text-[#1F2937]">
+                      <span>GST ({serviceTaxRate}%) :</span>
+                      <span>₹ {gst.toFixed(2)}/-</span>
+                    </div>
+                    <div className="border-t border-[#00000020] my-2"></div>
+                    <div className="flex justify-between items-center text-sm font-bold text-black">
+                      <span>Total Amount :</span>
+                      <span>₹ {finalTotal.toLocaleString('en-IN')}/-</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <p className="text-xs text-gray-500 text-center mt-4">
+                You can change your selection anytime before confirming the booking
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-4 mt-6">
+                <button
                   onClick={() => setPackageToConfirm(null)}
-                  className="flex-1"
+                  className="flex-1 py-3 px-5 border border-[#422A3C] text-[#422A3C] hover:bg-[#422A3C]/5 font-bold rounded-2xl text-sm transition-colors text-center"
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   onClick={confirmPackageSelection}
-                  className="flex-1"
+                  className="flex-1 py-3 px-5 bg-[#422A3C] hover:bg-[#422A3C]/95 text-white font-bold rounded-2xl text-sm transition-colors text-center shadow-md"
                 >
-                  <Check className="h-4 w-4 mr-2" />
                   Confirm
-                </Button>
-              </DialogFooter>
-            </>
+                </button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
