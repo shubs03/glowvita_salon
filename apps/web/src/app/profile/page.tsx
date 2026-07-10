@@ -470,8 +470,8 @@ function OverviewContent() {
           <CardHeader className="pb-2 px-4 pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-sm font-semibold">Current Offers</CardTitle>
-                <CardDescription className="text-[11px] mt-0.5">Don't miss out on these special deals.</CardDescription>
+                <CardTitle className="text-2xl sm:text-3xl leading-tight">Current Offers</CardTitle>
+                <CardDescription className="mt-1 text-sm sm:text-base">Don't miss out on these special deals.</CardDescription>
               </div>
               <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
                 {currentOffers.length} Active
@@ -552,8 +552,8 @@ function OverviewContent() {
         {/* NEW PRODUCTS */}
         <Card>
           <CardHeader>
-            <CardTitle>New Products</CardTitle>
-            <CardDescription>Check out the latest arrivals.</CardDescription>
+            <CardTitle className="text-2xl sm:text-3xl leading-tight">New Products</CardTitle>
+            <CardDescription className="mt-1 text-sm sm:text-base">Check out the latest arrivals.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoadingProducts ? (
@@ -619,8 +619,8 @@ function OverviewContent() {
               onClick={() => router.push("/profile/appointments")}
               className="hover:opacity-70 transition-opacity cursor-pointer"
             >
-              <CardTitle>Upcoming Appointments ({upcomingAppointments.length})</CardTitle>
-              <CardDescription>Your next scheduled appointments.</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl leading-tight">Upcoming Appointments ({upcomingAppointments.length})</CardTitle>
+              <CardDescription className="mt-1 text-sm sm:text-base">Your next scheduled appointments.</CardDescription>
             </div>
             {upcomingAppointments.length > 3 && (
               <Button
@@ -660,8 +660,8 @@ function OverviewContent() {
               onClick={() => router.push("/profile/orders")}
               className="hover:opacity-70 transition-opacity cursor-pointer"
             >
-              <CardTitle>Upcoming Orders ({upcomingOrders.length})</CardTitle>
-              <CardDescription>Your active and pending orders.</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl leading-tight">Upcoming Orders ({upcomingOrders.length})</CardTitle>
+              <CardDescription className="mt-1 text-sm sm:text-base">Your active and pending orders.</CardDescription>
             </div>
             {upcomingOrders.length > 3 && (
               <Button
