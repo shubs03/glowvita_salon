@@ -187,10 +187,10 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
       </div>
 
       {/* Service Type Buttons */}
-      <div className="flex gap-4">
+      <div className="flex gap-2 md:gap-4 overflow-x-auto pb-1 hide-scrollbar">
         <button
           onClick={() => { setServiceType("Individual Services"); setActiveCategory("All"); }}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${serviceType === "Individual Services" ? "bg-[#422A3C] text-white" : "bg-white text-black hover:bg-gray-50"
+          className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors ${serviceType === "Individual Services" ? "bg-[#422A3C] text-white" : "bg-white text-black hover:bg-gray-50"
             }`}
           style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
         >
@@ -199,7 +199,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
         </button>
         <button
           onClick={() => { router.push(`/book/${vendorId}?tab=packages`); }}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-black hover:bg-gray-50`}
+          className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors bg-white text-black hover:bg-gray-50`}
           style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
         >
           <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} />
@@ -216,10 +216,10 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
             <p className="text-xs md:text-sm text-black">Select your preferred services location type</p>
           </div>
         </div>
-        <div className="flex bg-white rounded-md p-1 shadow-sm border border-gray-100">
+        <div className="flex flex-nowrap overflow-x-auto hide-scrollbar bg-white rounded-md p-1 shadow-sm border border-gray-100 justify-start sm:justify-center w-full sm:w-auto">
           <button
             onClick={() => setLocationType("Visit Salon")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Visit Salon" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
+            className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 rounded-md text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors ${locationType === "Visit Salon" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
               }`}
           >
             <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={locationType === "Visit Salon" ? "brightness-0 invert" : ""} />
@@ -227,7 +227,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
           </button>
           <button
             onClick={() => setLocationType("Home Service")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${locationType === "Home Service" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
+            className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 rounded-md text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors ${locationType === "Home Service" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
               }`}
           >
             <Image src="/images/home (2) 1.png" alt="Home" width={16} height={16} className={locationType === "Home Service" ? "brightness-0 invert" : ""} />
@@ -314,11 +314,11 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                   <button
                     onClick={(e) => handleBook(e, service)}
                     disabled={isSubscriptionExpired}
-                    className={`border h-8 px-4 text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl ${isSubscriptionExpired ? "opacity-50 cursor-not-allowed bg-gray-100 border-gray-300 text-black" : "hover:bg-gray-50"
+                    className={`border h-7 md:h-8 px-2.5 md:px-4 text-[11px] md:text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl ${isSubscriptionExpired ? "opacity-50 cursor-not-allowed bg-gray-100 border-gray-300 text-black" : "hover:bg-gray-50"
                       }`}
                     style={!isSubscriptionExpired ? { borderColor: '#422A3C', color: '#422A3C' } : {}}
                   >
-                    <Plus className="w-3 h-3" /> Buy now
+                    <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" /> Buy now
                   </button>
                 </div>
 
