@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@repo/ui/button';
 import { cn } from "@repo/ui/cn";
-import { Heart, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ShoppingCart, ChevronsRight } from 'lucide-react';
 
 interface ProductPurchaseActionsProps {
   handleWishlistToggle: () => void;
@@ -18,9 +18,6 @@ interface ProductPurchaseActionsProps {
 }
 
 const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
-  handleWishlistToggle,
-  isWishlisted,
-  isWishlistLoading,
   handleBuyNow,
   handleAddToCart,
   isOutOfStock,
@@ -29,68 +26,48 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
   isSubscriptionExpired = false,
 }) => {
   return (
-    <div className="mt-4">
+    <div className="mt-8 flex flex-col items-center justify-center w-full">
       {isSubscriptionExpired && (
-        <div className="mb-4 bg-red-50 border border-red-100 rounded-md p-3 flex items-start gap-2">
+        <div className="w-full mb-4 bg-red-50 border border-red-100 rounded-md p-3 flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-red-700">
             Purchases are temporarily disabled for this salon.
           </p>
         </div>
       )}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12 text-red-500"
-          onClick={handleWishlistToggle}
-          disabled={isWishlistLoading}
-        >
-          <Heart className={cn("h-5 w-5", isWishlisted && "fill-red-500 text-red-500")} />
-        </Button>
+      
+      {!isSubscriptionExpired && (
+        <div className="flex items-center justify-center gap-4 w-full px-4">
+          <Button
+            size="lg"
+            variant="outline"
+            className="flex-1 max-w-[200px] border-[#8c828c] text-[#493c4e] hover:bg-gray-50 hover:text-[#493c4e] font-semibold rounded-md h-12"
+            onClick={() => handleAddToCart()}
+            disabled={isOutOfStock || isAddingToCart}
+          >
+            {isAddingToCart ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <ShoppingCart className="mr-2 h-5 w-5" />
+            )}
+            Add to cart
+          </Button>
 
-        <Button
-          size="lg"
-          variant="default"
-          className="flex-1 bg-primary hover:bg-primary/95"
-          onClick={() => handleBuyNow()}
-          disabled={isOutOfStock || isBuyingNow || isSubscriptionExpired}
-        >
-          {isBuyingNow ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : isOutOfStock ? (
-            'Out of Stock'
-          ) : isSubscriptionExpired ? (
-            'Unavailable'
-          ) : (
-            'Buy Now'
-          )}
-        </Button>
-
-        <Button
-          size="lg"
-          variant="outline"
-          className="flex-1 border-2 border-primary hover:border-primary/95"
-          onClick={() => handleAddToCart()}
-          disabled={isOutOfStock || isAddingToCart || isSubscriptionExpired}
-        >
-          {isAddingToCart ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Adding...
-            </>
-          ) : isOutOfStock ? (
-            'Out of Stock'
-          ) : isSubscriptionExpired ? (
-            'Unavailable'
-          ) : (
-            'Add to Cart'
-          )}
-        </Button>
-      </div>
+          <Button
+            size="lg"
+            className="flex-1 max-w-[200px] bg-[#3e2a3e] hover:bg-[#2c1d2c] text-white font-semibold rounded-md h-12"
+            onClick={() => handleBuyNow()}
+            disabled={isOutOfStock || isBuyingNow}
+          >
+            {isBuyingNow ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <ChevronsRight className="mr-2 h-5 w-5" />
+            )}
+            Buy Now
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

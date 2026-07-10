@@ -310,123 +310,137 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <Card
-      className={cn(
-        "group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl transition-shadow flex flex-col text-left relative",
-        isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
-      )}
-      onClick={() => {
-        if (isSubscriptionExpired) {
-          toast.error("Salon Unavailable", {
-            description: "This product is temporarily closed due to salon subscription expiry."
-          });
-          return;
-        }
-        router.push(`/product-details/${id}`);
-      }}
-    >
-      <div className="relative aspect-square overflow-hidden rounded-md m-2">
-        <img
-          src={imgSrc}
-          alt={name}
-          onError={() => setImgSrc(PRODUCT_PLACEHOLDER)}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          data-ai-hint={hint}
-        />
-
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute top-1 right-1 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all"
-          onClick={handleWishlistToggle}
-          disabled={isLoading}
-        >
-          <Heart
-            className={cn("h-4 w-4", isLiked && "fill-red-500 text-red-500")}
+    <>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`}</style>
+      <Card
+        className={cn(
+          "group overflow-hidden hover:shadow-lg w-[260px] h-[360px] rounded-none rounded-tr-[11px] rounded-bl-[11px] transition-shadow flex flex-col text-left relative",
+          isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
+        )}
+        onClick={() => {
+          if (isSubscriptionExpired) {
+            toast.error("Salon Unavailable", {
+              description: "This product is temporarily closed due to salon subscription expiry."
+            });
+            return;
+          }
+          router.push(`/product-details/${id}`);
+        }}
+      >
+        <div className="relative h-[185px] w-full overflow-hidden flex-shrink-0">
+          <img
+            src={imgSrc}
+            alt={name}
+            onError={() => setImgSrc(PRODUCT_PLACEHOLDER)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            data-ai-hint={hint}
           />
-        </Button>
-      </div>
-      <div className="p-3 flex flex-col flex-grow">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[10px] font-bold text-primary uppercase tracking-wider truncate mr-2">
-            {category}
-          </p>
-          <div className="flex items-center gap-1 text-muted-foreground flex-shrink-0" title={`Sold by ${vendorName || "GlowVita Partner"}`}>
-            <Store className="w-3 h-3" />
-            <span className="text-[10px] font-semibold truncate max-w-[90px]">{vendorName || "GlowVita Partner"}</span>
-          </div>
+
+          {salePrice && salePrice > 0 && price > salePrice && (
+            <div className="absolute top-0 right-0 bg-[#422A3C] text-white text-[10px] font-bold px-2 py-1 rounded-bl-[11px] flex flex-col items-center justify-center leading-tight">
+              <span>{Math.round(((price - salePrice) / price) * 100)}%</span>
+              <span>OFF</span>
+            </div>
+          )}
         </div>
-        <h4 className="text-sm font-semibold flex-grow mb-1 line-clamp-2">
-          {name}
-        </h4>
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {description}
-        </p>
-        <div className="flex justify-between items-center mt-auto">
-          <div className="flex items-center gap-2">
+
+        <div className="p-3 flex flex-col flex-grow" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[12px] font-medium text-gray-500 uppercase tracking-wider truncate mr-2">
+              {category || "Product"}
+            </p>
+            <div className="flex items-center gap-1 flex-shrink-0" style={{ color: "#BA7894" }}>
+              <Star className="w-3 h-3 fill-current" />
+              <span className="text-[12px] font-semibold">{rating > 0 ? rating.toFixed(1) : "0.0"}</span>
+            </div>
+          </div>
+
+          <h4 className="text-[15px] font-bold text-gray-900 mb-0.5 line-clamp-1 leading-tight">
+            {name}
+          </h4>
+
+          <p className="text-[12px] text-gray-500 line-clamp-2 leading-snug mb-1">
+            {description || hint || "Explore high-quality beauty products crafted to elevate your daily self-care."}
+          </p>
+
+          <div className="flex items-center gap-1.5 mt-auto mb-2">
             {salePrice && salePrice > 0 ? (
               <>
-                <p className="font-bold text-primary">
-                  ₹{salePrice.toFixed(2)}
+                <p className="text-[12px] text-gray-400 line-through">
+                  ₹ {price.toFixed(0)}/-
                 </p>
-                <p className="text-xs text-muted-foreground line-through">
-                  ₹{price.toFixed(2)}
+                <p className="text-[14px] font-bold text-gray-900">
+                  ₹ {salePrice.toFixed(0)}/-
                 </p>
-                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                  {Math.round(((price - salePrice) / price) * 100)}% OFF
-                </span>
               </>
             ) : (
-              <p className="font-bold text-primary">
-                ₹{price.toFixed(2)}
+              <p className="text-[14px] font-bold text-gray-900">
+                ₹ {price.toFixed(0)}/-
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-yellow-400 fill-current" />
-            <span className="text-xs text-muted-foreground font-medium">
-              {rating}
-            </span>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between gap-2 mt-2">
-          <div className="flex justify-between w-full">
+          <div className="flex items-center justify-between mt-auto">
             <Button
               size="sm"
               variant="outline"
               className={cn(
-                "w-full hover:border-none rounded-none rounded-tr-xl rounded-bl-xl text-xs lg:mr-3",
+                "text-[10px] font-semibold rounded-none hover:bg-[#422A3C] hover:text-white transition-colors",
                 isSubscriptionExpired && "opacity-50 cursor-not-allowed"
               )}
+              style={{
+                width: "100px",
+                height: "36px",
+                borderTopRightRadius: "7px",
+                borderBottomLeftRadius: "7px",
+                borderTopLeftRadius: "0px",
+                borderBottomRightRadius: "0px",
+                border: "1px solid #422A3C",
+                padding: "0",
+              }}
               onClick={handleBuyNow}
               disabled={isSubscriptionExpired}
             >
               {isSubscriptionExpired ? "Unavailable" : "Buy Now"}
             </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              className={cn(
-                "w-fit border-none text-xs rounded-none rounded-tr-2xl rounded-bl-2xl",
-                isSubscriptionExpired && "opacity-50 cursor-not-allowed"
-              )}
-              onClick={handleAddToCart}
-              disabled={isSubscriptionExpired}
-            >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
+                onClick={handleWishlistToggle}
+                disabled={isLoading}
+              >
+                <Heart
+                  className={cn("h-3.5 w-3.5", isLiked && "fill-red-500 text-red-500")}
+                />
+              </Button>
+
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "h-7 w-7 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100",
+                  isSubscriptionExpired && "opacity-50 cursor-not-allowed"
+                )}
+                onClick={handleAddToCart}
+                disabled={isSubscriptionExpired}
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
+
+          {isSubscriptionExpired && (
+            <div className="flex items-center gap-1 mt-1.5 text-red-600">
+              <AlertCircle className="h-3 w-3" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Closed</span>
+            </div>
+          )}
         </div>
-        {isSubscriptionExpired && (
-          <div className="flex items-center gap-1.5 mt-2 text-red-600">
-            <AlertCircle className="h-3 w-3" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Temporarily Closed</span>
-          </div>
-        )}
-      </div>
-    </Card>
+      </Card>
+    </>
   );
 };
 

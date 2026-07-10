@@ -44,7 +44,6 @@ import RecentlyAddedProducts from "./components/RecentlyAddedProducts";
 import Testimonials from "./components/Testimonials";
 import { ChevronDown } from "lucide-react";
 import DownloadApp from "@/components/landing/DownloadApp";
-import CTASection from "../salons/components/CTASection";
 
 // Product type definition
 interface Product {
@@ -390,28 +389,115 @@ export default function AllProductsPage() {
     setSortBy("featured");
   };
 
+  // Flash sale auto-scroll
+  const flashScrollRef = useRef<HTMLDivElement>(null);
+  const flashScrollPaused = useRef(false);
+
+  useEffect(() => {
+    const el = flashScrollRef.current;
+    if (!el) return;
+    let animId: number;
+    const speed = 0.6; // px per frame
+
+    const step = () => {
+      if (!flashScrollPaused.current && el) {
+        el.scrollLeft += speed;
+        // Reset to start when we've scrolled halfway (duplicated list)
+        if (el.scrollLeft >= el.scrollWidth / 2) {
+          el.scrollLeft = 0;
+        }
+      }
+      animId = requestAnimationFrame(step);
+    };
+
+    animId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animId);
+  }, [products]);
+
   return (
     <PageContainer padding="none">
       <Suspense fallback={<div className="min-h-screen bg-background animate-pulse" />}>
         <HeroSection onSearch={setSearchTerm} />
-        <RecentlyAddedProducts />
+        {/* <RecentlyAddedProducts /> */}
 
-        {/* Filters Row - Similar to WhereToDo component */}
-        <FilterComponent
-          allBodyParts={allBodyParts}
-          allBrands={allBrands}
-          selectedBodyParts={selectedBodyParts}
-          setSelectedBodyParts={setSelectedBodyParts}
-          selectedBrand={selectedBrand}
-          setSelectedBrand={setSelectedBrand}
-          ratingFilter={ratingFilter}
-          setRatingFilter={setRatingFilter}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          resetFilters={resetFilters}
-        />
+        {/* Shared background: Filter + Flash Sale */}
+        <div className="w-full" style={{ background: "linear-gradient(3.99deg, #EBF3FD 46.89%, #FFFFFF 96.85%)" }}>
 
-        <div className="container mx-auto px-4 py-8">
+          {/* Filters Row */}
+          <FilterComponent
+            allBodyParts={allBodyParts}
+            allBrands={allBrands}
+            selectedBodyParts={selectedBodyParts}
+            setSelectedBodyParts={setSelectedBodyParts}
+            selectedBrand={selectedBrand}
+            setSelectedBrand={setSelectedBrand}
+            ratingFilter={ratingFilter}
+            setRatingFilter={setRatingFilter}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            resetFilters={resetFilters}
+            priceRange={priceRange as [number, number]}
+            setPriceRange={(r) => setPriceRange(r)}
+          />
+
+          {/* Flash Sale Section */}
+          {products.filter(p => p.salePrice && p.salePrice < p.price).length > 0 && (
+            <div className="w-full pt-3 pb-0">
+
+              <style dangerouslySetInnerHTML={{
+                __html: `
+              .flash-sale-scroll::-webkit-scrollbar { display: none; }
+              .flash-sale-title { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 28px; line-height: 38px; letter-spacing: 0; color: #000; display: flex; align-items: center; gap: 0; }
+              .flash-bolt { display: inline-flex; align-items: center; justify-content: center; color: #111; background: none; padding: 0; margin: 0 2px; width: 26px; height: 26px; }
+              .flash-word-gap { display: inline-block; width: 10px; }
+              .flash-sale-underline { width: 190px; height: 3px; background: linear-gradient(90deg, #422A3C 0%, #FFFFFF 100%); margin-top: 6px; border: none; }
+            `}} />
+              <div className="mx-auto px-4 lg:px-8 max-w-7xl">
+                {/* Heading row */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="flash-sale-title">
+                      <span>FLA</span>
+                      <span className="flash-bolt">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '26px', height: '26px', display: 'block' }}>
+                          <path d="M13 2L4.09 13.5H11L10 22L20.91 10.5H14L13 2Z" />
+                        </svg>
+                      </span>
+                      <span>H</span>
+                      <span className="flash-word-gap" />
+                      <span>SALE</span>
+                    </div>
+                    <div className="flash-sale-underline" />
+                  </div>
+                </div>
+
+                {/* Horizontal scroll row — infinite auto-scroll */}
+                <div
+                  ref={flashScrollRef}
+                  className="flash-sale-scroll flex overflow-x-auto gap-4 pb-4"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none", overflowX: "hidden" }}
+                  onMouseEnter={() => { flashScrollPaused.current = true; }}
+                  onMouseLeave={() => { flashScrollPaused.current = false; }}
+                >
+                  {/* Render cards twice for seamless infinite loop */}
+                  {[...products.filter(p => p.salePrice && p.salePrice < p.price),
+                    ...products.filter(p => p.salePrice && p.salePrice < p.price)]
+                    .map((product, idx) => (
+                      <div
+                        key={`${product.id}-${idx}`}
+                        className="shrink-0"
+                        style={{ width: "260px" }}
+                      >
+                        <ProductCard {...product} />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>{/* end shared background wrapper */}
+
+        <div className="container mx-auto px-4 pb-8 pt-0">
           {/* 5. Product Grid */}
           <ProductsGrid
             products={filteblueProducts}
@@ -427,7 +513,7 @@ export default function AllProductsPage() {
           />
         </div>
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 pb-8 pt-0">
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
             <main className="lg:col-span-12">
               {/* 8. Testimonials Section */}
@@ -437,7 +523,6 @@ export default function AllProductsPage() {
             </main>
           </div>
         </div>
-        <CTASection />
       </Suspense>
     </PageContainer>
   );
