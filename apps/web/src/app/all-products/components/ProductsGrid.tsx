@@ -53,21 +53,41 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
   noServiceArea,
 }) => {
   return (
-    <section className="py-20 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-8 pb-4 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
-      <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-          All Products
-        </h2>
-        <p className="text-muted-foreground mt-3 text-sm">
-          Browse our complete collection of premium beauty and wellness
-          products. Discover top-rated skincare, cosmetics, body care, and more
-          from trusted brands.
-        </p>
+      <div className="mb-2">
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');`}</style>
+        <div style={{ display: 'inline-block' }}>
+          <h2
+            style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 700,
+              fontSize: '28px',
+              lineHeight: '38px',
+              color: '#000000',
+              width: '237px',
+              height: '38px',
+              margin: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+            }}
+          >
+            All Products
+          </h2>
+          <div
+            style={{
+              width: '237px',
+              height: '3px',
+              marginTop: '6px',
+              background: 'linear-gradient(90deg, #422A3C 0%, #FFFFFF 100%)',
+              border: 'none',
+            }}
+          />
+        </div>
       </div>
 
       {/* Search Bar - New Design */}
-      <div className="mb-8 p-4 rounded-md flex flex-col sm:flex-row gap-4 items-center shadow-sm">
+      <div className="mb-4 p-4 rounded-md flex flex-col sm:flex-row gap-4 items-center shadow-sm">
         <div className="relative flex-1 w-full">
           <Input
             placeholder="Search for products..."

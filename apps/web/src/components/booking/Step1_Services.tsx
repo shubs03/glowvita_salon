@@ -840,16 +840,20 @@ export function Step1_Services({
           {packageToConfirm && (
             <div className="relative">
               <div className="flex items-start gap-3 mt-1 pr-6">
-                {/* Green Check Icon */}
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 border border-green-200 flex items-center justify-center">
-                  <div className="w-5 h-5 rounded-full bg-[#15B048] flex items-center justify-center">
-                    <Check className="h-3.5 w-3.5 text-white stroke-[3.5]" />
-                  </div>
+                {/* Check Icon Image */}
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                  <img
+                    src="/images/check (23) 1.png"
+                    alt="Confirm"
+                    className="w-8 h-8 object-contain"
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 leading-tight">Confirm Package Selection</h3>
-                  <p className="text-sm text-black font-semibold mt-1.5 leading-normal">
-                    Are you sure you want to select <span className="font-bold">{packageToConfirm.name}</span>?
+                  <p className="text-sm text-black mt-0.5 leading-normal">
+                    <span className="font-normal">Are you sure you want to select</span>{' '}
+                    <span className="font-bold">{packageToConfirm.name}</span>
+                    <span className="font-bold">?</span>
                   </p>
                 </div>
               </div>
@@ -885,7 +889,7 @@ export function Step1_Services({
                 );
               })()}
 
-              <p className="text-xs text-gray-500 text-center mt-4">
+              <p className="text-xs text-gray-500 text-left mt-4 whitespace-nowrap">
                 You can change your selection anytime before confirming the booking
               </p>
 
@@ -893,13 +897,13 @@ export function Step1_Services({
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={() => setPackageToConfirm(null)}
-                  className="flex-1 py-3 px-5 border border-[#422A3C] text-[#422A3C] hover:bg-[#422A3C]/5 font-bold rounded-2xl text-sm transition-colors text-center"
+                  className="flex-1 py-3 px-5 border border-[#422A3C] text-[#422A3C] hover:bg-[#422A3C]/5 font-semibold rounded-2xl text-base transition-colors text-center"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmPackageSelection}
-                  className="flex-1 py-3 px-5 bg-[#422A3C] hover:bg-[#422A3C]/95 text-white font-bold rounded-2xl text-sm transition-colors text-center shadow-md"
+                  className="flex-1 py-3 px-5 bg-[#422A3C] hover:bg-[#422A3C]/95 text-white font-semibold rounded-2xl text-base transition-colors text-center shadow-md"
                 >
                   Confirm
                 </button>
@@ -908,6 +912,7 @@ export function Step1_Services({
           )}
         </DialogContent>
       </Dialog>
+
 
       {/* Package Details Modal - Enhanced & Responsive */}
       <Dialog open={selectedPackageForDetails !== null} onOpenChange={(open) => !open && setSelectedPackageForDetails(null)}>
