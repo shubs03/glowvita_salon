@@ -1,22 +1,28 @@
 import path from "path";
 import fs from "fs";
 
-// Define upload directories - can be switched between local and VPS
-const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
-const VPS_UPLOAD_DIR = "/home/glowvita/uploads";
-
-// Define base URLs
-const LOCAL_BASE_URL = "http://localhost:3001/uploads/";
-const VPS_BASE_URL = "https://glowvitasalon.com/glowvita/uploads/";
-
-// Set current configuration dynamically
-// Check if we are in a VPS environment (Linux) or local (Windows/Mac)
+// ─── Upload directories ───────────────────────────────────────────────────────
+// Local dev:   files live in apps/admin/public/uploads/  (served by Next.js dev server)
+// Production:  files live in /home/glowvita/uploads/     (shared Docker volume, served
+//              via the admin app's /api/local-image route)
 const isProduction = process.env.NODE_ENV === 'production' || process.platform === 'linux';
 
-const UPLOAD_DIR = isProduction ? VPS_UPLOAD_DIR : LOCAL_UPLOAD_DIR;
-const BASE_URL = isProduction ? VPS_BASE_URL : LOCAL_BASE_URL;
+const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
+const VPS_UPLOAD_DIR   = "/home/glowvita/uploads";
 
-console.log(`Upload configuration: DIR=${UPLOAD_DIR}, BASE=${BASE_URL}`);
+const UPLOAD_DIR = isProduction ? VPS_UPLOAD_DIR : LOCAL_UPLOAD_DIR;
+
+// ─── Public URL prefix ────────────────────────────────────────────────────────
+// We store RELATIVE paths (/uploads/filename) instead of absolute localhost/domain
+// URLs. This makes stored URLs environment-agnostic:
+//   • Local dev:   CRM next.config.js rewrites /uploads/* → http://localhost:3002/uploads/*
+//                  Admin Next.js dev server serves public/uploads/ at /uploads/
+//   • Production:  CRM next.config.js rewrites /uploads/* → http://localhost:3002/uploads/*
+//                  Admin container serves /api/local-image?url=… from the shared volume
+// Both work without changing any DB records between environments.
+const BASE_URL = "/uploads/";
+
+console.log(`Upload configuration: DIR=${UPLOAD_DIR}, BASE_URL=${BASE_URL}, isProduction=${isProduction}`);
 
 // Ensure the upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -24,27 +30,21 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 /**
- * Uploads a file and returns its URL.
+ * Uploads a file buffer and returns its relative URL (/uploads/filename).
  * @param {Buffer} buffer - The file buffer
  * @param {string} fileName - Name for the uploaded file (without extension)
  * @param {string} mimeType - The file's MIME type
- * @returns {Promise<string|null>} - Public URL of the uploaded file or null on failure
+ * @returns {Promise<string|null>} - Relative URL of the uploaded file or null on failure
  */
 export async function uploadFile(buffer, fileName, mimeType) {
     try {
-        // Get file extension from MIME type
         const extension = mimeType.split("/")[1] || 'jpg';
-
-        // Generate a unique file name (fileName already contains timestamp)
         const fullFileName = `${fileName}.${extension}`;
         const filePath = path.join(UPLOAD_DIR, fullFileName);
 
-        // Save the file
         fs.writeFileSync(filePath, buffer);
-
         console.log(`File saved: ${filePath}`);
 
-        // Return the public URL of the uploaded file
         return `${BASE_URL}${fullFileName}`;
     } catch (error) {
         console.error("File upload error:", error);
@@ -53,46 +53,34 @@ export async function uploadFile(buffer, fileName, mimeType) {
 }
 
 /**
- * Uploads a base64 encoded file
- * @param {string} base64String - Base64 encoded file data
+ * Uploads a base64-encoded file and returns its relative URL (/uploads/filename).
+ * @param {string} base64String - Base64 encoded file data (data:<mime>;base64,<data>)
  * @param {string} fileName - Name for the uploaded file (without extension)
- * @returns {Promise<string|null>} - Public URL of the uploaded file or null on failure
+ * @returns {Promise<string|null>} - Relative URL of the uploaded file or null on failure
  */
 export async function uploadBase64(base64String, fileName) {
     try {
         console.log(`uploadBase64 called for ${fileName}`);
-        // Validate Base64 format
         const match = base64String.match(/^data:(.*?);base64,(.*)$/);
         if (!match) {
             console.error("Invalid Base64 format for", fileName);
             return null;
         }
 
-        const fileType = match[1]; // Example: video/mp4, image/png
+        const fileType  = match[1];
         const base64Data = match[2];
-
-        // Get file extension
-        const extension = fileType.split("/")[1];
-
-        // Generate a unique file name
+        const extension  = fileType.split("/")[1];
         const fullFileName = `${Date.now()}-${fileName}.${extension}`;
-        const filePath = path.join(UPLOAD_DIR, fullFileName);
+        const filePath   = path.join(UPLOAD_DIR, fullFileName);
         console.log(`Target file path: ${filePath}`);
 
-        // Convert Base64 to buffer and save the file
-        const buffer = Buffer.from(base64Data, "base64");
-
-        // Check if directory exists just before write
         if (!fs.existsSync(UPLOAD_DIR)) {
-            console.log(`Directory ${UPLOAD_DIR} does not exist, creating...`);
             fs.mkdirSync(UPLOAD_DIR, { recursive: true });
         }
 
-        fs.writeFileSync(filePath, buffer);
-
+        fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
         console.log(`File saved successfully: ${filePath}`);
 
-        // Return the public URL of the uploaded file
         const url = `${BASE_URL}${fullFileName}`;
         console.log(`Generated URL: ${url}`);
         return url;
@@ -103,17 +91,16 @@ export async function uploadBase64(base64String, fileName) {
 }
 
 /**
- * Deletes a file from the upload directory
- * @param {string} fileUrl - The URL of the file to delete
+ * Deletes a file from the upload directory.
+ * Accepts either a relative path (/uploads/filename) or any URL containing the filename.
+ * @param {string} fileUrl - The URL or path of the file to delete
  * @returns {Promise<boolean>} - True if deletion was successful
  */
 export async function deleteFile(fileUrl) {
     try {
-        // Extract filename from URL
         const fileName = fileUrl.split('/').pop();
         const filePath = path.join(UPLOAD_DIR, fileName);
 
-        // Check if file exists
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
             console.log(`File deleted: ${filePath}`);
@@ -124,4 +111,4 @@ export async function deleteFile(fileUrl) {
         console.error("File deletion error:", error);
         return false;
     }
-} 
+}

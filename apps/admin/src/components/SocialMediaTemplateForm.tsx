@@ -123,26 +123,42 @@ function SocialMediaTemplateFormContent({
   /**
    * Normalize any stored imageUrl to a displayable src.
    * Handles: base64, relative paths (/uploads/...), full URLs (any host/port).
+   *
+   * The Admin app does NOT statically serve /uploads/ — we must route those
+   * through the /api/local-image proxy which knows where files live in both
+   * dev and production environments.
    */
   const resolvedImagePreview = useMemo(() => {
     if (!imagePreview) return null;
     // Already a data URL — use as-is
     if (imagePreview.startsWith('data:image')) return imagePreview;
-    
-    // Normalize URL to current origin to handle local port mismatch (e.g. 3001 vs 3002)
+
+    // Normalize an absolute URL down to a relative path (handles port mismatches)
+    let relativePath = imagePreview;
     if (imagePreview.startsWith('http')) {
       try {
-        const u = new URL(imagePreview);
-        return u.pathname;
+        relativePath = new URL(imagePreview).pathname;
       } catch {
-        return imagePreview;
+        relativePath = imagePreview;
       }
     }
-    
-    // Already a relative path — use as-is
-    if (imagePreview.startsWith('/')) return imagePreview;
-    // Plain filename — serve from current app uploads
-    return `/uploads/${imagePreview}`;
+
+    // Plain filename with no leading slash — prefix the uploads dir
+    if (!relativePath.startsWith('/')) {
+      relativePath = `/uploads/${relativePath}`;
+    }
+
+    // Extract the /uploads/... segment from wherever it appears in the path.
+    // This handles legacy VPS paths like /glowvita/uploads/file.jpg as well as
+    // clean relative paths like /uploads/file.jpg.
+    if (relativePath.includes('/uploads/')) {
+      const idx = relativePath.indexOf('/uploads/');
+      const cleanPath = relativePath.substring(idx); // → /uploads/filename.ext
+      return `/api/local-image?url=${encodeURIComponent(cleanPath)}`;
+    }
+
+    // Any other relative path (e.g. already a proxy URL) — use as-is
+    return relativePath;
   }, [imagePreview]);
 
   const handleSelectChange = (name: keyof SocialMediaTemplate, value: string) => {

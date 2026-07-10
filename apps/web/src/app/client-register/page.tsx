@@ -929,7 +929,7 @@ function ClientRegisterForm() {
                   </div>
 
                   {/* Location and Referral Code */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex gap-1.5">
                       <input
                         id="location"
@@ -966,7 +966,7 @@ function ClientRegisterForm() {
                   </div>
 
                   {/* Password Fields */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="relative">
                       <input
                         id="password"

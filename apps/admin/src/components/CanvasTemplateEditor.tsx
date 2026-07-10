@@ -24,12 +24,34 @@ export interface CanvasTemplateEditorRef {
 // Convert a single URL to a data URL (avoids CORS taint on canvas)
 async function urlToDataUrl(src: string): Promise<string> {
   if (!src || src.startsWith('data:')) return src;
-  // Build absolute URL
-  const absUrl = src.startsWith('http')
-    ? (() => { try { const u = new URL(src); return `${window.location.origin}${u.pathname}`; } catch { return src; } })()
-    : src.startsWith('/')
-      ? `${window.location.origin}${src}`
-      : src;
+
+  // Normalize absolute URL down to relative pathname
+  let relativePath = src;
+  if (src.startsWith('http')) {
+    try {
+      const u = new URL(src);
+      relativePath = u.pathname + u.search;
+    } catch {
+      relativePath = src;
+    }
+  }
+
+  // Ensure leading slash if relative
+  if (!relativePath.startsWith('/') && !relativePath.startsWith('http')) {
+    relativePath = `/${relativePath}`;
+  }
+
+  // Wrap /uploads/ paths in the local-image proxy
+  let targetUrl = relativePath;
+  if (relativePath.includes('/uploads/')) {
+    const idx = relativePath.indexOf('/uploads/');
+    const cleanPath = relativePath.substring(idx);
+    targetUrl = `/api/local-image?url=${encodeURIComponent(cleanPath)}`;
+  }
+
+  const absUrl = targetUrl.startsWith('http')
+    ? targetUrl
+    : `${window.location.origin}${targetUrl.startsWith('/') ? '' : '/'}${targetUrl}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second timeout to prevent hanging
@@ -227,15 +249,29 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
     // Helper: fetch image as data URL to avoid CORS taint, then set as canvas background
     const addBg = (src: string, done: () => void) => {
-      const absUrl = src.startsWith("data:")
-        ? src
-        : src.startsWith("http")
-          ? (() => { try { const u = new URL(src); return `${window.location.origin}${u.pathname}`; } catch { return src; } })()
-          : `${window.location.origin}${src.startsWith("/") ? "" : "/"}${src}`;
+      // If the URL already contains /api/local-image, keep it.
+      // If it contains /uploads/, rewrite to the local-image proxy.
+      let targetPath = src;
+      if (src.includes('/uploads/')) {
+        const idx = src.indexOf('/uploads/');
+        const cleanPath = src.substring(idx);
+        targetPath = `/api/local-image?url=${encodeURIComponent(cleanPath)}`;
+      }
+
+      const absUrl = targetPath.startsWith("data:")
+        ? targetPath
+        : targetPath.startsWith("http")
+          ? (() => { try { const u = new URL(targetPath); return `${window.location.origin}${u.pathname}${u.search}`; } catch { return targetPath; } })()
+          : `${window.location.origin}${targetPath.startsWith("/") ? "" : "/"}${targetPath}`;
 
       // Always store the canonical (non-data) URL for JSON serialisation
       if (!src.startsWith("data:")) {
-        bgOriginalUrlRef.current = absUrl;
+        let cleanPath = src;
+        if (src.includes('/uploads/')) {
+          const idx = src.indexOf('/uploads/');
+          cleanPath = src.substring(idx);
+        }
+        bgOriginalUrlRef.current = cleanPath;
       }
 
       // Convert image to a data URL so canvas is never CORS-tainted

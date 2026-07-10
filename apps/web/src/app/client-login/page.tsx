@@ -135,12 +135,12 @@ function LoginPageContent() {
           <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/10 pointer-events-none"></div>
           <div className="absolute bottom-[39px] left-[29px] right-10 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
           <div className="absolute bottom-[7px] right-[30px] left-10 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
-         
+
           {/* User lock icon */}
           <div className="flex flex-col items-center relative z-10">
-          
+
             <div className="w-[80px] h-[80px] flex items-center justify-center filter drop-shadow-sm">
-             <img   src="/images/user-profile.png" alt="User profile" className="w-full h-full object-contain"/>
+              <img src="/images/user-profile.png" alt="User profile" className="w-full h-full object-contain" />
             </div>
           </div>
 
@@ -195,7 +195,8 @@ function LoginPageContent() {
                 className="h-14 w-auto object-contain"
               />
             </div>
-            <p className="text-gray-600 text-sm">Login to access and manage your appointments anytime.</p>
+            <p className="text-[#422A3C] text-sm font-semibold tracking-wide">Glowvita Salon for customers</p>
+            <p className="text-gray-500 text-xs mt-0.5">Login to access and manage your appointments anytime.</p>
           </div>
 
           {/* Form centered in remaining space */}

@@ -170,7 +170,8 @@ export default function LoginPage() {
                 className="h-14 w-auto object-contain"
               />
             </div>
-            <p className="text-gray-600 text-sm">Log in access and manage your business anytime.</p>
+            <p className="text-[#422A3C] text-sm font-semibold tracking-wide">Glowvita Salon for professionals</p>
+            <p className="text-gray-500 text-xs mt-0.5">Log in to access and manage your business anytime.</p>
           </div>
 
           {/* Form centered in remaining space */}

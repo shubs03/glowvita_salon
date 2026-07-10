@@ -11,6 +11,23 @@ const nextConfig = {
   },
   serverExternalPackages: ['html-pdf-node', 'inline-css'],
   transpilePackages: ["@repo/ui", "@repo/store", "@repo/lib", "@repo/config"],
+
+  // ─── Proxy /uploads/* to the admin app (port 3002) ───────────────────────
+  // All uploaded images (templates, etc.) are stored in apps/admin/public/uploads
+  // and served by the admin dev server on port 3002.
+  // Existing DB records may have the URL saved as http://localhost:3001/uploads/…
+  // (the wrong port). The TemplateCanvasThumbnail rewrites absolute URLs to the
+  // current origin, so requests land here on port 3001. These rewrites forward
+  // them to the admin server so images display without any file copy/move.
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: 'http://localhost:3002/uploads/:path*',
+      },
+    ];
+  },
+
   webpack: (config, { isServer }) => {
 
     config.resolve.alias['@repo/config'] = path.resolve(__dirname, '../../packages/config');
@@ -78,15 +95,15 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
-        hostname: 'glowvitasalon.com',
-        port: '',
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3001',
         pathname: '/**',
       },
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '3001',
+        port: '3002',
         pathname: '/**',
       },
       {
