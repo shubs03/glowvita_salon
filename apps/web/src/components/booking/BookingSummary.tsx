@@ -720,24 +720,25 @@ export function BookingSummary({
 
 
             {/* Wedding Location Display */}
-            {isWeddingPackage && (
-              <div className="p-3 bg-secondary/50 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
-                  <div>
-                    <p className="text-xs text-black">Location</p>
+            {isWeddingPackage && (weddingVenueType === 'salon' || (weddingVenueType === 'venue' && (serviceLocation as any)?.address)) && (
+              <div className="p-3 rounded-xl mt-3" style={{ background: '#EBF3FD' }}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 mt-0.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/uploads/MapPin.png" alt="Location" className="h-6 w-6 object-contain opacity-80" />
+                  </div>
+                  <div className="w-full">
+                    <p className="text-sm font-semibold text-black mb-1">Location</p>
                     {weddingVenueType === 'salon' ? (
-                      <p className="font-medium text-sm">At Salon</p>
-                    ) : weddingVenueType === 'venue' && (serviceLocation as any)?.address ? (
-                      <div>
-                        <p className="font-medium text-sm">Wedding Venue</p>
-                        <p className="text-xs text-black">
+                      <p className="font-semibold text-base text-black truncate">At Salon</p>
+                    ) : (
+                      <div className="text-black text-sm">
+                        <p className="font-semibold text-base text-black truncate">Wedding Venue</p>
+                        <p className="text-xs text-black mt-1 line-clamp-2">
                           {(serviceLocation as any).address}
                           {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
                         </p>
                       </div>
-                    ) : (
-                      <p className="font-medium text-sm text-black">Not selected</p>
                     )}
                   </div>
                 </div>

@@ -520,7 +520,11 @@ export function Step3_LocationSelection({
             if (selectedWeddingPackage && weddingVenueType) {
               onVenueTypeChange?.(undefined as any);
             }
-            setCurrentStep(currentStep - 1);
+            if (selectedWeddingPackage) {
+              setCurrentStep(1);
+            } else {
+              setCurrentStep(currentStep - 1);
+            }
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
