@@ -54,6 +54,7 @@ import {
   useGetAppointmentsQuery,
   useGetCrmReviewsQuery,
   useGetCrmClientOrdersQuery,
+  useGetCrmOrdersQuery,
   useGetBillingRecordsQuery,
 } from "@repo/store/api";
 import { toast } from "sonner";
@@ -169,8 +170,12 @@ export default function ClientsPage() {
     useGetCrmReviewsQuery({ filter: "all", entityType: "all" });
 
   // Fetch client orders
-  const { data: clientOrdersResponse, isLoading: isLoadingOrders } =
+  const { data: clientOrdersResponse, isLoading: isLoadingClientOrders } =
     useGetCrmClientOrdersQuery({});
+
+  // Fetch general orders
+  const { data: generalOrdersResponse, isLoading: isLoadingGeneralOrders } =
+    useGetCrmOrdersQuery({});
 
   // Fetch billing records for the vendor/supplier
   const { data: billingResponse, isLoading: isLoadingBillings } =
@@ -342,11 +347,18 @@ export default function ClientsPage() {
 
   // Normalize orders into an array
   const allClientOrders: any[] = useMemo(() => {
-    const r: any = clientOrdersResponse;
-    if (Array.isArray(r)) return r;
-    if (Array.isArray(r?.data)) return r.data;
-    return [];
-  }, [clientOrdersResponse]);
+    let combined: any[] = [];
+    
+    const r1: any = clientOrdersResponse;
+    if (Array.isArray(r1)) combined = [...combined, ...r1];
+    else if (Array.isArray(r1?.data)) combined = [...combined, ...r1.data];
+
+    const r2: any = generalOrdersResponse;
+    if (Array.isArray(r2)) combined = [...combined, ...r2];
+    else if (Array.isArray(r2?.data)) combined = [...combined, ...r2.data];
+    
+    return combined;
+  }, [clientOrdersResponse, generalOrdersResponse]);
 
   // Get appointments for the selected profile client with robust matching
   const profileClientAppointments = useMemo(() => {
@@ -354,8 +366,10 @@ export default function ClientsPage() {
 
     return appointments.filter((appt: any) => {
       const rawClientId =
-        appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
-      const apptClientId = rawClientId != null ? String(rawClientId) : "";
+        appt?.client?.$oid ?? appt?.client?._id ?? appt?.client ?? appt?.clientId?.$oid ?? appt?.clientId?._id ?? appt?.clientId ?? appt?.client_id;
+      const apptClientId = typeof rawClientId === 'object' && rawClientId !== null 
+        ? String(rawClientId?.$oid || rawClientId?._id || rawClientId)
+        : rawClientId != null ? String(rawClientId) : "";
       const targetId = String(profileClient._id);
 
       if (apptClientId === targetId) return true;
@@ -403,7 +417,13 @@ export default function ClientsPage() {
     return allClientOrders.filter((order: any) => {
       // Priority 1: Match by userId
       const targetId = String(profileClient._id);
-      if (order.userId && String(order.userId) === targetId) return true;
+      
+      const rawOrderUserId = order.userId?.$oid ?? order.userId?._id ?? order.userId;
+      const orderUserId = typeof rawOrderUserId === 'object' && rawOrderUserId !== null
+        ? String(rawOrderUserId?.$oid || rawOrderUserId?._id || rawOrderUserId)
+        : rawOrderUserId != null ? String(rawOrderUserId) : "";
+        
+      if (orderUserId && orderUserId === targetId) return true;
 
       // Fallback: match by email or phone
       const orderEmail = (order.email || "").toLowerCase().trim();
@@ -417,6 +437,11 @@ export default function ClientsPage() {
       const clientPhone = (profileClient.phone || "").replace(/\D/g, "");
       if (orderPhone && clientPhone && orderPhone === clientPhone) return true;
 
+      // Fallback: match by name
+      const orderName = (order.customerName || order.user?.fullName || order.name || "").toLowerCase().trim();
+      const clientName = (profileClient.fullName || "").toLowerCase().trim();
+      if (orderName && clientName && orderName === clientName) return true;
+
       return false;
     });
   }, [profileClient, allClientOrders]);
@@ -426,8 +451,10 @@ export default function ClientsPage() {
     if (!profileClient || !billings) return [];
 
     return billings.filter((bill: any) => {
-      const rawClientId = bill?.clientId?._id || bill?.clientId;
-      const billClientId = rawClientId != null ? String(rawClientId) : "";
+      const rawClientId = bill?.clientId?.$oid ?? bill?.clientId?._id ?? bill?.clientId;
+      const billClientId = typeof rawClientId === 'object' && rawClientId !== null
+        ? String(rawClientId?.$oid || rawClientId?._id || rawClientId)
+        : rawClientId != null ? String(rawClientId) : "";
       const targetId = String(profileClient._id);
 
       if (billClientId === targetId) return true;
