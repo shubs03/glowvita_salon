@@ -1,6 +1,7 @@
 
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor.model";
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import ClientModel from "@repo/lib/models/Vendor/Client.model";
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
@@ -48,15 +49,43 @@ export const GET = async (req, { params }) => {
     ).lean();
 
     if (!vendor) {
-      const response = Response.json(
-        {
-          success: false,
-          message: "Vendor not found",
-        },
-        { status: 404 }
-      );
+      // Try supplier as fallback (supplier products use a supplier ID as vendorId)
+      const supplier = await SupplierModel.findOne({
+        _id: id,
+        status: 'Approved'
+      }).select('shopName firstName lastName city state subscription').lean();
 
-      // Add CORS headers to error response
+      if (!supplier) {
+        const response = Response.json(
+          {
+            success: false,
+            message: "Vendor not found",
+          },
+          { status: 404 }
+        );
+
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+        return response;
+      }
+
+      // Return supplier data shaped like a vendor so ProductCard can check subscription
+      const response = Response.json({
+        success: true,
+        vendor: {
+          _id: supplier._id,
+          businessName: supplier.shopName,
+          firstName: supplier.firstName,
+          lastName: supplier.lastName,
+          city: supplier.city,
+          state: supplier.state,
+          subscription: supplier.subscription,
+          isSupplier: true,
+        }
+      });
+
       response.headers.set('Access-Control-Allow-Origin', '*');
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
