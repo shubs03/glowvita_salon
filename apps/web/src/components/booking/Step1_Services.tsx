@@ -186,6 +186,65 @@ export function Step1_Services({
     return lookup;
   }, [staffData]);
 
+  // Create a staff position lookup map for quick ID to position resolution
+  const staffPositionLookup = useMemo(() => {
+    if (!staffData) return {};
+
+    const posLookup: { [key: string]: string } = {};
+    let staffArray: any[] = [];
+
+    if (Array.isArray(staffData)) {
+      staffArray = staffData;
+    } else if ((staffData as any)?.data && Array.isArray((staffData as any).data)) {
+      staffArray = (staffData as any).data;
+    } else if ((staffData as any)?.staff && Array.isArray((staffData as any).staff)) {
+      staffArray = (staffData as any).staff;
+    }
+
+    staffArray.forEach((staff: any) => {
+      if (staff) {
+        const staffId = staff._id || staff.id || staff.staffId;
+        // Try all possible position/role fields
+        const staffPosition =
+          staff.position ||
+          staff.role ||
+          staff.designation ||
+          staff.specialization ||
+          staff.jobTitle ||
+          staff.title ||
+          '';
+        if (staffId) {
+          posLookup[String(staffId)] = staffPosition;
+        }
+      }
+    });
+
+    return posLookup;
+  }, [staffData]);
+
+  // Helper function to get staff position from ID or object
+  const getStaffPosition = (staff: any): string => {
+    if (typeof staff === 'string') {
+      return staffPositionLookup[staff] || '';
+    }
+    if (staff && typeof staff === 'object') {
+      const staffId = staff._id || staff.id || staff.staffId;
+      if (staffId && staffPositionLookup[String(staffId)]) {
+        return staffPositionLookup[String(staffId)];
+      }
+      return (
+        staff.position ||
+        staff.role ||
+        staff.designation ||
+        staff.specialization ||
+        staff.jobTitle ||
+        staff.title ||
+        ''
+      );
+    }
+    return '';
+  };
+
   // Helper function to get staff name from ID with fallback
   const getStaffName = (staff: any): string => {
     console.log('Getting staff name for:', staff);
@@ -1003,6 +1062,7 @@ export function Step1_Services({
                       <div className="space-y-2">
                         {selectedPackageForDetails.assignedStaff.map((staff, idx) => {
                           const staffName = getStaffName(staff);
+                          const staffPosition = getStaffPosition(staff);
                           const staffArr: any[] = Array.isArray(staffData)
                             ? staffData
                             : ((staffData as any)?.data || []);
@@ -1011,7 +1071,19 @@ export function Step1_Services({
                             s._id === (staff as any)?._id || s.id === (staff as any)?._id
                           );
                           const staffPhoto = staffObj?.profileImage || staffObj?.photo || staffObj?.image || (staff as any)?.photo || (staff as any)?.image;
-                          const staffRole = staffObj?.role || staffObj?.designation || staffObj?.specialization || (staff as any)?.role || (staff as any)?.designation || '';
+                          // Merge position from lookup + direct object fields for maximum coverage
+                          const resolvedPosition =
+                            staffPosition ||
+                            staffObj?.position ||
+                            staffObj?.role ||
+                            staffObj?.designation ||
+                            staffObj?.specialization ||
+                            staffObj?.jobTitle ||
+                            staffObj?.title ||
+                            (staff as any)?.position ||
+                            (staff as any)?.role ||
+                            (staff as any)?.designation ||
+                            '';
                           return (
                             <div key={idx} className="flex items-center gap-2 text-black">
                               <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-200 border border-gray-200">
@@ -1024,8 +1096,10 @@ export function Step1_Services({
                                 )}
                               </div>
                               <div>
-                                <p className="font-normal text-sm leading-tight text-black">{staffName}</p>
-                                {staffRole && <p className="text-xs text-black leading-tight">{staffRole}</p>}
+                                <p className="font-semibold text-sm leading-tight text-black">{staffName}</p>
+                                {resolvedPosition && (
+                                  <p className="text-xs text-gray-500 leading-tight mt-0.5">{resolvedPosition}</p>
+                                )}
                               </div>
                             </div>
                           );
