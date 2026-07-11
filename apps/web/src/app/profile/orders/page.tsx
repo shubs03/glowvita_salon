@@ -122,37 +122,37 @@ function fmtTime(iso: string) {
 
 function getStatusIcon(status: string, cls = "h-5 w-5") {
   switch (status) {
-    case "Pending":    return <Clock className={cls} />;
+    case "Pending": return <Clock className={cls} />;
     case "Processing": return <Package className={cls} />;
-    case "Packed":     return <Package className={cls} />;
-    case "Shipped":    return <Truck className={cls} />;
-    case "Delivered":  return <Home className={cls} />;
-    case "Cancelled":  return <AlertCircle className={cls} />;
-    default:           return <Clock className={cls} />;
+    case "Packed": return <Package className={cls} />;
+    case "Shipped": return <Truck className={cls} />;
+    case "Delivered": return <Home className={cls} />;
+    case "Cancelled": return <AlertCircle className={cls} />;
+    default: return <Clock className={cls} />;
   }
 }
 
 function statusColor(status: string) {
   switch (status) {
-    case "Delivered":  return "bg-green-100 text-green-800 border-green-300";
-    case "Shipped":    return "bg-blue-100 text-blue-800 border-blue-300";
-    case "Packed":     return "bg-purple-100 text-purple-800 border-purple-300";
+    case "Delivered": return "bg-green-100 text-green-800 border-green-300";
+    case "Shipped": return "bg-blue-100 text-blue-800 border-blue-300";
+    case "Packed": return "bg-purple-100 text-purple-800 border-purple-300";
     case "Processing": return "bg-orange-100 text-orange-800 border-orange-300";
-    case "Pending":    return "bg-yellow-100 text-yellow-800 border-yellow-300";
-    case "Cancelled":  return "bg-red-100 text-red-800 border-red-300";
-    default:           return "bg-gray-100 text-gray-800 border-gray-300";
+    case "Pending": return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    case "Cancelled": return "bg-red-100 text-red-800 border-red-300";
+    default: return "bg-gray-100 text-gray-800 border-gray-300";
   }
 }
 
 function dotColor(status: string) {
   switch (status) {
-    case "Delivered":  return "bg-green-500 border-green-500";
-    case "Shipped":    return "bg-blue-500 border-blue-500";
-    case "Packed":     return "bg-purple-500 border-purple-500";
+    case "Delivered": return "bg-green-500 border-green-500";
+    case "Shipped": return "bg-blue-500 border-blue-500";
+    case "Packed": return "bg-purple-500 border-purple-500";
     case "Processing": return "bg-orange-500 border-orange-500";
-    case "Pending":    return "bg-yellow-500 border-yellow-500";
-    case "Cancelled":  return "bg-red-500 border-red-500";
-    default:           return "bg-gray-400 border-gray-400";
+    case "Pending": return "bg-yellow-500 border-yellow-500";
+    case "Cancelled": return "bg-red-500 border-red-500";
+    default: return "bg-gray-400 border-gray-400";
   }
 }
 
@@ -227,7 +227,7 @@ function TrackingTimeline({ order }: TrackingTimelineProps) {
     <div className="relative pl-2">
       {steps.map((step, idx) => {
         const isLast = idx === steps.length - 1;
-        
+
         // A step is considered "Active/Current" if it's done/actual,
         // and the next step is estimated/not done.
         const isCurrent = step.done && (!steps[idx + 1] || !steps[idx + 1].done);
@@ -240,13 +240,12 @@ function TrackingTimeline({ order }: TrackingTimelineProps) {
                 className={[
                   "w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all flex items-center justify-center",
                   step.done
-                    ? `${dotColor(step.status)} text-white border-transparent ${
-                        isCurrent
-                          ? "ring-4 ring-offset-1 " +
-                            dotColor(step.status).replace("bg-", "ring-").split(" ")[0] +
-                            "/30 scale-110"
-                          : ""
-                      }`
+                    ? `${dotColor(step.status)} text-white border-transparent ${isCurrent
+                      ? "ring-4 ring-offset-1 " +
+                      dotColor(step.status).replace("bg-", "ring-").split(" ")[0] +
+                      "/30 scale-110"
+                      : ""
+                    }`
                     : "bg-background border-dashed border-gray-300 text-gray-400",
                 ].join(" ")}
               >
@@ -278,8 +277,8 @@ function TrackingTimeline({ order }: TrackingTimelineProps) {
                     step.isCancelled
                       ? "text-red-700"
                       : step.done
-                      ? "text-gray-900"
-                      : "text-gray-400",
+                        ? "text-gray-900"
+                        : "text-gray-400",
                   ].join(" ")}
                 >
                   {step.status}
@@ -294,7 +293,7 @@ function TrackingTimeline({ order }: TrackingTimelineProps) {
                     </span>
                   )}
                 </span>
-                
+
                 {step.date && (
                   <span className="text-xs text-muted-foreground font-semibold">
                     {step.isEstimated ? "Est. " : ""}
@@ -439,8 +438,12 @@ export default function OrdersPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle className="text-2xl sm:text-3xl leading-tight">My Orders</CardTitle>
-              <CardDescription className="mt-1 text-sm sm:text-base">Your product order history.</CardDescription>
+              <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                My Orders
+              </CardTitle>
+              <CardDescription className="mt-0.5 text-xs sm:text-sm">
+                Your product order history.
+              </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2 items-end">
               <div className="flex flex-col gap-1">
@@ -712,8 +715,8 @@ export default function OrdersPage() {
                             {selectedOrder.paymentMethod === "cash-on-delivery"
                               ? "Cash on Delivery"
                               : selectedOrder.paymentMethod === "pay-online"
-                              ? "Online Payment"
-                              : selectedOrder.paymentMethod || "N/A"}
+                                ? "Online Payment"
+                                : selectedOrder.paymentMethod || "N/A"}
                           </span>
                         </div>
                       </div>

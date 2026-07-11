@@ -208,8 +208,12 @@ export default function CartPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-                            <CardTitle className="text-2xl sm:text-3xl leading-tight">My Cart Items</CardTitle>
-                            <CardDescription className="mt-1 text-sm sm:text-base">Review and manage your cart items before checkout.</CardDescription>
+              <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                My Cart Items
+              </CardTitle>
+              <CardDescription className="mt-0.5 text-xs sm:text-sm">
+                Review and manage your cart items before checkout.
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               <div className="relative">

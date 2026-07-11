@@ -306,10 +306,13 @@ export default function WishlistPage() {
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
-            <CardTitle className="text-2xl sm:text-3xl leading-tight">My Wishlist</CardTitle>
-            <CardDescription className="mt-1 text-sm sm:text-base">Your favorite products and doctors saved for later.</CardDescription>
-          </div>
-          <div className="relative">
+            <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+              My Wishlist
+            </CardTitle>
+            <CardDescription className="mt-0.5 text-xs sm:text-sm">
+              Your favorite products and doctors saved for later.
+            </CardDescription>
+          </div>          <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
