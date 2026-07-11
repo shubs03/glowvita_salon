@@ -138,7 +138,10 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                     <Button
                       key={item.id}
                       variant={(pathname === item.href) ? "secondary" : "ghost"}
-                      className="justify-start gap-3 h-12 text-sm rounded-lg"
+                      className={cn(
+                        "justify-start gap-3 h-12 text-sm rounded-lg",
+                        (pathname === item.href) && "bg-[#422A3C] text-white hover:bg-[#422A3C]/90 hover:text-white"
+                      )}
                       asChild
                     >
                       <Link href={item.href}>

@@ -70,7 +70,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
               <Calendar className="h-4 w-4 mr-2" /> {format(new Date(appointment.date), 'EEE, MMM d, yyyy')}
             </p>
             {appointment.startTime && (
-              <p className="text-sm flex items-center text-muted-foreground">
+              <p className="text-sm flex items-center">
                 <Clock className="h-4 w-4 mr-2" /> {appointment.startTime}
               </p>
             )}
