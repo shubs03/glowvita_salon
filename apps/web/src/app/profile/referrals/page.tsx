@@ -158,9 +158,9 @@ export default function ReferralsPage() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={Gift} title="Total Earnings" value={`₹${totalEarnings}`} change="from referrals" />
-        <StatCard icon={UserPlus} title="Successful Referrals" value={successfulReferralsCount} change="friends joined" />
-        <StatCard icon={Users} title="Total Referrals" value={referralHistory.length} change="invites sent" />
+        <StatCard imageSrc="/images/earnings (1).png" title="Total Earnings" value={`₹${totalEarnings}`} change="from referrals" />
+        <StatCard imageSrc="/images/Success Reffereal.png" title="Successful Referrals" value={successfulReferralsCount} change="friends joined" />
+        <StatCard imageSrc="/images/Invite send.png" title="Total Referrals" value={referralHistory.length} change="invites sent" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
