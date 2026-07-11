@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { StatCard } from '../../../components/profile/StatCard';
-import { Plus, ArrowUp, ArrowDown, Loader2, AlertCircle, Building2 } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Loader2, AlertCircle, Building2, Send } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
