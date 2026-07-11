@@ -17,25 +17,25 @@ import { useGetConsultationsQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Consultation {
-  id: string;
-  patientName: string;
-  consultationType: 'Video' | 'In-Person';
-  date: string;
-  time: string;
-  duration: number;
-  cost: number;
-  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled';
-  notes?: string;
-  doctorName?: string;
-  concerns?: string;
-  doctorClinic?: string;
-  doctorAddress?: string;
+    id: string;
+    patientName: string;
+    consultationType: 'Video' | 'In-Person';
+    date: string;
+    time: string;
+    duration: number;
+    cost: number;
+    status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled';
+    notes?: string;
+    doctorName?: string;
+    concerns?: string;
+    doctorClinic?: string;
+    doctorAddress?: string;
 }
 
 interface ConsultationCardProps {
-  consultation: Consultation;
-  onSelect: () => void;
-  isSelected: boolean;
+    consultation: Consultation;
+    onSelect: () => void;
+    isSelected: boolean;
 }
 
 const ConsultationCard = ({ consultation, onSelect, isSelected }: ConsultationCardProps) => {
@@ -46,7 +46,7 @@ const ConsultationCard = ({ consultation, onSelect, isSelected }: ConsultationCa
         Cancelled: { icon: X, color: 'text-red-500' },
     };
     const StatusIcon = statusConfig[consultation.status]?.icon || CheckCircle;
-    
+
     // Safely parse the date
     let displayDate = 'Invalid Date';
     try {
@@ -57,9 +57,9 @@ const ConsultationCard = ({ consultation, onSelect, isSelected }: ConsultationCa
     } catch (e) {
         console.error('Error parsing date:', e);
     }
-    
+
     const TypeIcon = consultation.consultationType === 'Video' ? Video : MapPin;
-    
+
     return (
         <button
             onClick={onSelect}
@@ -89,8 +89,8 @@ const ConsultationCard = ({ consultation, onSelect, isSelected }: ConsultationCa
 };
 
 interface ConsultationDetailsProps {
-  consultation: Consultation | null;
-  onCancelClick: (consultation: Consultation) => void;
+    consultation: Consultation | null;
+    onCancelClick: (consultation: Consultation) => void;
 }
 
 const ConsultationDetails = ({ consultation, onCancelClick }: ConsultationDetailsProps) => {
@@ -111,14 +111,14 @@ const ConsultationDetails = ({ consultation, onCancelClick }: ConsultationDetail
         Pending: { color: 'bg-yellow-100 text-yellow-800' },
         Cancelled: { color: 'bg-red-100 text-red-800' },
     };
-    
+
     const isConsultationCancellable = (consultationDate: string) => {
         const now = new Date();
         const consultDate = new Date(consultationDate);
         const hoursDifference = (consultDate.getTime() - now.getTime()) / (1000 * 60 * 60);
         return hoursDifference > 24 && (consultation.status === 'Confirmed' || consultation.status === 'Pending');
     };
-    
+
     // Safely parse the date for display
     let displayDate = 'Invalid Date';
     let displayDateTime = 'Invalid Date';
@@ -214,16 +214,16 @@ const ConsultationDetails = ({ consultation, onCancelClick }: ConsultationDetail
                     <div className="grid grid-cols-1 gap-2">
                         {consultation.consultationType === 'Video' && consultation.status === 'Confirmed' && (
                             <Button variant="default" className="justify-start gap-2">
-                                <Video className="h-4 w-4"/> Join Video Call
+                                <Video className="h-4 w-4" /> Join Video Call
                             </Button>
                         )}
-                        <Button 
-                            variant="outline" 
-                            className="justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10" 
-                            disabled={!isConsultationCancellable(consultation.date)} 
+                        <Button
+                            variant="outline"
+                            className="justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            disabled={!isConsultationCancellable(consultation.date)}
                             onClick={() => onCancelClick(consultation)}
                         >
-                            <X className="h-4 w-4"/> Cancel Consultation
+                            <X className="h-4 w-4" /> Cancel Consultation
                         </Button>
                         {!isConsultationCancellable(consultation.date) && consultation.status !== 'Cancelled' && consultation.status !== 'Completed' && (
                             <p className="text-xs text-muted-foreground">
@@ -260,7 +260,7 @@ export default function ConsultationsPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const hasSetInitialSelection = useRef(false);
-    
+
     // Transform API data to local format
     useEffect(() => {
         if (consultationsData?.data?.consultations) {
@@ -301,7 +301,7 @@ export default function ConsultationsPage() {
                 };
             });
             setConsultations(transformed);
-            
+
             if (!hasSetInitialSelection.current && !selectedConsultation && transformed.length > 0) {
                 setSelectedConsultation(transformed[0]);
                 hasSetInitialSelection.current = true;
@@ -312,7 +312,7 @@ export default function ConsultationsPage() {
     const filteredConsultations = useMemo(() => {
         return consultations.filter(consultation =>
             (consultation.doctorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             consultation.consultationType.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                consultation.consultationType.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (statusFilter === 'all' || consultation.status === statusFilter)
         );
     }, [consultations, searchTerm, statusFilter]);
@@ -329,7 +329,7 @@ export default function ConsultationsPage() {
 
     const handleConfirmCancel = () => {
         // In a real implementation, this would call an API to cancel the consultation
-        setConsultations(consultations.map(consult => 
+        setConsultations(consultations.map(consult =>
             consult.id === consultationToCancel!.id ? { ...consult, status: 'Cancelled' } : consult
         ));
         setIsCancelModalOpen(false);
@@ -339,7 +339,7 @@ export default function ConsultationsPage() {
             setSelectedConsultation(prev => prev ? ({ ...prev, status: 'Cancelled' }) : null);
         }
     };
-    
+
     return (
         <div className="space-y-6">
             {isLoading ? (
@@ -359,54 +359,57 @@ export default function ConsultationsPage() {
             ) : (
                 <>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard 
-                            icon={CalendarCheck} 
-                            title="Upcoming" 
+                        <StatCard
+                            icon={CalendarCheck}
+                            title="Upcoming"
                             value={consultations.filter(c => {
                                 try {
                                     return new Date(c.date) > new Date() && (c.status === 'Confirmed' || c.status === 'Pending');
                                 } catch (e) {
                                     return false;
                                 }
-                            }).length} 
-                            change="Scheduled consultations" 
+                            }).length}
+                            change="Scheduled consultations"
                         />
-                        <StatCard 
-                            icon={Clock} 
-                            title="Pending" 
-                            value={consultations.filter(c => c.status === 'Pending').length} 
-                            change="Awaiting confirmation" 
+                        <StatCard
+                            icon={Clock}
+                            title="Pending"
+                            value={consultations.filter(c => c.status === 'Pending').length}
+                            change="Awaiting confirmation"
                         />
-                        <StatCard 
-                            icon={UserCheck} 
-                            title="Completed" 
-                            value={consultations.filter(c => c.status === 'Completed').length} 
-                            change="All time" 
+                        <StatCard
+                            icon={UserCheck}
+                            title="Completed"
+                            value={consultations.filter(c => c.status === 'Completed').length}
+                            change="All time"
                         />
-                        <StatCard 
-                            icon={CalendarX} 
-                            title="Cancelled" 
-                            value={consultations.filter(c => c.status === 'Cancelled').length} 
-                            change="All time" 
+                        <StatCard
+                            icon={CalendarX}
+                            title="Cancelled"
+                            value={consultations.filter(c => c.status === 'Cancelled').length}
+                            change="All time"
                         />
                     </div>
-                    
+
                     <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
                         {/* Left Column: Consultations List */}
                         <div className="lg:col-span-1 space-y-4">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-2xl sm:text-3xl leading-tight">My Consultations</CardTitle>
-                                    <CardDescription className="mt-1 text-sm sm:text-base">Select a consultation to view details.</CardDescription>
-                                    <div className="pt-4 space-y-4">
+                                    <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                                        My Consultations
+                                    </CardTitle>
+                                    <CardDescription className="mt-0.5 text-xs sm:text-sm">
+                                        Select a consultation to view details.
+                                    </CardDescription>   <div className="pt-4 space-y-4">
                                         <div className="relative">
                                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                             <Input
-                                              type="search"
-                                              placeholder="Search by doctor or type..."
-                                              className="pl-8"
-                                              value={searchTerm}
-                                              onChange={(e) => setSearchTerm(e.target.value)}
+                                                type="search"
+                                                placeholder="Search by doctor or type..."
+                                                className="pl-8"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
                                             />
                                         </div>
                                         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -426,9 +429,9 @@ export default function ConsultationsPage() {
                                 <CardContent className="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
                                     {currentItems.length > 0 ? (
                                         currentItems.map(consult => (
-                                            <ConsultationCard 
-                                                key={consult.id} 
-                                                consultation={consult} 
+                                            <ConsultationCard
+                                                key={consult.id}
+                                                consultation={consult}
                                                 onSelect={() => setSelectedConsultation(consult)}
                                                 isSelected={selectedConsultation?.id === consult.id}
                                             />
@@ -455,7 +458,7 @@ export default function ConsultationsPage() {
                                 )}
                             </Card>
                         </div>
-                        
+
                         {/* Right Column: Consultation Details */}
                         <div className="lg:col-span-2">
                             <ConsultationDetails consultation={selectedConsultation} onCancelClick={handleCancelClick} />
@@ -474,12 +477,12 @@ export default function ConsultationsPage() {
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="cancellation-reason">Reason for Cancellation</Label>
-                        <Textarea 
-                          id="cancellation-reason"
-                          value={cancellationReason}
-                          onChange={(e) => setCancellationReason(e.target.value)}
-                          placeholder="e.g., Schedule conflict"
-                          className="mt-2"
+                        <Textarea
+                            id="cancellation-reason"
+                            value={cancellationReason}
+                            onChange={(e) => setCancellationReason(e.target.value)}
+                            placeholder="e.g., Schedule conflict"
+                            className="mt-2"
                         />
                     </div>
                     <DialogFooter>
