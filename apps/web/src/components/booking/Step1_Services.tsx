@@ -913,7 +913,6 @@ export function Step1_Services({
         </DialogContent>
       </Dialog>
 
-
       {/* Package Details Modal - Updated UI */}
       <Dialog open={selectedPackageForDetails !== null} onOpenChange={(open) => !open && setSelectedPackageForDetails(null)}>
         <DialogContent className="max-w-[95vw] sm:max-w-[580px] h-[90vh] sm:h-[530px] overflow-hidden p-0 gap-0 [&>button]:hidden">
@@ -931,7 +930,7 @@ export function Step1_Services({
                     target.src = '/images/wedding package placeholder.png';
                   }}
                 />
-                {/* Hidden title for accessibility */}
+                {/* Hidden title for accessibility (kept for a11y, visible name now below image) */}
                 <DialogTitle className="sr-only">{selectedPackageForDetails.name}</DialogTitle>
                 {/* Small X Close Button top-right */}
                 <button
@@ -968,14 +967,11 @@ export function Step1_Services({
 
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2" style={{ backgroundColor: '#ffffff' }}>
-                {/* Description */}
-                {selectedPackageForDetails.description && (
-                  <div className="pb-2 border-b border-black mb-2">
-                    <DialogDescription className="text-sm text-black leading-relaxed">
-                      {selectedPackageForDetails.description}
-                    </DialogDescription>
-                  </div>
-                )}
+                {/* Package Name - bold, below image */}
+                <h3 className="font-bold text-base sm:text-lg text-black mb-3">
+                  {selectedPackageForDetails.name}
+                </h3>
+
 
                 {/* Two Column Layout: Services | Staff */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
@@ -983,7 +979,7 @@ export function Step1_Services({
                   {selectedPackageForDetails.services && selectedPackageForDetails.services.length > 0 && (
                     <div>
                       <div className="flex items-center gap-1.5 mb-2">
-                        <img src="/images/customer-review 1.png" alt="Services" className="h-4 w-4 object-contain" />
+                        <img src="/images/customer-review 1.png" alt="Services" className="h-6 w-6 object-contain" />
                         <h4 className="font-bold text-sm text-black">Included Services ({selectedPackageForDetails.services.length})</h4>
                       </div>
                       <div className="space-y-1.5">
@@ -1001,7 +997,7 @@ export function Step1_Services({
                   {selectedPackageForDetails.assignedStaff && selectedPackageForDetails.assignedStaff.length > 0 && (
                     <div>
                       <div className="flex items-center gap-1.5 mb-2">
-                        <img src="/images/group (4) 1.png" alt="Staff" className="h-4 w-4 object-contain" />
+                        <img src="/images/group (4) 1.png" alt="Staff" className="h-6 w-6 object-contain" />
                         <h4 className="font-bold text-sm text-black">Expert Staff ({selectedPackageForDetails.assignedStaff.length})</h4>
                       </div>
                       <div className="space-y-2">
@@ -1041,7 +1037,7 @@ export function Step1_Services({
               </div>
 
               {/* Package Pricing Bar */}
-              <div className="flex-shrink-0 mx-4 mb-4 mt-2 rounded-xl border overflow-hidden flex items-center justify-between" style={{ backgroundColor: '#EBF3FD', borderColor: '#00000082' }}>
+              <div className="flex-shrink-0 mx-4 mb-4 mt-2 rounded-lg border overflow-hidden flex items-center justify-between" style={{ backgroundColor: '#EBF3FD', borderColor: '#00000082' }}>
                 {/* Left vertical accent */}
                 <div className="w-[5px] self-stretch flex-shrink-0" style={{ backgroundColor: '#422A3C' }} />
                 <span className="font-semibold text-sm text-black flex-1 px-3 py-2.5">Package Pricing</span>
@@ -1089,7 +1085,6 @@ export function Step1_Services({
           )}
         </DialogContent>
       </Dialog>
-
       {/* Add-ons Selection Modal */}
       <Dialog open={isAddonModalOpen} onOpenChange={(open) => {
         if (!open) {
