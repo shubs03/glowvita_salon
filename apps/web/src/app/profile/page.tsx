@@ -385,7 +385,8 @@ function OverviewContent() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <PieChart className="h-5 w-5" /> Appointments
+              <img src="/images/Appointment (10).png" alt="Appointments" className="h-7 w-7" />
+              Appointments
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -405,7 +406,9 @@ function OverviewContent() {
                     strokeWidth="2"
                     strokeDasharray="75, 100"
                   />
-                  <text x="18" y="22" className="text-xs font-bold fill-blue-600" textAnchor="middle">{stats.completedAppointments}</text>
+                  <text x="18" y="22" className="text-xs font-bold fill-blue-600" textAnchor="middle">
+                    {stats.completedAppointments}
+                  </text>
                 </svg>
               </div>
               <div className="text-center text-sm text-muted-foreground">Completed appointments</div>
@@ -415,7 +418,8 @@ function OverviewContent() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5" /> Delivered Orders
+              <img src="/images/Delivered orders.png" alt="Appointments" className="h-7 w-7" />
+              Delivered Orders
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -445,7 +449,8 @@ function OverviewContent() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart className="h-5 w-5" /> Monthly Spend
+              <img src="/images/Monthly Spend.png" alt="Appointments" className="h-7 w-7" />
+              Monthly Spend
             </CardTitle>
           </CardHeader>
           <CardContent>
