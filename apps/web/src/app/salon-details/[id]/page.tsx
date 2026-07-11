@@ -719,8 +719,10 @@ export default function SalonDetailsPage() {
       const startTime = getEntryTime(entry.startDate);
       const endTime = getEntryTime(entry.endDate);
       const dbStatus = (entry.status || '').toLowerCase().trim();
+      
+      const isExplicitlyExpired = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'].includes(dbStatus);
 
-      if (endTime > nowTime) {
+      if (!isExplicitlyExpired && endTime > nowTime) {
         // Future-end entry: check if active or scheduled
         if (!hasActivePlan && startTime <= nowTime) {
           hasActivePlan = true;
@@ -738,8 +740,15 @@ export default function SalonDetailsPage() {
     // Also check top-level DB status as final safety net
     // (handles case where public API omits history array entirely)
     const topStatus = (subscription.status || '').toLowerCase().trim();
+    const topIsExplicitlyExpired = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'].includes(topStatus);
+
     if (topStatus === 'scheduled') hasScheduledPlan = true;
-    if (topStatus === 'active' && getEntryTime(subscription.endDate) > nowTime) hasActivePlan = true;
+    if (!topIsExplicitlyExpired && topStatus === 'active' && getEntryTime(subscription.endDate) > nowTime) hasActivePlan = true;
+
+    // Force expire if the top-level status is explicitly expired
+    if (topIsExplicitlyExpired) {
+      return true;
+    }
 
     // Show banner only when nothing is active AND nothing is scheduled
     return !hasActivePlan && !hasScheduledPlan;
