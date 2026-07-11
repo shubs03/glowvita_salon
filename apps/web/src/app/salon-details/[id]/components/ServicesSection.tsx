@@ -194,7 +194,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
             }`}
           style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
         >
-          <Image src="/images/customer (2) 1.png" alt="Individual" width={16} height={16} className={serviceType === "Individual Services" ? "brightness-0 invert" : ""} />
+          <Image src="/images/Mask group (3).png" alt="Individual" width={16} height={16} className={serviceType === "Individual Services" ? "brightness-0 invert" : ""} />
           Individual Services
         </button>
         <button
@@ -222,7 +222,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
             className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 rounded-md text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors ${locationType === "Visit Salon" ? "bg-[#452c42] text-white" : "bg-transparent text-black hover:bg-gray-50"
               }`}
           >
-            <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={locationType === "Visit Salon" ? "brightness-0 invert" : ""} />
+            <Image src="/images/Mask group (4).png" alt="Salon" width={16} height={16} className={locationType === "Visit Salon" ? "brightness-0 invert" : ""} />
             Visit Salon
           </button>
           <button
@@ -318,7 +318,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                       }`}
                     style={!isSubscriptionExpired ? { borderColor: '#422A3C', color: '#422A3C' } : {}}
                   >
-                    <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" /> Buy now
+                    <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" /> Add
                   </button>
                 </div>
 
