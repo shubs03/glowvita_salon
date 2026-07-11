@@ -37,6 +37,7 @@ import {
   CheckCircle,
   AlertCircle,
   MapPin,
+  ShoppingCart,
 } from "lucide-react";
 import { StatCard } from "../../../components/profile/StatCard";
 import { Pagination } from "@repo/ui/pagination";
