@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
-import { Heart, ShoppingCart, Star, Store } from "lucide-react";
+import { Star } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +14,10 @@ import { useMemo } from "react";
 import { AlertCircle } from "lucide-react";
 
 const PRODUCT_PLACEHOLDER = "/images/product-placeholder.png";
+const WISHLIST_ICON = "/images/wishlist.png";
+const WISHLIST_ACTIVE_ICON = "/images/filedheart.png";
+const CART_ICON = "/images/emptycart.png";
+const CART_ACTIVE_ICON = "/images/cart.png";
 
 interface ProductCardProps {
   id: string;
@@ -58,6 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCartAdded, setIsCartAdded] = useState(false);
   const [imgSrc, setImgSrc] = useState<string>(image || PRODUCT_PLACEHOLDER);
 
   useEffect(() => {
@@ -73,6 +78,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
   });
 
   const cartItems = isAuthenticated && user?._id ? (cartData?.data?.items || []) : localCartItems;
+
+  const isProductInCart = useMemo(() => {
+    if (!cartItems?.length) return false;
+
+    return cartItems.some((item: any) => {
+      const itemId = item?.productId || item?._id || item?.id;
+      return String(itemId) === String(id);
+    });
+  }, [cartItems, id]);
+
+  const showCartActiveIcon = isCartAdded || isProductInCart;
 
   // Fetch vendor data to check subscription
   const { data: vendorResponse } = useGetPublicVendorByIdQuery(vendorId, {
@@ -135,10 +151,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
       return;
     }
 
+    const nextLikedState = !isLiked;
+
     try {
       setIsLoading(true);
-      const url = isLiked ? `/api/client/wishlist/${id}/remove` : '/api/client/wishlist';
-      const method = isLiked ? 'DELETE' : 'POST';
+      setIsLiked(nextLikedState);
+
+      const url = nextLikedState ? '/api/client/wishlist' : `/api/client/wishlist/${id}/remove`;
+      const method = nextLikedState ? 'POST' : 'DELETE';
 
       const response = await fetch(url, {
         method,
@@ -150,17 +170,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        setIsLiked(!isLiked);
-        toast.success(isLiked ? "Removed from Wishlist" : "Added to Wishlist", {
-          description: isLiked ? "Product removed from your wishlist" : "Product added to your wishlist"
+        const serverLikedState = typeof data?.isInWishlist === 'boolean' ? data.isInWishlist : nextLikedState;
+        setIsLiked(serverLikedState);
+
+        toast.success(nextLikedState ? "Added to Wishlist" : "Removed from Wishlist", {
+          description: nextLikedState ? "Product added to your wishlist" : "Product removed from your wishlist"
         });
       } else {
+        setIsLiked(isLiked);
         const errorData = await response.json();
         toast.error("Wishlist Update Failed", {
           description: errorData.message || "Failed to update wishlist"
         });
       }
     } catch (error) {
+      setIsLiked(isLiked);
       console.error("Failed to update wishlist:", error);
       toast.error("Wishlist Update Failed", {
         description: "Failed to update wishlist. Please try again."
@@ -174,9 +198,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
 
     if (isSubscriptionExpired) {
-      toast.error("Salon Unavailable", {
-        description: "This product is temporarily closed due to salon subscription expiry."
-      });
+      toast.error("This product is unavailable");
       return;
     }
 
@@ -209,6 +231,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         };
 
         await addToCartAPI(cartItem).unwrap();
+        setIsCartAdded(true);
 
         // Show success toast
         toast.success(`${name} added to cart!`, {
@@ -238,6 +261,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         // Dispatch to Redux store (will also save to localStorage)
         dispatch(addToCart(cartItem));
+        setIsCartAdded(true);
 
         // Show success toast
         toast.success(`${name} added to cart!`, {
@@ -259,9 +283,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
 
     if (isSubscriptionExpired) {
-      toast.error("Salon Unavailable", {
-        description: "This product is temporarily closed due to salon subscription expiry."
-      });
+      toast.error("This product is unavailable");
       return;
     }
 
@@ -314,14 +336,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`}</style>
       <Card
         className={cn(
-          "group overflow-hidden hover:shadow-lg w-[260px] h-[360px] rounded-none rounded-tr-[11px] rounded-bl-[11px] transition-shadow flex flex-col text-left relative",
+          "group overflow-hidden hover:shadow-lg w-[260px] h-[372px] rounded-none rounded-tr-[11px] rounded-bl-[11px] transition-shadow flex flex-col text-left relative",
           isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
         )}
+        style={{ fontFamily: "'Poppins', sans-serif" }}
         onClick={() => {
           if (isSubscriptionExpired) {
-            toast.error("Salon Unavailable", {
-              description: "This product is temporarily closed due to salon subscription expiry."
-            });
+            toast.error("This product is unavailable");
             return;
           }
           router.push(`/product-details/${id}`);
@@ -346,8 +367,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         <div className="p-3 flex flex-col flex-grow" style={{ fontFamily: "'Poppins', sans-serif" }}>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[12px] font-medium text-gray-500 uppercase tracking-wider truncate mr-2">
-              {category || "Product"}
+            <p className="text-[13px] font-medium truncate mr-2 text-[#422A3C]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              {category ? category.charAt(0).toUpperCase() + category.slice(1).toLowerCase() : "Product"}
             </p>
             <div className="flex items-center gap-1 flex-shrink-0" style={{ color: "#BA7894" }}>
               <Star className="w-3 h-3 fill-current" />
@@ -355,11 +376,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           </div>
 
-          <h4 className="text-[15px] font-bold text-gray-900 mb-0.5 line-clamp-1 leading-tight">
+          <h4 className="text-[15px] font-semibold text-gray-900 mb-0.5 line-clamp-1 leading-tight">
             {name}
           </h4>
 
-          <p className="text-[12px] text-gray-500 line-clamp-2 leading-snug mb-1">
+          <p className="text-[12px] text-black-500 line-clamp-2 leading-snug mb-1">
             {description || hint || "Explore high-quality beauty products crafted to elevate your daily self-care."}
           </p>
 
@@ -369,12 +390,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <p className="text-[12px] text-gray-400 line-through">
                   ₹ {price.toFixed(0)}/-
                 </p>
-                <p className="text-[14px] font-bold text-gray-900">
+                <p className="text-[14px] font-medium text-gray-900">
                   ₹ {salePrice.toFixed(0)}/-
                 </p>
               </>
             ) : (
-              <p className="text-[14px] font-bold text-gray-900">
+              <p className="text-[14px] font-medium text-gray-900">
                 ₹ {price.toFixed(0)}/-
               </p>
             )}
@@ -385,7 +406,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               size="sm"
               variant="outline"
               className={cn(
-                "text-[10px] font-semibold rounded-none hover:bg-[#422A3C] hover:text-white transition-colors",
+                "text-[13px] font-medium rounded-none hover:bg-[#422A3C] hover:text-white transition-colors",
                 isSubscriptionExpired && "opacity-50 cursor-not-allowed"
               )}
               style={{
@@ -395,8 +416,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 borderBottomLeftRadius: "7px",
                 borderTopLeftRadius: "0px",
                 borderBottomRightRadius: "0px",
-                border: "1px solid #422A3C",
+                border: "2px solid #422A3C",
                 padding: "0",
+                fontFamily: "'Poppins', sans-serif",
               }}
               onClick={handleBuyNow}
               disabled={isSubscriptionExpired}
@@ -412,8 +434,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 onClick={handleWishlistToggle}
                 disabled={isLoading}
               >
-                <Heart
-                  className={cn("h-3.5 w-3.5", isLiked && "fill-red-500 text-red-500")}
+                <img
+                  src={isLiked ? WISHLIST_ACTIVE_ICON : WISHLIST_ICON}
+                  alt="Wishlist"
+                  className={cn("h-5 w-5 object-contain transition-transform", isLiked && "scale-110")}
                 />
               </Button>
 
@@ -427,7 +451,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 onClick={handleAddToCart}
                 disabled={isSubscriptionExpired}
               >
-                <ShoppingCart className="h-3.5 w-3.5" />
+                <img
+                  src={showCartActiveIcon ? CART_ACTIVE_ICON : CART_ICON}
+                  alt="Add to cart"
+                  className="h-6 w-6 object-contain"
+                />
               </Button>
             </div>
           </div>
@@ -435,7 +463,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {isSubscriptionExpired && (
             <div className="flex items-center gap-1 mt-1.5 text-red-600">
               <AlertCircle className="h-3 w-3" />
-              <span className="text-[9px] font-bold uppercase tracking-wider">Closed</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider">This product unavailable</span>
             </div>
           )}
         </div>

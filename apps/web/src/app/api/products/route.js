@@ -180,6 +180,7 @@ export const GET = async (request) => {
         vendorName: product.origin === 'Vendor'
           ? (vendorData?.businessName || 'Unknown Vendor')
           : (vendorData?.shopName || 'Unknown Supplier'),
+        origin: product.origin || 'Vendor',
         category: product.category?.name || 'Beauty Products',
         stock: product.stock,
         isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
