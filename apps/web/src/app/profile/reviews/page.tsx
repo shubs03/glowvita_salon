@@ -305,7 +305,7 @@ export default function ReviewsPage() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-4 border border-[#c8dff7]" style={{ backgroundColor: '#EBF3FD' }}>
               <TabsTrigger value="all">All ({reviews.length})</TabsTrigger>
               <TabsTrigger value="products">Products ({reviews.filter(r => r.type === 'product').length})</TabsTrigger>
               <TabsTrigger value="services">Services ({reviews.filter(r => r.type === 'service').length})</TabsTrigger>

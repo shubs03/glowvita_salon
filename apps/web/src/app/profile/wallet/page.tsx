@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { StatCard } from '../../../components/profile/StatCard';
-import { Wallet, Gift, Send, Plus, ArrowUp, ArrowDown, Loader2, AlertCircle, Building2 } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Loader2, AlertCircle, Building2 } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -317,25 +317,25 @@ export default function WalletPage() {
             {/* Stats Cards */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
-                    icon={Wallet}
+                    imageSrc="/images/Current Balance.png"
                     title="Current Balance"
                     value={`₹${balance.toFixed(2)}`}
                     change="Available to spend"
                 />
                 <StatCard
-                    icon={Gift}
+                    imageSrc="/images/deposit.png"
                     title="Total Deposits"
                     value={`₹${stats.totalDeposits.toFixed(2)}`}
                     change="From all sources"
                 />
                 <StatCard
-                    icon={Send}
+                    imageSrc="/images/Transfer to bank.png"
                     title="Total Withdrawn"
                     value={`₹${stats.totalWithdrawals.toFixed(2)}`}
                     change="Transferred to bank"
                 />
                 <StatCard
-                    icon={Gift}
+                    imageSrc="/images/referral earning.png"
                     title="Referral Earnings"
                     value={`₹${stats.totalReferralEarnings.toFixed(2)}`}
                     change="From referrals"
