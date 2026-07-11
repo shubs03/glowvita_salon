@@ -150,7 +150,7 @@ export default function SettingsPage() {
             }
         }));
     };
-    
+
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -266,8 +266,12 @@ export default function SettingsPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-                <CardDescription>Update your personal information and password.</CardDescription>
+                <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                    Account Settings
+                </CardTitle>
+                <CardDescription className="mt-0.5 text-xs sm:text-sm">
+                    Update your personal information and password.
+                </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
@@ -459,16 +463,16 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">
                         Configure how you receive updates and reminders.
                     </p>
-                    
+
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-medium">Push Notifications</Label>
                                 <p className="text-xs text-muted-foreground">Receive alerts in your browser.</p>
                             </div>
-                            <Switch 
-                                checked={formData.notificationPreferences.pushEnabled} 
-                                onCheckedChange={() => handlePreferenceToggle('pushEnabled')} 
+                            <Switch
+                                checked={formData.notificationPreferences.pushEnabled}
+                                onCheckedChange={() => handlePreferenceToggle('pushEnabled')}
                             />
                         </div>
 
@@ -477,9 +481,9 @@ export default function SettingsPage() {
                                 <Label className="text-sm font-medium">SMS Alerts</Label>
                                 <p className="text-xs text-muted-foreground">Critical updates via SMS.</p>
                             </div>
-                            <Switch 
-                                checked={formData.notificationPreferences.smsEnabled} 
-                                onCheckedChange={() => handlePreferenceToggle('smsEnabled')} 
+                            <Switch
+                                checked={formData.notificationPreferences.smsEnabled}
+                                onCheckedChange={() => handlePreferenceToggle('smsEnabled')}
                             />
                         </div>
 
@@ -488,9 +492,9 @@ export default function SettingsPage() {
                                 <Label className="text-sm font-medium">Appointments</Label>
                                 <p className="text-xs text-muted-foreground">Reminders and status changes.</p>
                             </div>
-                            <Switch 
-                                checked={formData.notificationPreferences.appointments} 
-                                onCheckedChange={() => handlePreferenceToggle('appointments')} 
+                            <Switch
+                                checked={formData.notificationPreferences.appointments}
+                                onCheckedChange={() => handlePreferenceToggle('appointments')}
                             />
                         </div>
 
@@ -499,9 +503,9 @@ export default function SettingsPage() {
                                 <Label className="text-sm font-medium">Promotional</Label>
                                 <p className="text-xs text-muted-foreground">Offers and new features.</p>
                             </div>
-                            <Switch 
-                                checked={formData.notificationPreferences.promotional} 
-                                onCheckedChange={() => handlePreferenceToggle('promotional')} 
+                            <Switch
+                                checked={formData.notificationPreferences.promotional}
+                                onCheckedChange={() => handlePreferenceToggle('promotional')}
                             />
                         </div>
                     </div>

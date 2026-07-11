@@ -347,8 +347,10 @@ export default function WalletPage() {
                 {/* Add Money */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Add Money to Wallet</CardTitle>
-                        <CardDescription>
+                        <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                            Add Money to Wallet
+                        </CardTitle>
+                        <CardDescription className="mt-0.5 text-xs sm:text-sm">
                             Instantly add funds for quick payments. Min: ₹10, Max: ₹1,00,000
                         </CardDescription>
                     </CardHeader>
@@ -391,8 +393,10 @@ export default function WalletPage() {
                 {/* Withdraw Money */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Withdraw Funds</CardTitle>
-                        <CardDescription>
+                        <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                            Withdraw Funds
+                        </CardTitle>
+                        <CardDescription className="mt-0.5 text-xs sm:text-sm">
                             Transfer wallet balance to your bank account instantly
                         </CardDescription>
                     </CardHeader>
@@ -441,8 +445,12 @@ export default function WalletPage() {
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div>
-                            <CardTitle>Transaction History</CardTitle>
-                            <CardDescription>A record of all your wallet transactions</CardDescription>
+                            <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                                Transaction History
+                            </CardTitle>
+                            <CardDescription className="mt-0.5 text-xs sm:text-sm">
+                                A record of all your wallet transactions
+                            </CardDescription>
                         </div>
                         <div className="flex gap-2">
                             <Button
@@ -494,8 +502,8 @@ export default function WalletPage() {
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <div className={`p-1.5 rounded-full ${tx.transactionType === 'credit'
-                                                            ? 'bg-green-100 text-green-600'
-                                                            : 'bg-red-100 text-red-600'
+                                                        ? 'bg-green-100 text-green-600'
+                                                        : 'bg-red-100 text-red-600'
                                                         }`}>
                                                         {tx.transactionType === 'credit' ? (
                                                             <ArrowDown className="h-3 w-3" />
@@ -521,8 +529,8 @@ export default function WalletPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className={`text-right font-semibold ${tx.transactionType === 'credit'
-                                                    ? 'text-green-600'
-                                                    : 'text-red-600'
+                                                ? 'text-green-600'
+                                                : 'text-red-600'
                                                 }`}>
                                                 {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount).toFixed(2)}
                                             </TableCell>
@@ -590,8 +598,8 @@ export default function WalletPage() {
                                     <button
                                         onClick={() => setBankDetails(prev => ({ ...prev, withdrawalMethod: 'bank_transfer' }))}
                                         className={`text-xs px-3 py-1 rounded-sm transition-all ${(bankDetails as any).withdrawalMethod !== 'upi'
-                                                ? 'bg-background shadow-sm font-medium'
-                                                : 'text-muted-foreground hover:text-foreground'
+                                            ? 'bg-background shadow-sm font-medium'
+                                            : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                     >
                                         Bank Transfer
@@ -599,8 +607,8 @@ export default function WalletPage() {
                                     <button
                                         onClick={() => setBankDetails(prev => ({ ...prev, withdrawalMethod: 'upi' }))}
                                         className={`text-xs px-3 py-1 rounded-sm transition-all ${(bankDetails as any).withdrawalMethod === 'upi'
-                                                ? 'bg-background shadow-sm font-medium'
-                                                : 'text-muted-foreground hover:text-foreground'
+                                            ? 'bg-background shadow-sm font-medium'
+                                            : 'text-muted-foreground hover:text-foreground'
                                             }`}
                                     >
                                         UPI
