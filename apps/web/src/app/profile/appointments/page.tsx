@@ -721,7 +721,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                 <Separator />
 
                 <div className="space-y-3">
-                    <h4 className="font-semibold">Service & Booking Summary</h4>
+                    <h4 className=" text-lg sm:text-xl font-bold leading-tight">Service & Booking Summary</h4>
 
                     {/* Show service details for all appointments */}
                     <div className="space-y-3">
@@ -1089,7 +1089,7 @@ export default function AppointmentsPage() {
                         <div className="lg:col-span-1 flex flex-col h-full">
                             <Card className="flex-1 flex flex-col">
                                 <CardHeader className="pb-3">
-                                    <CardTitle>My Appointments</CardTitle>
+                                    <CardTitle className="text-lg sm:text-xl font-bold leading-tight">My Appointments</CardTitle>
                                     <CardDescription>Select an appointment to view details.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1 flex flex-col space-y-4">
@@ -1141,7 +1141,7 @@ export default function AppointmentsPage() {
                         </div>
 
                         {/* Right Column: Appointment Details */}
-                        <div className="lg:col-span-2">
+                        <div className="lg:col-span-2 text-lg sm:text-xl font-bold leading-tight ">
                             <AppointmentDetails
                                 appointment={selectedAppointment}
                                 onCancelClick={handleCancelClick}
