@@ -4,7 +4,6 @@
 import { Card, CardContent } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
 import { format } from 'date-fns';
-import { Calendar, Clock } from 'lucide-react';
 
 export interface Appointment {
   id: string;
@@ -66,12 +65,26 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
         </div>
         <div className="flex justify-between items-end mt-4">
           <div>
-            <p className="text-sm flex items-center mb-1">
-              <Calendar className="h-4 w-4 mr-2" /> {format(new Date(appointment.date), 'EEE, MMM d, yyyy')}
+            {/* Date row with custom calendar icon */}
+            <p className="text-sm flex items-center gap-1.5 mb-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/calendar (6) 1.png"
+                alt="Date"
+                className="h-4 w-4 object-contain flex-shrink-0"
+              />
+              {format(new Date(appointment.date), 'EEE, MMM d, yyyy')}
             </p>
+            {/* Time row with custom clock icon */}
             {appointment.startTime && (
-              <p className="text-sm flex items-center">
-                <Clock className="h-4 w-4 mr-2" /> {appointment.startTime}
+              <p className="text-sm flex items-center gap-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/clock (2) 4.png"
+                  alt="Time"
+                  className="h-4 w-4 object-contain flex-shrink-0"
+                />
+                {appointment.startTime}
               </p>
             )}
           </div>

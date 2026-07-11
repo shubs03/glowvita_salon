@@ -350,26 +350,30 @@ function OverviewContent() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 1. Total Appointments — red calendar icon */}
         <StatCard
-          icon={LayoutDashboard}
+          imageSrc="/images/calendar (6) 1.png"
           title="Total Appointments"
           value={stats.totalAppointments}
           change={`${stats.totalAppointments} bookings`}
         />
+        {/* 2. Cart Items — orange shopping cart icon */}
         <StatCard
-          icon={IndianRupee}
+          imageSrc="/images/Cart.png"
           title="Cart Items"
           value={stats.cartItemsCount}
           change={`${stats.cartItemsCount} items in cart`}
         />
+        {/* 3. Total Spent — orders / clipboard+box icon */}
         <StatCard
-          icon={Gift}
+          imageSrc="/images/Appoi + Order.png"
           title="Total Spent"
           value={`₹${stats.totalSpent.toLocaleString()}`}
           change="Orders + Appointments"
         />
+        {/* 4. My Wishlist — blue bookmark icon */}
         <StatCard
-          icon={Heart}
+          imageSrc="/images/Saved.png"
           title="My Wishlist"
           value={stats.wishlistItems}
           change={`${stats.wishlistItems} items saved`}
