@@ -27,19 +27,17 @@ import {
   DialogTitle,
 } from "@repo/ui/dialog";
 import {
-  X,
-  ShoppingCart,
-  TrendingUp,
-  Package,
   Eye,
   CreditCard,
   User,
   Clock,
   Truck,
+  Package,
   Home,
   CheckCircle,
   AlertCircle,
   MapPin,
+  ShoppingCart,
 } from "lucide-react";
 import { StatCard } from "../../../components/profile/StatCard";
 import { Pagination } from "@repo/ui/pagination";
@@ -425,11 +423,11 @@ export default function OrdersPage() {
     <div className="space-y-6">
       {/* Stat Cards */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={ShoppingCart} title="Total Orders" value={orderHistory.length} change="All time" />
-        <StatCard icon={Package} title="Delivered" value={orderHistory.filter((o) => o.status === "Delivered").length} change="All time" />
-        <StatCard icon={X} title="Cancelled" value={orderHistory.filter((o) => o.status?.toLowerCase() === "cancelled").length} change="All time" />
+        <StatCard imageSrc="/images/logistics.png" title="Total Orders" value={orderHistory.length} change="All time" />
+        <StatCard imageSrc="/images/Delivered orders.png" title="Delivered" value={orderHistory.filter((o) => o.status === "Delivered").length} change="All time" />
+        <StatCard imageSrc="/images/Cancelled.png" title="Cancelled" value={orderHistory.filter((o) => o.status?.toLowerCase() === "cancelled").length} change="All time" />
         <StatCard
-          icon={TrendingUp}
+          imageSrc="/images/Monthly Spend.png"
           title="Total Spent"
           value={`₹${orderHistory.filter((o) => o.status === "Delivered").reduce((acc, o) => acc + (o.totalAmount || 0), 0).toFixed(2)}`}
           change="Delivered orders only"
@@ -547,11 +545,11 @@ export default function OrdersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className={`text-red-500 ${!isOrderCancellable(order.status) ? "opacity-50 cursor-not-allowed" : "hover:text-red-700 hover:bg-red-50"}`}
+                              className={`${!isOrderCancellable(order.status) ? "opacity-40 cursor-not-allowed" : "hover:bg-red-50"}`}
                               disabled={!isOrderCancellable(order.status)}
                               onClick={() => handleCancelClick(order)}
                             >
-                              <X className="h-4 w-4" />
+                              <Image src="/images/trash.png" alt="Cancel" width={18} height={18} className="object-contain" />
                             </Button>
                           )}
                         </TableCell>

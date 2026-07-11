@@ -323,7 +323,7 @@ export default function WishlistPage() {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4 border border-[#c8dff7]" style={{ backgroundColor: '#EBF3FD' }}>
             <TabsTrigger value="all">All ({wishlistItems.length + doctorWishlistItems.length + salonWishlistItems.length})</TabsTrigger>
             <TabsTrigger value="products">Products ({wishlistItems.length})</TabsTrigger>
             <TabsTrigger value="doctors">Doctors ({doctorWishlistItems.length})</TabsTrigger>

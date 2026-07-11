@@ -198,9 +198,9 @@ export default function CartPage() {
     <div className="space-y-6">
       {/* Stats Section */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={ShoppingCart} title="Items in Cart" value={cartItems.length} change={`Total quantity: ${itemCount}`} />
-        <StatCard icon={DollarSign} title="Cart Value" value={`₹${subtotal.toFixed(2)}`} change="Before taxes and shipping" />
-        <StatCard icon={Tag} title="Estimated Tax" value={`₹${tax.toFixed(2)}`} change="Including GST and platform fees" />
+        <StatCard imageSrc="/images/Cart.png" title="Items in Cart" value={cartItems.length} change={`Total quantity: ${itemCount}`} />
+        <StatCard imageSrc="/images/cart - gst.png" title="Cart Value" value={`₹${subtotal.toFixed(2)}`} change="Before taxes and shipping" />
+        <StatCard imageSrc="/images/Tax.png" title="Estimated Tax" value={`₹${tax.toFixed(2)}`} change="Including GST and platform fees" />
       </div>
 
       {/* Main Cart Table */}

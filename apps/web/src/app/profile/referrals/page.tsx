@@ -158,9 +158,9 @@ export default function ReferralsPage() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={Gift} title="Total Earnings" value={`₹${totalEarnings}`} change="from referrals" />
-        <StatCard icon={UserPlus} title="Successful Referrals" value={successfulReferralsCount} change="friends joined" />
-        <StatCard icon={Users} title="Total Referrals" value={referralHistory.length} change="invites sent" />
+        <StatCard imageSrc="/images/earnings (1).png" title="Total Earnings" value={`₹${totalEarnings}`} change="from referrals" />
+        <StatCard imageSrc="/images/Success Reffereal.png" title="Successful Referrals" value={successfulReferralsCount} change="friends joined" />
+        <StatCard imageSrc="/images/Invite send.png" title="Total Referrals" value={referralHistory.length} change="invites sent" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -309,20 +309,20 @@ export default function ReferralsPage() {
             </div>
             
             <div className="pt-4 flex flex-col gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full justify-start text-[#25D366] hover:text-[#25D366] hover:bg-[#25D366]/10 border-[#25D366]/20"
                 onClick={() => handleWhatsAppShare(clientReferralLink, 'friend')}
               >
-                <MessageCircle className="h-4 w-4 mr-2 fill-current" />
+                <img src="/images/whatsapp.png" alt="WhatsApp" className="h-4 w-4 mr-2 object-contain" />
                 Share Friend Link on WhatsApp
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full justify-start text-primary hover:bg-primary/5"
                 onClick={() => handleWhatsAppShare(partnerReferralLink, 'partner')}
               >
-                <Building className="h-4 w-4 mr-2" />
+                <img src="/images/Salon Details (2).png" alt="Salon" className="h-4 w-4 mr-2 object-contain" />
                 Share Partner Link on WhatsApp
               </Button>
               <Button 

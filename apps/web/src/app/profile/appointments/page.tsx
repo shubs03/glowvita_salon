@@ -304,11 +304,11 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
         const dateObj = new Date(appointment.date);
         if (!isNaN(dateObj.getTime())) {
             const displayDate = dateObj.toLocaleDateString();
-            
+
             const startTime = (appointment.serviceItems && appointment.serviceItems.length > 0)
                 ? appointment.serviceItems[0].startTime
                 : appointment.startTime;
-            
+
             if (startTime) {
                 displayDateTime = `${displayDate} at ${startTime}`;
             } else {
@@ -656,7 +656,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
 
                 <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-3">
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <img src="/images/Appointment (10).png" alt="Date" className="h-5 w-5 object-contain" />
                         <div>
                             <p className="text-sm font-medium">Date & Time</p>
                             <p className="text-sm text-muted-foreground">
@@ -665,7 +665,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <img src="/images/clock (20).png" alt="Date" className="h-5 w-5 object-contain" />
                         <div>
                             <p className="text-sm font-medium">Duration</p>
                             <p className="text-sm text-muted-foreground">{appointment.duration} minutes</p>
@@ -691,16 +691,20 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                     <h4 className="font-semibold">Options</h4>
                     <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" className="justify-start gap-2" onClick={handleAddToCalendar}>
-                            <Calendar className="h-4 w-4" /> Add to Calendar
+                            <img src="/images/Appointment (10).png" alt="Date" className="h-5 w-5 object-contain" />
+                            Add to Calendar
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" onClick={handleGetDirections}>
-                            <MapPin className="h-4 w-4" /> Get Directions
+                            <img src="/images/Location (3).png" alt="Date" className="h-5 w-5 object-contain" />
+                            Get Directions
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date, appointment.status, appointment.serviceItems && appointment.serviceItems.length > 0 ? appointment.serviceItems[0].startTime : appointment.startTime)} onClick={() => onCancelClick(appointment)}>
-                            <Edit className="h-4 w-4" /> Manage Appointment
+                            <img src="/images/manage App.png" alt="Date" className="h-5 w-5 object-contain" />
+                            Manage Appointment
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
-                            <LinkIcon className="h-4 w-4" /> Salon Details
+                            <img src="/images/Salon Details (2).png" alt="Date" className="h-5 w-5 object-contain" />
+                            Salon Details
                         </Button>
                         {(appointment.status === 'Completed' || appointment.status?.toLowerCase() === 'completed') && (
                             <Button
@@ -1021,6 +1025,31 @@ export default function AppointmentsPage() {
         }
     };
 
+    // A lucide-icon-compatible wrapper around a custom image
+    const AppointmentCalendarIcon = ({ className }: { className?: string }) => (
+        <img
+            src="/images/Date (2).png"
+            alt="Appointments"
+            className={`${className} h-7 w-7`}
+        />
+    );
+
+    const CompletedIcon = ({ className }: { className?: string }) => (
+        <img
+            src="/images/Appointment completed.png"
+            alt="Completed"
+            className={`${className} h-7 w-7`}
+        />
+    );
+
+    const CancelledIcon = ({ className }: { className?: string }) => (
+        <img
+            src="/images/Cancelled.png"
+            alt="Cancelled"
+            className={`${className} h-7 w-7`}
+        />
+    );
+
     return (
         <div className="space-y-6">
             {isLoading ? (
@@ -1040,7 +1069,7 @@ export default function AppointmentsPage() {
             ) : (
                 <>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <StatCard icon={Calendar} title="Upcoming" value={appointments.filter(a => {
+                        <StatCard icon={AppointmentCalendarIcon} title="Upcoming" value={appointments.filter(a => {
                             try {
                                 const apptDate = new Date(a.date);
                                 const today = new Date();
@@ -1051,8 +1080,8 @@ export default function AppointmentsPage() {
                                 return false;
                             }
                         }).length} change="Next in 3 days" />
-                        <StatCard icon={CheckCircle} title="Completed" value={appointments.filter(a => a.status === 'Completed').length} change="All time" />
-                        <StatCard icon={X} title="Cancelled" value={appointments.filter(a => a.status === 'Cancelled').length} change="All time" />
+                        <StatCard icon={CompletedIcon} title="Completed" value={appointments.filter(a => a.status === 'Completed').length} change="All time" />
+                        <StatCard icon={CancelledIcon} title="Cancelled" value={appointments.filter(a => a.status === 'Cancelled').length} change="All time" />
                     </div>
 
                     <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">

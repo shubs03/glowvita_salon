@@ -186,6 +186,65 @@ export function Step1_Services({
     return lookup;
   }, [staffData]);
 
+  // Create a staff position lookup map for quick ID to position resolution
+  const staffPositionLookup = useMemo(() => {
+    if (!staffData) return {};
+
+    const posLookup: { [key: string]: string } = {};
+    let staffArray: any[] = [];
+
+    if (Array.isArray(staffData)) {
+      staffArray = staffData;
+    } else if ((staffData as any)?.data && Array.isArray((staffData as any).data)) {
+      staffArray = (staffData as any).data;
+    } else if ((staffData as any)?.staff && Array.isArray((staffData as any).staff)) {
+      staffArray = (staffData as any).staff;
+    }
+
+    staffArray.forEach((staff: any) => {
+      if (staff) {
+        const staffId = staff._id || staff.id || staff.staffId;
+        // Try all possible position/role fields
+        const staffPosition =
+          staff.position ||
+          staff.role ||
+          staff.designation ||
+          staff.specialization ||
+          staff.jobTitle ||
+          staff.title ||
+          '';
+        if (staffId) {
+          posLookup[String(staffId)] = staffPosition;
+        }
+      }
+    });
+
+    return posLookup;
+  }, [staffData]);
+
+  // Helper function to get staff position from ID or object
+  const getStaffPosition = (staff: any): string => {
+    if (typeof staff === 'string') {
+      return staffPositionLookup[staff] || '';
+    }
+    if (staff && typeof staff === 'object') {
+      const staffId = staff._id || staff.id || staff.staffId;
+      if (staffId && staffPositionLookup[String(staffId)]) {
+        return staffPositionLookup[String(staffId)];
+      }
+      return (
+        staff.position ||
+        staff.role ||
+        staff.designation ||
+        staff.specialization ||
+        staff.jobTitle ||
+        staff.title ||
+        ''
+      );
+    }
+    return '';
+  };
+
   // Helper function to get staff name from ID with fallback
   const getStaffName = (staff: any): string => {
     console.log('Getting staff name for:', staff);
@@ -484,7 +543,7 @@ export function Step1_Services({
               borderRadius: '0.375rem'
             }}
           >
-            <Image src="/images/customer (2) 1.png" alt="Individual" width={14} height={14} className={viewMode === 'services' ? 'brightness-0 invert' : ''} />
+            <Image src="/images/Mask group (3).png" alt="Individual" width={14} height={14} className={viewMode === 'services' ? 'brightness-0 invert' : ''} />
             Individual Services
           </button>
           <button
@@ -913,14 +972,13 @@ export function Step1_Services({
         </DialogContent>
       </Dialog>
 
-
-      {/* Package Details Modal - Enhanced & Responsive */}
+      {/* Package Details Modal - Updated UI */}
       <Dialog open={selectedPackageForDetails !== null} onOpenChange={(open) => !open && setSelectedPackageForDetails(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0 gap-0">
+        <DialogContent className="max-w-[95vw] sm:max-w-[580px] h-[90vh] sm:h-[530px] overflow-hidden p-0 gap-0 [&>button]:hidden">
           {selectedPackageForDetails && (
-            <div className="flex flex-col h-full max-h-[90vh]">
-              {/* Header with Image */}
-              <div className="relative w-full h-40 sm:h-52 flex-shrink-0 overflow-hidden bg-muted">
+            <div className="flex flex-col h-full max-h-[90vh] sm:max-h-[530px]">
+              {/* Header with Image + badges on image + small X close button */}
+              <div className="relative w-full h-40 sm:h-48 flex-shrink-0 overflow-hidden bg-muted">
                 <Image
                   src={selectedPackageForDetails.image || '/images/wedding package placeholder.png'}
                   alt={selectedPackageForDetails.name}
@@ -931,163 +989,176 @@ export function Step1_Services({
                     target.src = '/images/wedding package placeholder.png';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                {/* Hidden title for accessibility (kept for a11y, visible name now below image) */}
+                <DialogTitle className="sr-only">{selectedPackageForDetails.name}</DialogTitle>
+                {/* Small X Close Button top-right */}
+                <button
+                  onClick={() => setSelectedPackageForDetails(null)}
+                  className="absolute top-2 right-2 z-20 w-6 h-6 flex items-center justify-center"
+                  aria-label="Close"
+                >
+                  <img src="/images/x-button (3) 1.png" alt="Close" className="w-6 h-6 object-contain" />
+                </button>
 
-                {/* Title & Info Overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                  <DialogTitle className="text-xl sm:text-2xl font-bold text-white mb-2 line-clamp-2">
-                    {selectedPackageForDetails.name}
-                  </DialogTitle>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
-                      <List className="h-3 w-3 mr-1" />
-                      {selectedPackageForDetails.services?.length || 0} Services
+                {/* Info Badges on image bottom */}
+                <div className="absolute bottom-2 left-3 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
+                    <img src="/images/menu (1) 1.png" alt="Services" className="h-3 w-3 mr-1" />
+                    {selectedPackageForDetails.services?.length || 0} Services
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
+                    <img src="/images/clock (10) 4.png" alt="Duration" className="h-3 w-3 mr-1" />
+                    {(() => {
+                      const dur = selectedPackageForDetails.duration || 0;
+                      return dur >= 60
+                        ? `${Math.floor(dur / 60)}hr ${dur % 60 > 0 ? (dur % 60) + 'min' : ''}`
+                        : `${dur} min`;
+                    })()}
+                  </span>
+                  {selectedPackageForDetails.staffCount && (
+                    <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
+                      <img src="/images/group (4) 1.png" alt="Staff" className="h-3 w-3 mr-1" />
+                      {selectedPackageForDetails.staffCount} Staff
                     </span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {selectedPackageForDetails.duration || 0} min
-                    </span>
-                    {selectedPackageForDetails.staffCount && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
-                        <Users className="h-3 w-3 mr-1" />
-                        {selectedPackageForDetails.staffCount} Staff
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-                {/* Description */}
-                {selectedPackageForDetails.description && (
-                  <div className="pb-4 border-b">
-                    <h4 className="font-semibold text-sm mb-2">Description</h4>
-                    <DialogDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      {selectedPackageForDetails.description}
-                    </DialogDescription>
-                  </div>
-                )}
+              <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2" style={{ backgroundColor: '#ffffff' }}>
+                {/* Package Name - bold, below image */}
+                <h3 className="font-bold text-base sm:text-lg text-black mb-3">
+                  {selectedPackageForDetails.name}
+                </h3>
 
-                {/* Services List */}
-                {selectedPackageForDetails.services && selectedPackageForDetails.services.length > 0 && (
-                  <div className="pb-4 border-b">
-                    <div className="flex items-center gap-2 mb-3">
-                      <List className="h-4 w-4 text-primary" />
-                      <h4 className="font-semibold text-base">Included Services ({selectedPackageForDetails.services.length})</h4>
-                    </div>
-                    <div className="space-y-2">
-                      {selectedPackageForDetails.services.map((service, idx) => (
-                        <div key={idx} className="flex items-start gap-2 text-sm">
-                          <div className="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
-                          <span className="leading-relaxed line-clamp-2">{service.serviceName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {/* Staff List */}
-                {selectedPackageForDetails.assignedStaff && selectedPackageForDetails.assignedStaff.length > 0 && (
-                  <div className="pb-4 border-b">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Users className="h-4 w-4 text-primary" />
-                      <h4 className="font-semibold text-base">Expert Staff Members ({selectedPackageForDetails.assignedStaff.length})</h4>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {selectedPackageForDetails.assignedStaff.map((staff, idx) => {
-                        const staffName = getStaffName(staff);
-
-                        return (
-                          <div key={idx} className="flex items-center gap-2 text-sm">
-                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="line-clamp-1">{staffName}</span>
+                {/* Two Column Layout: Services | Staff */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                  {/* Left Column: Included Services */}
+                  {selectedPackageForDetails.services && selectedPackageForDetails.services.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <img src="/images/customer-review 1.png" alt="Services" className="h-6 w-6 object-contain" />
+                        <h4 className="font-bold text-sm text-black">Included Services ({selectedPackageForDetails.services.length})</h4>
+                      </div>
+                      <div className="space-y-1.5">
+                        {selectedPackageForDetails.services.map((service, idx) => (
+                          <div key={idx} className="flex items-start gap-1.5 text-sm text-black">
+                            <img src="/images/checkmark (3) 1 (1).png" alt="check" className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 object-contain" />
+                            <span className="leading-relaxed font-normal text-[13px]">{service.serviceName || (service as any).name}</span>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Pricing Section */}
-                <div>
-                  <h4 className="font-semibold text-base mb-3">Package Pricing</h4>
-                  {selectedPackageForDetails.discountedPrice &&
-                    selectedPackageForDetails.discountedPrice !== selectedPackageForDetails.totalPrice ? (
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Original Price:</span>
-                        <span className="text-muted-foreground line-through">
-                          ₹{selectedPackageForDetails.totalPrice?.toLocaleString('en-IN')}
-                        </span>
+                  {/* Right Column: Expert Staff */}
+                  {selectedPackageForDetails.assignedStaff && selectedPackageForDetails.assignedStaff.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <img src="/images/group (4) 1.png" alt="Staff" className="h-6 w-6 object-contain" />
+                        <h4 className="font-bold text-sm text-black">Expert Staff ({selectedPackageForDetails.assignedStaff.length})</h4>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">You Save:</span>
-                        <span className="font-semibold text-primary">
-                          {Math.round(((selectedPackageForDetails.totalPrice - selectedPackageForDetails.discountedPrice) / selectedPackageForDetails.totalPrice) * 100)}% OFF
-                        </span>
+                      <div className="space-y-2">
+                        {selectedPackageForDetails.assignedStaff.map((staff, idx) => {
+                          const staffName = getStaffName(staff);
+                          const staffPosition = getStaffPosition(staff);
+                          const staffArr: any[] = Array.isArray(staffData)
+                            ? staffData
+                            : ((staffData as any)?.data || []);
+                          const staffObj = staffArr.find((s: any) =>
+                            s._id === staff || s.id === staff ||
+                            s._id === (staff as any)?._id || s.id === (staff as any)?._id
+                          );
+                          const staffPhoto = staffObj?.profileImage || staffObj?.photo || staffObj?.image || (staff as any)?.photo || (staff as any)?.image;
+                          // Merge position from lookup + direct object fields for maximum coverage
+                          const resolvedPosition =
+                            staffPosition ||
+                            staffObj?.position ||
+                            staffObj?.role ||
+                            staffObj?.designation ||
+                            staffObj?.specialization ||
+                            staffObj?.jobTitle ||
+                            staffObj?.title ||
+                            (staff as any)?.position ||
+                            (staff as any)?.role ||
+                            (staff as any)?.designation ||
+                            '';
+                          return (
+                            <div key={idx} className="flex items-center gap-2 text-black">
+                              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-200 border border-gray-200">
+                                {staffPhoto ? (
+                                  <img src={staffPhoto} alt={staffName} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                                    <User className="h-4 w-4 text-primary" />
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-sm leading-tight text-black">{staffName}</p>
+                                {resolvedPosition && (
+                                  <p className="text-xs text-gray-500 leading-tight mt-0.5">{resolvedPosition}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <span className="font-bold">Final Price:</span>
-                        <span className="text-primary font-bold text-xl sm:text-2xl">
-                          ₹{selectedPackageForDetails.discountedPrice?.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="font-bold">Total Price:</span>
-                      <span className="text-primary font-bold text-xl sm:text-2xl">
-                        ₹{selectedPackageForDetails.totalPrice?.toLocaleString('en-IN')}
-                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Footer Actions */}
-              <DialogFooter className="border-t bg-muted/50 p-4 sm:p-5 gap-2 flex-shrink-0">
-                <Button
-                  size="default"
-                  variant="outline"
+              {/* Package Pricing Bar */}
+              <div className="flex-shrink-0 mx-4 mb-4 mt-2 rounded-lg border overflow-hidden flex items-center justify-between" style={{ backgroundColor: '#EBF3FD', borderColor: '#00000082' }}>
+                {/* Left vertical accent */}
+                <div className="w-[5px] self-stretch flex-shrink-0" style={{ backgroundColor: '#422A3C' }} />
+                <span className="font-semibold text-sm text-black flex-1 px-3 py-2.5">Package Pricing</span>
+                <span className="font-bold text-sm text-black px-4 py-2.5">
+                  {selectedPackageForDetails.discountedPrice && selectedPackageForDetails.discountedPrice !== selectedPackageForDetails.totalPrice
+                    ? `₹ ${selectedPackageForDetails.discountedPrice?.toLocaleString('en-IN')}/-`
+                    : `₹ ${selectedPackageForDetails.totalPrice?.toLocaleString('en-IN')}/-`}
+                </span>
+              </div>
+
+              {/* Footer Actions: Cancel + Confirm/Deselect (small width on the right) */}
+              <div className="flex-shrink-0 px-4 pt-4 pb-4 flex justify-end gap-3" style={{ backgroundColor: '#EBF3FD' }}>
+                <button
                   onClick={() => setSelectedPackageForDetails(null)}
-                  className="flex-1 sm:flex-none"
+                  className="w-24 py-1.5 font-bold rounded-xl text-xs transition-colors text-center border"
+                  style={{ backgroundColor: '#EBF3FD', borderColor: '#000000', color: '#000000' }}
                 >
-                  Close
-                </Button>
+                  Cancel
+                </button>
                 {selectedWeddingPackage?.id === (selectedPackageForDetails.id || selectedPackageForDetails._id) ? (
-                  <Button
-                    size="default"
-                    variant="outline"
-                    className="flex-1 sm:flex-none"
+                  <button
                     onClick={() => {
                       handleSelectWeddingPackage(null);
                       setSelectedPackageForDetails(null);
                     }}
+                    className="w-32 py-1.5 font-bold rounded-xl text-xs transition-colors text-center border text-white"
+                    style={{ backgroundColor: '#422A3C', borderColor: '#000000' }}
                   >
-                    <X className="h-4 w-4 mr-2" />
                     Deselect Package
-                  </Button>
+                  </button>
                 ) : (
-                  <Button
-                    size="default"
-                    variant="default"
-                    className="flex-1 sm:flex-none"
+                  <button
                     onClick={() => {
                       handleSelectWeddingPackage(selectedPackageForDetails);
                       setSelectedPackageForDetails(null);
                     }}
+                    className="w-24 py-1.5 font-bold rounded-xl text-xs transition-colors text-center border text-white"
+                    style={{ backgroundColor: '#422A3C', borderColor: '#000000' }}
                   >
-                    <Heart className="h-4 w-4 mr-2" />
-                    Select Package
-                  </Button>
+                    Confirm
+                  </button>
                 )}
-              </DialogFooter>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
       {/* Add-ons Selection Modal */}
       <Dialog open={isAddonModalOpen} onOpenChange={(open) => {
         if (!open) {

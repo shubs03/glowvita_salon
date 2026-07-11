@@ -350,26 +350,30 @@ function OverviewContent() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 1. Total Appointments — red calendar icon */}
         <StatCard
-          icon={LayoutDashboard}
+          imageSrc="/images/calendar (6) 1.png"
           title="Total Appointments"
           value={stats.totalAppointments}
           change={`${stats.totalAppointments} bookings`}
         />
+        {/* 2. Cart Items — orange shopping cart icon */}
         <StatCard
-          icon={IndianRupee}
+          imageSrc="/images/Cart.png"
           title="Cart Items"
           value={stats.cartItemsCount}
           change={`${stats.cartItemsCount} items in cart`}
         />
+        {/* 3. Total Spent — orders / clipboard+box icon */}
         <StatCard
-          icon={Gift}
+          imageSrc="/images/Appoi + Order.png"
           title="Total Spent"
           value={`₹${stats.totalSpent.toLocaleString()}`}
           change="Orders + Appointments"
         />
+        {/* 4. My Wishlist — blue bookmark icon */}
         <StatCard
-          icon={Heart}
+          imageSrc="/images/Saved.png"
           title="My Wishlist"
           value={stats.wishlistItems}
           change={`${stats.wishlistItems} items saved`}
@@ -381,7 +385,8 @@ function OverviewContent() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <PieChart className="h-5 w-5" /> Appointments
+              <img src="/images/Appointment (10).png" alt="Appointments" className="h-7 w-7" />
+              Appointments
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -401,7 +406,9 @@ function OverviewContent() {
                     strokeWidth="2"
                     strokeDasharray="75, 100"
                   />
-                  <text x="18" y="22" className="text-xs font-bold fill-blue-600" textAnchor="middle">{stats.completedAppointments}</text>
+                  <text x="18" y="22" className="text-xs font-bold fill-blue-600" textAnchor="middle">
+                    {stats.completedAppointments}
+                  </text>
                 </svg>
               </div>
               <div className="text-center text-sm text-muted-foreground">Completed appointments</div>
@@ -411,7 +418,8 @@ function OverviewContent() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5" /> Delivered Orders
+              <img src="/images/Delivered orders.png" alt="Appointments" className="h-7 w-7" />
+              Delivered Orders
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -441,7 +449,8 @@ function OverviewContent() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart className="h-5 w-5" /> Monthly Spend
+              <img src="/images/Monthly Spend.png" alt="Appointments" className="h-7 w-7" />
+              Monthly Spend
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -495,7 +504,7 @@ function OverviewContent() {
                   <div className="flex-1 min-w-0">
                     {/* Title + code row */}
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <h4 className="font-semibold truncate text-sm">{offer.title}</h4>
+                      <h4 className="font-bold truncate text-base">{offer.title}</h4>
                       <span className="bg-primary/10 text-primary text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-primary/20 leading-none flex-shrink-0">
                         {offer.code}
                       </span>
@@ -523,16 +532,16 @@ function OverviewContent() {
                       return uniqueServices.length > 0 ? (
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
                           {uniqueServices.map((s: string, i: number) => (
-                            <span key={s + i} className="flex items-center gap-1 text-[11px] text-foreground">
+                            <span key={s + i} className="flex items-center gap-1 text-sm text-foreground">
                               <span className="text-primary font-bold leading-none">•</span>
-                              <span className="font-bold">{s}</span>
+                              <span className="font-semibold">{s}</span>
                             </span>
                           ))}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 mt-1.5">
-                          <span className="text-primary font-bold text-[11px] leading-none">•</span>
-                          <span className="text-[11px] font-bold text-foreground">All services</span>
+                          <span className="text-primary font-bold text-sm leading-none">•</span>
+                          <span className="text-sm font-semibold text-foreground">All services</span>
                         </div>
                       );
                     })()}
@@ -567,8 +576,8 @@ function OverviewContent() {
                     <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-sm leading-tight">{product.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-1.5">₹{product.price.toFixed(2)}</p>
+                    <h4 className="font-bold text-base leading-tight mb-0.5">{product.name}</h4>
+                    <p className="text-sm font-bold text-primary mt-1.5">₹{product.price.toFixed(2)}</p>
                   </div>
                   <div className="flex gap-2 ml-auto">
                     <div
