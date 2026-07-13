@@ -3,7 +3,7 @@
 
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
-import { ThemeToggle } from "./ThemeToggle";
+
 import { Bell, Menu, LogOut, User, CheckCircle, XCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
@@ -101,7 +101,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 
       <div className="flex items-center gap-1.5 sm:gap-4 ml-auto">
         <RegionSelector />
-        <ThemeToggle />
+
 
         {/* Notification Bell with Dropdown */}
         <NotificationDropdown apiEndpoint="/api/admin/notifications" />

@@ -3,7 +3,7 @@
 
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
-import { ThemeToggle } from "./ThemeToggle";
+
 import { Bell, Menu, LogOut, User, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart, Wallet } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
@@ -165,7 +165,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
           <span className="sr-only">Search</span>
         </Button>
 
-        <ThemeToggle />
+
 
         {/* Wallet for Professionals */}
         {(role === 'vendor' || role === 'doctor' || role === 'supplier') && (

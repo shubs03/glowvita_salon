@@ -39,7 +39,7 @@ import {
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import Cookies from "js-cookie";
 import { NotificationDropdown } from "./NotificationDropdown";
-import { ThemeToggle } from "./ThemeToggle";
+
 import NotificationManager from "@/utils/NotificationManager";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 interface User {
@@ -251,9 +251,7 @@ export function MarketingHeader({
                 )}
               </>
             )}
-            <div className="mx-2">
-              <ThemeToggle />
-            </div>
+
             {!isLoading && (
               <>
                 {isAuthenticated && user && (
@@ -355,7 +353,7 @@ export function MarketingHeader({
                 <NotificationDropdown apiEndpoint="/api/notifications" />
               </div>
             )}
-            <ThemeToggle />
+
             <Button
               variant="ghost"
               size="icon"

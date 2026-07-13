@@ -121,14 +121,14 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
             nameKey="name"
             labelLine={!isMobileScreen}
             style={{ fontSize: '11px' }}
-            label={isMobileScreen ? ({ percent }) => `${(percent * 100).toFixed(0)}%` : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            label={isMobileScreen ? ({ percent }) => `${(percent * 100).toFixed(0)}%` : ({ name, percent }) => `${name.length > 20 ? name.substring(0, 20) + '...' : name}: ${(percent * 100).toFixed(0)}%`}
           >
             {chartData.map((entry: any, index: number) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: "20px" }} />
+          <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: "20px" }} formatter={(value) => value.length > 20 ? value.substring(0, 20) + '...' : value} />
         </PieChart>
       </ResponsiveContainer>
     </div>
