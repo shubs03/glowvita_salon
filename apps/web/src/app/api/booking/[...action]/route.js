@@ -1057,6 +1057,29 @@ async function handleSlotLock(body) {
       }
     }
 
+    // SECURITY: Prevent booking if vendor subscription is inactive/expired
+    try {
+      const VendorModel = (await import("@repo/lib/models/Vendor.model")).default;
+      const vendor = await VendorModel.findById(vendorId).select('subscription').lean();
+      
+      if (vendor && vendor.subscription) {
+        const topStatus = (vendor.subscription.status || '').toLowerCase().trim();
+        const isExplicitlyExpired = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'].includes(topStatus);
+        
+        if (isExplicitlyExpired) {
+          return Response.json({
+            success: false,
+            error: {
+              code: 'VENDOR_SUBSCRIPTION_INACTIVE',
+              message: 'Salon is currently unavailable for bookings.',
+            }
+          }, { status: 403 });
+        }
+      }
+    } catch (err) {
+      console.error("Error checking vendor subscription during lock:", err);
+    }
+
     const {
       staffId,
       serviceId: rawServiceId,

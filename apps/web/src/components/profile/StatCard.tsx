@@ -20,7 +20,7 @@ export const StatCard = ({ icon: Icon, imageSrc, title, value, change }: StatCar
           {imageSrc ? (
             <Image src={imageSrc} alt={title} width={32} height={32} className="object-contain" />
           ) : Icon ? (
-            <Icon className="h-5 w-5 text-primary" />
+            <Icon className="h-8 w-8 text-primary" />
           ) : null}
         </div>
         <p className="text-sm font-semibold text-blue-600">{change}</p>

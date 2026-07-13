@@ -46,11 +46,11 @@ export default function ReferralsPage() {
   const referralCode = referralData?.data?.referralCode || 'LOADING';
   const isValidCode = referralCode !== 'N/A' && referralCode !== 'LOADING' && referralCode !== 'NOTAVAILABLE';
   const clientReferralLink = `${NEXT_PUBLIC_WEB_URL}/client-register?ref=${referralCode}`;
-  
 
-    
+
+
   const partnerReferralLink = `${NEXT_PUBLIC_CRM_URL}/auth/register?ref=${referralCode}`;
-  
+
   const referralHistory = referralData?.data?.referralHistory || [];
   const stats = referralData?.data?.stats || { totalEarnings: 0, successfulReferrals: 0, totalReferrals: 0 };
 
@@ -79,8 +79,8 @@ export default function ReferralsPage() {
   const filteredHistory = useMemo(() => {
     return referralHistory.filter((referral: any) =>
       (referral.friend.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (statusFilter === 'all' || 
-       (statusFilter === 'Completed' ? (referral.status === 'Completed' || referral.status === 'Bonus Paid') : referral.status === statusFilter))
+      (statusFilter === 'all' ||
+        (statusFilter === 'Completed' ? (referral.status === 'Completed' || referral.status === 'Bonus Paid') : referral.status === statusFilter))
     );
   }, [referralHistory, searchTerm, statusFilter]);
 
@@ -91,10 +91,10 @@ export default function ReferralsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': 
+      case 'Completed':
       case 'Bonus Paid':
         return 'bg-green-100 text-green-800';
-      case 'Pending': 
+      case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -117,8 +117,8 @@ export default function ReferralsPage() {
   const totalEarnings = referralHistory
     .filter((r: any) => r.status === 'Completed' || r.status === 'Bonus Paid')
     .reduce((acc: number, r: any) => {
-      const numericValue = typeof r.reward === 'string' 
-        ? parseFloat(r.reward.replace(/[^\d.]/g, '')) 
+      const numericValue = typeof r.reward === 'string'
+        ? parseFloat(r.reward.replace(/[^\d.]/g, ''))
         : Number(r.reward);
       return acc + (isNaN(numericValue) ? 0 : numericValue);
     }, 0);
@@ -143,14 +143,14 @@ export default function ReferralsPage() {
     }
     const reward = type === 'friend' ? bonuses.c2c.referrerBonus : bonuses.c2v.referrerBonus;
     const friendReward = bonuses.c2c.refereeBonus;
-    
+
     let message = '';
     if (type === 'friend') {
       message = `Hey! Join GlowVita using my referral link and get ₹${friendReward} off on your first salon booking! 🧖‍♀️💅\n\nRegister here: ${link}`;
     } else {
       message = `Hey! Register your Salon or Spa on GlowVita and manage your business easily! 🏢✂️\n\nRegister here: ${link}`;
     }
-    
+
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
@@ -170,11 +170,13 @@ export default function ReferralsPage() {
             <CardHeader className="bg-blue-50/50 border-b border-blue-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-blue-900">
-                    <UserPlus className="w-5 h-5" /> 
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold leading-tight text-blue-900">
+                    <UserPlus className="w-5 h-5" />
                     Friend Referral Program
                   </CardTitle>
-                  <CardDescription className="text-blue-700/70">Invite friends to book salon & spa services</CardDescription>
+                  <CardDescription className="mt-0.5 text-xs sm:text-sm text-blue-700/70">
+                    Invite friends to book salon & spa services
+                  </CardDescription>
                 </div>
                 <Badge className="bg-blue-600">Earn ₹{bonuses.c2c.referrerBonus}</Badge>
               </div>
@@ -205,11 +207,13 @@ export default function ReferralsPage() {
             <CardHeader className="bg-purple-50/50 border-b border-purple-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-purple-900">
-                    <Building className="w-5 h-5" /> 
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold leading-tight text-purple-900">
+                    <Building className="w-5 h-5" />
                     Partner Referral Program
                   </CardTitle>
-                  <CardDescription className="text-purple-700/70">Invite Salons, Doctors, or Suppliers to GlowVita</CardDescription>
+                  <CardDescription className="mt-0.5 text-xs sm:text-sm text-purple-700/70">
+                    Invite Salons, Doctors, or Suppliers to GlowVita
+                  </CardDescription>
                 </div>
                 <Badge className="bg-purple-600">Earn ₹{bonuses.c2v.referrerBonus}</Badge>
               </div>
@@ -238,8 +242,12 @@ export default function ReferralsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Share & Earn</CardTitle>
-            <CardDescription>Share your code to start earning rewards today.</CardDescription>
+            <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+              Share & Earn
+            </CardTitle>
+            <CardDescription className="mt-0.5 text-xs sm:text-sm">
+              Share your code to start earning rewards today.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -260,7 +268,7 @@ export default function ReferralsPage() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="space-y-4 pt-2 border-t">
               <div>
                 <Label className="text-xs font-semibold flex items-center gap-1">
@@ -307,7 +315,7 @@ export default function ReferralsPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="pt-4 flex flex-col gap-2">
               <Button
                 variant="outline"
@@ -325,9 +333,9 @@ export default function ReferralsPage() {
                 <img src="/images/Salon Details (2).png" alt="Salon" className="h-4 w-4 mr-2 object-contain" />
                 Share Partner Link on WhatsApp
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-xs text-muted-foreground hover:bg-transparent"
                 onClick={() => {
                   const subject = encodeURIComponent("Join GlowVita - Your Premium Salon Booking Platform");
@@ -347,8 +355,12 @@ export default function ReferralsPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle>Referral History</CardTitle>
-              <CardDescription>Track the status of your referrals.</CardDescription>
+              <CardTitle className="text-lg sm:text-xl font-bold leading-tight">
+                Referral History
+              </CardTitle>
+              <CardDescription className="mt-0.5 text-xs sm:text-sm">
+                Track the status of your referrals.
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               <div className="relative">

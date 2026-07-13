@@ -334,7 +334,7 @@ export default function CartPage() {
         hideMenuItems={true}
       />
       <PageContainer className="max-w-7xl">
-        <div className="py-8 lg:py-12">
+        <div className="pt-4 pb-8 lg:pt-1 lg:pb-12">
           {isSubscriptionExpired && (
             <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left shadow-sm">
               <div className="bg-red-100 p-3 rounded-full">
@@ -343,7 +343,7 @@ export default function CartPage() {
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-red-800 mb-1">Action Required: Salon Unavailable</h3>
                 <p className="text-red-700">
-                  The salon you're trying to purchase from is temporarily closed for product orders. 
+                  The salon you're trying to purchase from is temporarily closed for product orders.
                   You can keep these items in your cart, but you won't be able to checkout until the salon is back online.
                 </p>
               </div>

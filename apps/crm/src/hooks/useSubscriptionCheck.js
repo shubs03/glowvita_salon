@@ -62,9 +62,12 @@ export function useSubscriptionCheck() {
         const evaluatedEntries = uniqueEntries.map(entry => {
             const startTime = getTime(entry.startDate);
             const endTime = getTime(entry.endDate);
+            const dbStatus = (entry.status || '').toLowerCase().trim();
+            
+            const isExplicitlyExpired = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'].includes(dbStatus);
             let displayStatus = "Expired";
 
-            if (endTime > nowTime) {
+            if (!isExplicitlyExpired && endTime > nowTime) {
                 if (!hasActivePlan && startTime <= nowTime) {
                     displayStatus = "Active";
                     hasActivePlan = true;
@@ -73,6 +76,9 @@ export function useSubscriptionCheck() {
                     displayStatus = "Scheduled";
                     if (!scheduledEntry) scheduledEntry = entry;
                 }
+            } else if (dbStatus === 'scheduled') {
+                displayStatus = "Scheduled";
+                if (!scheduledEntry) scheduledEntry = entry;
             }
 
             return { ...entry, displayStatus };
