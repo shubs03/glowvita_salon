@@ -298,8 +298,30 @@ export const GET = async (request) => {
         isWeddingService: {
           $max: {
             $or: [
-              { $eq: ["$services.weddingService.available", true] },
-              { $eq: ["$services.serviceWeddingService.available", true] },
+              {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: { $ifNull: ["$services", []] },
+                        as: "s",
+                        cond: {
+                          $and: [
+                            { $eq: ["$$s.status", "approved"] },
+                            {
+                              $or: [
+                                { $eq: ["$$s.weddingService.available", true] },
+                                { $eq: ["$$s.serviceWeddingService.available", true] }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  0
+                ]
+              },
               {
                 $gt: [
                   {
@@ -307,7 +329,12 @@ export const GET = async (request) => {
                       $filter: {
                         input: { $ifNull: ["$weddingPackageList", []] },
                         as: "pkg",
-                        cond: { $eq: ["$$pkg.isActive", true] },
+                        cond: {
+                          $and: [
+                            { $eq: ["$$pkg.isActive", true] },
+                            { $eq: ["$$pkg.status", "approved"] }
+                          ]
+                        },
                       },
                     },
                   },
