@@ -1,8 +1,8 @@
 import React from 'react';
 
 const ICONS = {
-  star: "/images/star 7.png",
-  pin: "/images/placeholder 7.png",
+  star: "/images/star 6.png",
+  pin: "/images/placeholder 6.png",
   bolt: "/images/storm 2.png",
   chat: "/images/speech-bubble 1.png",
   doc: "/images/file 1.png",

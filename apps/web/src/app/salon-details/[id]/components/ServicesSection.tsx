@@ -292,7 +292,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                 </div>
 
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Image src="/images/clock (2) 4.png" alt="Time" width={12} height={12} />
+                  <Image src="/images/clock (20).png" alt="Time" width={12} height={12} />
                   <span className="text-xs text-black">{service.duration} mins</span>
                 </div>
 

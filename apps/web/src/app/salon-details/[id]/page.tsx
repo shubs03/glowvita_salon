@@ -132,7 +132,7 @@ const StaffDisplay = ({
           __html: `
           .staff-scroll::-webkit-scrollbar { display: none; }
         `}} />
-        <div 
+        <div
           className="staff-scroll flex overflow-x-auto gap-6 pb-4"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
@@ -168,7 +168,7 @@ const StaffDisplay = ({
         __html: `
         .staff-scroll::-webkit-scrollbar { display: none; }
       `}} />
-      <div 
+      <div
         className="staff-scroll flex overflow-x-auto gap-6 pb-6 pt-2 snap-x"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
@@ -189,7 +189,7 @@ const StaffDisplay = ({
             <h4 className="font-bold text-sm md:text-base mb-0.5 text-black">
               {member.name || "Staff Member"}
             </h4>
-            <p className="text-xs md:text-sm text-black font-medium capitalize">
+            <p className="text-xs md:text-sm text-black font-normal capitalize">
               {member.role || "Team Member"}
             </p>
           </div>
@@ -737,7 +737,7 @@ export default function SalonDetailsPage() {
       const startTime = getEntryTime(entry.startDate);
       const endTime = getEntryTime(entry.endDate);
       const dbStatus = (entry.status || '').toLowerCase().trim();
-      
+
       const isExplicitlyExpired = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'].includes(dbStatus);
 
       if (!isExplicitlyExpired && endTime > nowTime) {
