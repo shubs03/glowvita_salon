@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown, Gift, Users, FileText, Stethoscope, Box, Heart, Receipt, DollarSign, Bell, Truck, Store, HelpCircle, PlusSquare, Clock, Scissors, Megaphone } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@repo/ui/cn";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { useAppDispatch } from "@repo/store/hooks";
@@ -539,9 +538,6 @@ export function MarketingHeader({
                 )}
               </>
             )}
-            <div className="mx-2">
-              <ThemeToggle />
-            </div>
             {!isLoading && (
               <>
                 {isAuthenticated && user ? (
@@ -633,7 +629,6 @@ export function MarketingHeader({
 
           {/* Mobile Nav Toggle */}
           <div className="lg:hidden flex items-center gap-2">
-            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
