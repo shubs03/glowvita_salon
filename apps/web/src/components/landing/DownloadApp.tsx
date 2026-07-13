@@ -2,7 +2,7 @@ import React from 'react';
 
 const DownloadApp = () => {
   return (
-    <section id="download-app" className=" mt-0 pt-0 pb-6 sm:pb-8 lg:pb-0 bg-[#FAFAFA] overflow-hidden">
+    <section id="download-app" className=" mt-0 pt-0 pb-0 bg-[#FAFAFA] overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12 items-center">
           {/* Left Content */}

@@ -481,7 +481,7 @@ export default function AllProductsPage() {
                 >
                   {/* Render cards twice for seamless infinite loop */}
                   {[...products.filter(p => p.salePrice && p.salePrice < p.price),
-                    ...products.filter(p => p.salePrice && p.salePrice < p.price)]
+                  ...products.filter(p => p.salePrice && p.salePrice < p.price)]
                     .map((product, idx) => (
                       <div
                         key={`${product.id}-${idx}`}
@@ -518,11 +518,10 @@ export default function AllProductsPage() {
             <main className="lg:col-span-12">
               {/* 8. Testimonials Section */}
               <Testimonials />
-
-              <DownloadApp />
             </main>
           </div>
         </div>
+        <DownloadApp />
       </Suspense>
     </PageContainer>
   );
