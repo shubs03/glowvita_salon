@@ -718,34 +718,68 @@ export const Step3_TimeSlot = memo(({
             <p className="text-xs text-muted-foreground mt-2">Try selecting a different date or a different professional.</p>
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {slots.map((slot, index) => {
-                const isSelected = selectedTime === slot.startTime;
+          <div className="max-h-[600px] overflow-y-auto pr-2 no-scrollbar space-y-5">
+            {(() => {
+              const morningSlots = slots.filter((s: TimeSlot) => {
+                const h = parseInt(s.startTime.split(':')[0], 10);
+                return h < 12;
+              });
+              const afternoonSlots = slots.filter((s: TimeSlot) => {
+                const h = parseInt(s.startTime.split(':')[0], 10);
+                return h >= 12 && h < 16;
+              });
+              const eveningSlots = slots.filter((s: TimeSlot) => {
+                const h = parseInt(s.startTime.split(':')[0], 10);
+                return h >= 16;
+              });
+
+              const renderGroup = (label: string, dotColor: string, groupSlots: TimeSlot[]) => {
+                if (groupSlots.length === 0) return null;
                 return (
-                  <button
-                    key={`${slot.startTime}-${index}`}
-                    type="button"
-                    onClick={() => !isLocking && handleTimeSelect(slot)}
-                    disabled={isLocking}
-                    className={cn(
-                      "py-2 px-2 border rounded-lg transition-colors text-center relative overflow-hidden",
-                      isSelected ? "bg-[#EBF3FD] border-black" : "bg-white border-black/40",
-                      isLocking && "opacity-50 cursor-wait"
-                    )}
-                  >
-                    {isLocking && isSelected && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-                        <Loader2 className="h-5 w-5 animate-spin text-[#422A3C]" />
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-black">
-                      {slot.startTime} - {slot.endTime}
-                    </span>
-                  </button>
+                  <div key={label}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: dotColor }} />
+                      <span className="text-sm font-medium text-gray-700">{label}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {groupSlots.map((slot: TimeSlot, index: number) => {
+                        const isSelected = selectedTime === slot.startTime;
+                        return (
+                          <button
+                            key={`${slot.startTime}-${index}`}
+                            type="button"
+                            onClick={() => !isLocking && handleTimeSelect(slot)}
+                            disabled={isLocking}
+                            className={cn(
+                              "py-2 px-2 border rounded-lg transition-colors text-center relative overflow-hidden",
+                              isSelected ? "bg-[#EBF3FD] border-black" : "bg-white border-black/40",
+                              isLocking && "opacity-50 cursor-wait"
+                            )}
+                          >
+                            {isLocking && isSelected && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                                <Loader2 className="h-5 w-5 animate-spin text-[#422A3C]" />
+                              </div>
+                            )}
+                            <span className="text-sm font-medium text-black">
+                              {slot.startTime} - {slot.endTime}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
-              })}
-            </div>
+              };
+
+              return (
+                <>
+                  {renderGroup('Morning', '#F5A623', morningSlots)}
+                  {renderGroup('Afternoon', '#E07B39', afternoonSlots)}
+                  {renderGroup('Evening', '#27AE60', eveningSlots)}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

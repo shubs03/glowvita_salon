@@ -96,6 +96,7 @@ interface Step1ServicesProps {
   initialViewMode?: 'services' | 'packages';
   priceBreakdown?: any;
   taxFeeSettings?: any;
+  onClearServices?: () => void;
 }
 
 export function Step1_Services({
@@ -118,6 +119,7 @@ export function Step1_Services({
   initialViewMode = 'services',
   priceBreakdown,
   taxFeeSettings,
+  onClearServices,
 }: Step1ServicesProps) {
   // Get vendor ID from URL params
   const params = useParams();
@@ -534,7 +536,10 @@ export function Step1_Services({
       {hasWeddingPackages && (
         <div className="flex gap-2 md:gap-4 mb-6 overflow-x-auto pb-1">
           <button
-            onClick={() => setViewMode('services')}
+            onClick={() => {
+              setViewMode('services');
+              if (onWeddingPackageSelect) onWeddingPackageSelect(null);
+            }}
             className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors"
             style={{
               background: viewMode === 'services' ? '#422A3C' : '#ffffff',
@@ -547,7 +552,10 @@ export function Step1_Services({
             Individual Services
           </button>
           <button
-            onClick={() => setViewMode('packages')}
+            onClick={() => {
+              setViewMode('packages');
+              if (onClearServices) onClearServices();
+            }}
             className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors"
             style={{
               background: viewMode === 'packages' ? '#422A3C' : '#ffffff',
