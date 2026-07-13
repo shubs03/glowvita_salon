@@ -232,14 +232,9 @@ export const GET = async (request) => {
                       input: { $ifNull: [{ $arrayElemAt: ["$vendorServicesItems.services", 0] }, []] },
                       as: "s",
                       cond: {
-                        $and: [
-                          { $eq: ["$$s.status", "approved"] },
-                          {
-                            $or: [
-                              { $eq: ["$$s.weddingService.available", true] },
-                              { $eq: ["$$s.serviceWeddingService.available", true] }
-                            ]
-                          }
+                        $or: [
+                          { $eq: ["$$s.weddingService.available", true] },
+                          { $eq: ["$$s.serviceWeddingService.available", true] }
                         ]
                       }
                     }
@@ -255,12 +250,7 @@ export const GET = async (request) => {
                     $filter: {
                       input: { $ifNull: ["$weddingPackagesItems", []] },
                       as: "pkg",
-                      cond: { 
-                        $and: [
-                          { $eq: ["$$pkg.isActive", true] },
-                          { $eq: ["$$pkg.status", "approved"] }
-                        ]
-                      }
+                      cond: { $eq: ["$$pkg.isActive", true] }
                     }
                   }
                 },
