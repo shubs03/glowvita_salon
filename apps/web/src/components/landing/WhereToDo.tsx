@@ -308,12 +308,12 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
         vendor.isHomeService === true ||
         (vendor.vendorType && ["hybrid", "home-only", "vendor-home-travel"].includes(vendor.vendorType)) ||
         (vendor.subCategories?.includes("at-home")) ||
-        (vendor.services?.some((s: any) => s.homeService?.available || s.serviceHomeService?.available));
+        (vendor.services?.some((s: any) => (!s.status || s.status === 'approved') && (s.homeService?.available || s.serviceHomeService?.available)));
 
       const isWeddingService =
         vendor.isWeddingService === true ||
-        vendor.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available) ||
-        (vendor.vendorServicesItems?.[0]?.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available));
+        vendor.services?.some((s: any) => (!s.status || s.status === 'approved') && (s.weddingService?.available || s.serviceWeddingService?.available)) ||
+        (vendor.vendorServicesItems?.[0]?.services?.some((s: any) => (!s.status || s.status === 'approved') && (s.weddingService?.available || s.serviceWeddingService?.available)));
 
       return {
         id: vendor._id,
