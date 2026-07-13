@@ -1,10 +1,12 @@
 import path from "path";
 import fs from "fs";
 
-// ─── Upload directories ───────────────────────────────────────────────────────
-// Local dev:   files live in apps/admin/public/uploads/  (served by Next.js dev server)
-// Production:  files live in /home/glowvita/uploads/     (shared Docker volume, served
-//              via the admin app's /api/local-image route)
+
+// Define base URLs
+const LOCAL_BASE_URL = "http://localhost:3001/uploads/";
+const VPS_BASE_URL = "https://glowvitasalon.com/glowvita/uploads/";
+
+
 const isProduction = process.env.NODE_ENV === 'production' || process.platform === 'linux';
 
 const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
@@ -12,30 +14,14 @@ const VPS_UPLOAD_DIR   = "/home/glowvita/uploads";
 
 const UPLOAD_DIR = isProduction ? VPS_UPLOAD_DIR : LOCAL_UPLOAD_DIR;
 
-// ─── Public URL prefix ────────────────────────────────────────────────────────
-// We store RELATIVE paths (/uploads/filename) instead of absolute localhost/domain
-// URLs. This makes stored URLs environment-agnostic:
-//   • Local dev:   CRM next.config.js rewrites /uploads/* → http://localhost:3002/uploads/*
-//                  Admin Next.js dev server serves public/uploads/ at /uploads/
-//   • Production:  CRM next.config.js rewrites /uploads/* → http://localhost:3002/uploads/*
-//                  Admin container serves /api/local-image?url=… from the shared volume
-// Both work without changing any DB records between environments.
-const BASE_URL = "/uploads/";
+const BASE_URL = isProduction ? VPS_BASE_URL : LOCAL_BASE_URL;
 
-console.log(`Upload configuration: DIR=${UPLOAD_DIR}, BASE_URL=${BASE_URL}, isProduction=${isProduction}`);
 
 // Ensure the upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-/**
- * Uploads a file buffer and returns its relative URL (/uploads/filename).
- * @param {Buffer} buffer - The file buffer
- * @param {string} fileName - Name for the uploaded file (without extension)
- * @param {string} mimeType - The file's MIME type
- * @returns {Promise<string|null>} - Relative URL of the uploaded file or null on failure
- */
 export async function uploadFile(buffer, fileName, mimeType) {
     try {
         const extension = mimeType.split("/")[1] || 'jpg';
@@ -52,12 +38,6 @@ export async function uploadFile(buffer, fileName, mimeType) {
     }
 }
 
-/**
- * Uploads a base64-encoded file and returns its relative URL (/uploads/filename).
- * @param {string} base64String - Base64 encoded file data (data:<mime>;base64,<data>)
- * @param {string} fileName - Name for the uploaded file (without extension)
- * @returns {Promise<string|null>} - Relative URL of the uploaded file or null on failure
- */
 export async function uploadBase64(base64String, fileName) {
     try {
         console.log(`uploadBase64 called for ${fileName}`);
@@ -90,12 +70,6 @@ export async function uploadBase64(base64String, fileName) {
     }
 }
 
-/**
- * Deletes a file from the upload directory.
- * Accepts either a relative path (/uploads/filename) or any URL containing the filename.
- * @param {string} fileUrl - The URL or path of the file to delete
- * @returns {Promise<boolean>} - True if deletion was successful
- */
 export async function deleteFile(fileUrl) {
     try {
         const fileName = fileUrl.split('/').pop();
