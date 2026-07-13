@@ -6,7 +6,7 @@ const DownloadApp = () => {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12 items-center">
           {/* Left Content */}
-          <div className="order-2 lg:order-1 lg:col-span-3 text-center lg:text-left w-full">
+          <div className="order-2 lg:order-1 lg:col-span-3 text-center lg:text-left w-full self-start pt-4 lg:pt-6">
             <h2
               className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-4 sm:mb-5 lg:mb-6"
               style={{ color: "#252B42" }}

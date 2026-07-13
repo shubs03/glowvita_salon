@@ -275,7 +275,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
         <ErrorState />
       ) : filteredServices.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredServices.map((service: any) => (
+          {filteredServices.slice(0, 8).map((service: any) => (
             <div key={service.id} className="flex p-2.5 rounded-xl hover:shadow-sm transition-shadow relative" style={{ border: '1px solid #00000080', background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' }}>
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 mr-3">
                 <Image src={service.image} alt={service.name} fill className="object-cover" />
