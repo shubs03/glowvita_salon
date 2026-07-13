@@ -225,13 +225,14 @@ export function PackageTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDeleteClick(pkg)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          onClick={() => pkg.status !== 'approved' && onDeleteClick(pkg)}
+                          disabled={pkg.status === 'approved'}
+                          className={`h-8 w-8 p-0 ${pkg.status === 'approved' ? 'opacity-30 cursor-not-allowed text-muted-foreground' : 'text-red-500 hover:text-red-700'}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                         <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] font-medium text-background opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">
-                          Delete
+                          {pkg.status === 'approved' ? 'Cannot delete approved package' : 'Delete'}
                         </span>
                       </div>
                     </div>
