@@ -8,7 +8,7 @@ const HeroSection = () => {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ 
+      element.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });
@@ -20,29 +20,16 @@ const HeroSection = () => {
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
-      {/* Right-side panel: Rectangle 5.png image */}
-      <div className="absolute top-0 right-0 h-full" style={{ width: "65%" }}>
+      {/* Full-width image background */}
+      <div className="absolute inset-0">
         <img
           src="/images/Rectangle 5.png"
-          alt="Salon"
+          alt="Products"
           className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center right" }}
+          style={{ objectFit: "cover", objectPosition: "center" }}
         />
       </div>
 
-      {/* Gradient — solid maroon left, blending to transparent right */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(to right,
-            rgba(66, 42, 60, 1)     0%,
-            rgba(66, 42, 60, 1)     49%,
-            rgba(66, 42, 60, 0.85)  60%,
-            rgba(66, 42, 60, 0.80)  73%,
-            rgba(66, 42, 60, 0.31)  78%,
-            rgba(66, 42, 60, 0)     100%)`,
-        }}
-      />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl py-10 md:py-0">

@@ -178,23 +178,15 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#130C11" }} />
 
-      {/* Right-side panel for the image */}
-      <div className="absolute top-0 right-0 h-full w-full lg:w-[50%]">
+      {/* Full-width image background */}
+      <div className="absolute inset-0">
         <img
           src="/images/product-hero-bg.png"
           alt="Products"
           className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center right" }}
+          style={{ objectFit: "cover", objectPosition: "center" }}
         />
       </div>
-
-      {/* Gradient Overlay */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: "linear-gradient(90deg, #130C11 0%, #291A25 0%, #422A3C 20%, #56374E 50%, rgba(86, 55, 78, 0.7) 70%, rgba(66, 42, 60, 0) 95%)"
-        }}
-      />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl py-12 md:py-20 lg:py-0">
