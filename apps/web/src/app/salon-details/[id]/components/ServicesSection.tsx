@@ -299,14 +299,14 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Image src="/images/rupee (2) 1.png" alt="Price" width={12} height={12} />
-                    <span className="text-xs sm:text-sm text-black font-medium">
+                    <span className="text-xs sm:text-sm text-black">
                       {service.discountedPrice && service.discountedPrice < service.price ? (
                         <>
                           <span className="line-through text-black mr-1">{service.price}/-</span>
-                          {service.discountedPrice}/-
+                          <span className="font-bold">{service.discountedPrice}/-</span>
                         </>
                       ) : (
-                        `${service.price}/-`
+                        <span className="font-bold">{service.price}/-</span>
                       )}
                     </span>
                   </div>
