@@ -48,6 +48,7 @@ interface User {
   emailAddress?: string;
   avatarUrl?: string;
   profilePicture?: string;
+  profileImage?: string;
 }
 
 interface MenuItemProps {
@@ -269,7 +270,7 @@ export function MarketingHeader({
                       >
                         <Avatar className="h-9 w-9 ring-2 ring-primary/50">
                           <AvatarImage
-                            src={user?.profilePicture || user?.avatarUrl}
+                            src={user?.profileImage || user?.profilePicture || user?.avatarUrl}
                             alt={`${user?.firstName || "User"} avatar`}
                           />
                           <AvatarFallback className="bg-primary text-white">
@@ -287,7 +288,7 @@ export function MarketingHeader({
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 ring-2 ring-primary/50">
                             <AvatarImage
-                              src={user?.profilePicture || user?.avatarUrl}
+                              src={user?.profileImage || user?.profilePicture || user?.avatarUrl}
                               alt={`${user?.firstName || "User"} avatar`}
                             />
                             <AvatarFallback className="bg-primary text-white">

@@ -118,7 +118,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
               <CardHeader className="text-center p-6 border-b border-border/20">
                 <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
                   <AvatarImage
-                    src={user?.profilePicture}
+                    src={user?.profileImage || user?.profilePicture}
                     alt={user?.firstName}
                   />
                   <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
