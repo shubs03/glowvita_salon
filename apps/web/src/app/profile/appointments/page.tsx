@@ -80,7 +80,7 @@ interface AppointmentCardProps {
 
 // ─── Invoice Modal ────────────────────────────────────────────────
 const InvoiceModal = ({ appointmentId, onClose }: { appointmentId: string; onClose: () => void }) => {
-    const { data, isLoading, isError, error } = useGetAppointmentInvoiceQuery(appointmentId);
+    const { data, isLoading, isError, error, refetch } = useGetAppointmentInvoiceQuery(appointmentId, { refetchOnMountOrArgChange: true });
 
     const handleDownload = async () => {
         const element = document.getElementById('web-invoice-pdf-area');
