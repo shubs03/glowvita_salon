@@ -48,6 +48,7 @@ const HeroSection = () => {
               fontSize: "clamp(42px, 6vw, 70px)",
               lineHeight: "115%",
               letterSpacing: "-0.01em",
+              color: "#F7E5C1",
             }}
           >
             Choose the Best
