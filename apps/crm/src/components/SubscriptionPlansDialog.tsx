@@ -203,7 +203,7 @@ export function SubscriptionPlansDialog({
                   ],
                 },
               },
-              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+              sequence: ['block.upi', 'card', 'netbanking'],
             },
           },
           modal: { 

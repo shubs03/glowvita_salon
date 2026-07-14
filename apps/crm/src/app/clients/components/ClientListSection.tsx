@@ -180,6 +180,9 @@ export default function ClientListSection({
                                 src={client.profilePicture || `https://placehold.co/40x40.png?text=${client.fullName[0]}`}
                                 alt={client.fullName}
                                 className="w-10 h-10 rounded-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).src = `https://placehold.co/40x40.png?text=${encodeURIComponent(client.fullName[0] || '?')}`;
+                                }}
                               />
 
                             </div>
