@@ -692,14 +692,14 @@ export function Step1_Services({
                       <div className="flex items-center justify-between mt-auto">
                         <div className="flex items-center gap-1.5">
                           <Image src="/images/rupee (2) 1.png" alt="Price" width={14} height={14} />
-                          <span className="text-xs sm:text-sm text-black font-medium">
+                          <span className="text-xs sm:text-sm text-black">
                             {service.discountedPrice && parseFloat(String(service.discountedPrice)) < parseFloat(String(service.price)) ? (
                               <>
                                 <span className="line-through text-black mr-1">{service.price}/-</span>
-                                {service.discountedPrice}/-
+                                <span className="font-bold">{service.discountedPrice}/-</span>
                               </>
                             ) : (
-                              `${service.price}/-`
+                              <span className="font-bold">{service.price}/-</span>
                             )}
                           </span>
                         </div>

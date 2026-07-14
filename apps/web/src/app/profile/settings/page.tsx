@@ -30,6 +30,7 @@ export default function SettingsPage() {
         },
         gender: '',
         birthdayDate: '',
+        profileImage: '',
     });
 
     const [passwords, setPasswords] = useState({
@@ -51,6 +52,49 @@ export default function SettingsPage() {
     const [isProfileLoading, setIsProfileLoading] = useState(false);
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+            const maxSize = 2 * 1024 * 1024; // 2MB
+
+            if (!validTypes.includes(file.type)) {
+                toast.error('Please upload a valid image file (JPG, PNG, or WEBP).');
+                return;
+            }
+
+            if (file.size > maxSize) {
+                toast.error('Image size should be maximum 2MB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                setFormData(prev => ({ ...prev, profileImage: reader.result as string }));
+            };
+            reader.onerror = (error) => {
+                console.error("Error reading file:", error);
+                toast.error("Failed to read image file");
+            };
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setFormData(prev => ({ ...prev, profileImage: '' }));
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const getInitials = () => {
+        const first = formData.firstName ? formData.firstName[0] : '';
+        const last = formData.lastName ? formData.lastName[0] : '';
+        return (first + last).toUpperCase() || 'U';
+    };
+
     useEffect(() => {
         if (user) {
             setFormData({
@@ -69,6 +113,7 @@ export default function SettingsPage() {
                 },
                 gender: user.gender || '',
                 birthdayDate: user.birthdayDate || '',
+                profileImage: user.profileImage || '',
             });
         }
     }, [user]);
@@ -182,6 +227,7 @@ export default function SettingsPage() {
                     notificationPreferences: formData.notificationPreferences,
                     gender: formData.gender,
                     birthdayDate: formData.birthdayDate,
+                    profileImage: formData.profileImage,
                 }),
             });
 
@@ -275,6 +321,55 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-8">
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
+                    {/* Profile Picture Section */}
+                    <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-border/10">
+                        <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                            <Avatar className="h-24 w-24 ring-2 ring-primary/20 hover:ring-primary transition-all duration-300">
+                                <AvatarImage src={formData.profileImage} alt={`${formData.firstName} ${formData.lastName}`} className="object-cover" />
+                                <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
+                                    {getInitials()}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <Camera className="h-6 w-6 text-white" />
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center sm:items-start gap-2">
+                            <h3 className="text-sm font-semibold">Profile Picture</h3>
+                            <p className="text-xs text-muted-foreground text-center sm:text-left">
+                                Supports JPG, PNG, or WEBP. Max size 2MB.
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="text-xs"
+                                >
+                                    Change Picture
+                                </Button>
+                                {formData.profileImage && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleRemoveImage}
+                                        className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                        Remove
+                                    </Button>
+                                )}
+                            </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                        </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="firstName">First Name</Label>

@@ -80,7 +80,7 @@ interface AppointmentCardProps {
 
 // ─── Invoice Modal ────────────────────────────────────────────────
 const InvoiceModal = ({ appointmentId, onClose }: { appointmentId: string; onClose: () => void }) => {
-    const { data, isLoading, isError, error } = useGetAppointmentInvoiceQuery(appointmentId);
+    const { data, isLoading, isError, error, refetch } = useGetAppointmentInvoiceQuery(appointmentId, { refetchOnMountOrArgChange: true });
 
     const handleDownload = async () => {
         const element = document.getElementById('web-invoice-pdf-area');
@@ -1028,7 +1028,7 @@ export default function AppointmentsPage() {
     // A lucide-icon-compatible wrapper around a custom image
     const AppointmentCalendarIcon = ({ className }: { className?: string }) => (
         <img
-            src="/images/Date (2).png"
+            src="/images/Appointment (10).png"
             alt="Appointments"
             className={`${className} h-7 w-7`}
         />

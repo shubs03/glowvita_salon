@@ -69,6 +69,8 @@ function OverviewContent() {
   const [productWishlistCount, setProductWishlistCount] = useState(0);
   const [showAllAppointments, setShowAllAppointments] = useState(false);
   const [showAllOrders, setShowAllOrders] = useState(false);
+  const [showAllOffers, setShowAllOffers] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && user?._id) {
@@ -173,7 +175,7 @@ function OverviewContent() {
       return dateB - dateA;
     });
 
-    return sortedProducts.slice(0, 2).map((product: any) => ({
+    return sortedProducts.map((product: any) => ({
       id: product._id || product.id,
       name: product.productName || product.name,
       price: product.salePrice || product.price || 0,
@@ -229,6 +231,9 @@ function OverviewContent() {
       applicableCategories: (offer.applicableCategories || []).filter(Boolean),
     }));
   }, [offersResponse]);
+
+  const displayOffers = showAllOffers ? currentOffers : currentOffers.slice(0, 3);
+  const displayNewProducts = showAllProducts ? newProducts : newProducts.slice(0, 3);
 
   // Calculate dynamic stats
   const stats = useMemo(() => {
@@ -481,9 +486,20 @@ function OverviewContent() {
                 <CardTitle className="text-lg sm:text-xl font-bold leading-tight">Current Offers</CardTitle>
                 <CardDescription className="mt-0.5 text-xs sm:text-sm">Don't miss out on these special deals.</CardDescription>
               </div>
-              <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                {currentOffers.length} Active
-              </span>
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 whitespace-nowrap">
+                  {currentOffers.length} Active
+                </span>
+                {currentOffers.length > 3 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllOffers(!showAllOffers)}
+                  >
+                    {showAllOffers ? "Show Less" : "View All"}
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-2">
@@ -492,8 +508,8 @@ function OverviewContent() {
                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span className="text-sm text-muted-foreground">Loading offers...</span>
               </div>
-            ) : currentOffers.length > 0 ? (
-              currentOffers.map((offer, idx) => (
+            ) : displayOffers.length > 0 ? (
+              displayOffers.map((offer, idx) => (
                 <div key={offer.title + idx} className="flex items-center gap-4 p-3 rounded-lg relative border border-[#c8dff7]" style={{ backgroundColor: '#EBF3FD' }}>
                   {/* Thumbnail */}
                   <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded-md">
@@ -561,16 +577,27 @@ function OverviewContent() {
         {/* NEW PRODUCTS */}
         <Card>
           <CardHeader className="pb-3">
-            <div>
-              <CardTitle className="text-lg sm:text-xl font-bold leading-tight">New Products</CardTitle>
-              <CardDescription className="mt-0.5 text-xs sm:text-sm">Check out the latest arrivals.</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg sm:text-xl font-bold leading-tight">New Products</CardTitle>
+                <CardDescription className="mt-0.5 text-xs sm:text-sm">Check out the latest arrivals.</CardDescription>
+              </div>
+              {newProducts.length > 3 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllProducts(!showAllProducts)}
+                >
+                  {showAllProducts ? "Show Less" : "View All"}
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-2">
             {isLoadingProducts ? (
               <p className="text-muted-foreground text-center py-8">Loading products...</p>
-            ) : newProducts.length > 0 ? (
-              newProducts.map((product) => (
+            ) : displayNewProducts.length > 0 ? (
+              displayNewProducts.map((product) => (
                 <div key={product.name} className="flex items-center gap-4 p-3 rounded-lg border border-[#c8dff7]" style={{ backgroundColor: '#EBF3FD' }}>
                   <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded-md relative">
                     <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
