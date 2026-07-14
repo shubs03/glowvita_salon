@@ -6,7 +6,7 @@ import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 await _db();
 
 // GET all categories
-export const GET = authMiddlewareAdmin(async (req) => {
+export const GET = (async (req) => {
   try {
     const categories = await CategoryModel.find({});
     return Response.json(categories, { status: 200 });
@@ -16,7 +16,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"], "categories:view");
+}, "categories:view");
 
 // POST a new category
 export const POST = authMiddlewareAdmin(
