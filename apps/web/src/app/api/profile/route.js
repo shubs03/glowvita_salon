@@ -4,15 +4,15 @@ import { verifyJwt } from '@repo/lib/auth';
 import dbConnect from '@repo/lib/db';
 import User from '@repo/lib/models/user';
 import bcrypt from 'bcryptjs';
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 export async function GET(req) {
   const db = await dbConnect();
-  
-  // If database connection is not available, return an error
+
   if (!db) {
     return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
   }
-  
+
   const token = cookies().get('token')?.value;
 
   if (!token) {
@@ -31,7 +31,6 @@ export async function GET(req) {
     }
 
     const { password, ...userWithoutPassword } = user.toObject();
-
     return NextResponse.json({ user: userWithoutPassword }, { status: 200 });
   } catch (error) {
     console.error(error);
@@ -41,12 +40,11 @@ export async function GET(req) {
 
 export async function PUT(req) {
   const db = await dbConnect();
-  
-  // If database connection is not available, return an error
+
   if (!db) {
     return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
   }
-  
+
   const token = cookies().get('token')?.value;
 
   if (!token) {
@@ -65,38 +63,36 @@ export async function PUT(req) {
     }
 
     const body = await req.json();
-    
-    // Handle password change
+
+    // ── Password change ──────────────────────────────────────────────────────
     if (body.currentPassword && body.newPassword) {
-      // Verify current password
       const isMatch = await bcrypt.compare(body.currentPassword, user.password);
       if (!isMatch) {
         return NextResponse.json({ message: 'Current password is incorrect' }, { status: 400 });
       }
-      
-      // Validate new password
+
       if (body.newPassword.length < 6) {
         return NextResponse.json({ message: 'New password must be at least 6 characters long' }, { status: 400 });
       }
-      
+
       if (body.newPassword !== body.confirmPassword) {
         return NextResponse.json({ message: 'New passwords do not match' }, { status: 400 });
       }
-      
-      // Hash new password
+
       const hashedPassword = await bcrypt.hash(body.newPassword, 10);
-      
-      // Update password
       await User.findByIdAndUpdate(payload.userId, { password: hashedPassword });
-      
+
       return NextResponse.json({ message: 'Password updated successfully' }, { status: 200 });
     }
-    
-    // Handle profile update (excluding password fields)
+
+    // ── Profile update ───────────────────────────────────────────────────────
     const updateData = {};
-    const allowedFields = ['firstName', 'lastName', 'mobileNo', 'state', 'city', 'pincode', 'gender', 'birthdayDate','notificationPreferences', 'profileImage'];
-    
-    // Server-side validation for birthdayDate
+    const allowedFields = [
+      'firstName', 'lastName', 'mobileNo', 'state', 'city',
+      'pincode', 'gender', 'birthdayDate', 'notificationPreferences',
+    ];
+
+    // Server-side birthday validation
     if (body.birthdayDate) {
       const today = new Date().toISOString().split('T')[0];
       if (body.birthdayDate > today) {
@@ -109,18 +105,50 @@ export async function PUT(req) {
         updateData[field] = body[field];
       }
     });
-    
+
+    // ── Profile image upload ─────────────────────────────────────────────────
+    // Upload base64 image to disk (shared /uploads folder) and store the URL.
+    // This keeps MongoDB lean and makes the image available via the /uploads proxy.
+    if (body.profileImage !== undefined) {
+      if (body.profileImage && body.profileImage.startsWith('data:image')) {
+        // New image: upload to disk
+        const fileName = `user-${payload.userId}`;
+        const imageUrl = await uploadBase64(body.profileImage, fileName);
+
+        if (!imageUrl) {
+          return NextResponse.json(
+            { message: 'Failed to upload profile image' },
+            { status: 500 }
+          );
+        }
+
+        // Remove old image file from disk (ignore errors — file may not exist)
+        if (user.profileImage && !user.profileImage.startsWith('data:')) {
+          await deleteFile(user.profileImage).catch(() => {});
+        }
+
+        updateData.profileImage = imageUrl;
+      } else if (body.profileImage === '' || body.profileImage === null) {
+        // Image explicitly removed
+        if (user.profileImage && !user.profileImage.startsWith('data:')) {
+          await deleteFile(user.profileImage).catch(() => {});
+        }
+        updateData.profileImage = '';
+      }
+      // Existing URL passed back unchanged — no action needed
+    }
+
     if (Object.keys(updateData).length > 0) {
       await User.findByIdAndUpdate(payload.userId, updateData);
     }
-    
-    // Fetch updated user data
+
+    // Return updated user (without password)
     const updatedUser = await User.findById(payload.userId);
     const { password, ...userWithoutPassword } = updatedUser.toObject();
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: 'Profile updated successfully',
-      user: userWithoutPassword
+      user: userWithoutPassword,
     }, { status: 200 });
   } catch (error) {
     console.error(error);
