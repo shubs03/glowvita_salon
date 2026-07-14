@@ -645,7 +645,7 @@ export function BookingSummary({
                                 {service.duration && (
                                   <span className="flex items-center gap-0.5 text-xs text-black shrink-0">
                                     <Clock className="h-3.5 w-3.5" />
-                                    {service.duration}
+                                    {convertDurationToMinutes(service.duration)} min
                                   </span>
                                 )}
                               </div>
