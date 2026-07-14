@@ -14,6 +14,7 @@ interface Review {
   entityType?: "salon" | "service";
   entityLabel?: string;
   serviceName?: string;
+  userImage?: string;
 }
 
 interface ReviewsSectionProps {
@@ -151,7 +152,9 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               <div className="flex w-full justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center text-primary font-bold shadow-inner">
-                    {review.userName ? (
+                    {review.userImage ? (
+                      <img src={review.userImage} alt={review.userName} className="w-full h-full object-cover" />
+                    ) : review.userName ? (
                       <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(review.userName)}&background=random`} alt={review.userName} className="w-full h-full object-cover" />
                     ) : (
                       "U"
