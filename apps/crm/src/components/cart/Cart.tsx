@@ -259,7 +259,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                   ],
                 },
               },
-              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+              sequence: ['block.upi', 'card', 'netbanking'],
             },
           },
           modal: {

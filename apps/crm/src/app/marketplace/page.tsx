@@ -404,7 +404,7 @@ export default function MarketplacePage() {
                   ],
                 },
               },
-              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+              sequence: ['block.upi', 'card', 'netbanking'],
             },
           },
           modal: {
