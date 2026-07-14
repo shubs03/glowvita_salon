@@ -272,37 +272,24 @@ const HeroSection2 = () => {
   }, [categoriesData]);
 
   return (
-    <div className="relative w-full min-h-[500px] h-auto lg:h-[700px] overflow-hidden">
+    <div className="relative w-full min-h-[500px] h-auto lg:h-[600px] overflow-hidden">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
-      {/* Right-side panel: full salon image, no crop, fits height */}
-      <div className="absolute top-0 right-0 h-full" style={{ width: "65%" }}>
+      {/* Full-width image background */}
+      <div className="absolute inset-0">
         <img
-          src="/images/hero-salon-bg.jpg"
-          alt="Salon"
+          src="/images/hero-salon-bg.png"
+          alt="Products"
           className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "contain", objectPosition: "center right" }}
+          style={{ objectFit: "cover", objectPosition: "center" }}
         />
       </div>
 
-      {/* Gradient — solid maroon left, purple mid-blend, transparent right */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(to right,
-            rgba(66, 42, 60, 1)     0%,
-            rgba(66, 42, 60, 1)     49%,
-            rgba(66, 42, 60, 0.85)  60%,
-            rgba(66, 42, 60, 0.80)  73%,
-            rgba(66, 42, 60, 0.31)  78%,
-            rgba(66, 42, 60, 0)     100%)`,
-        }}
-      />
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center py-6 lg:py-10 max-w-7xl">
-        <h3 className="text-amber-100 text-xs sm:text-sm font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase mb-6 lg:mb-8 mt-10">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-evenly max-w-7xl">
+        <h3 className="text-amber-100 text-xs sm:text-sm font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase">
           WELCOME TO GLOWVITA SALON
         </h3>
 
@@ -314,11 +301,9 @@ const HeroSection2 = () => {
             lineHeight: "115%",
             letterSpacing: "-0.01em",
             width: "510px",
-            height: "160px",
             opacity: 1,
             color: "#F7E5C1",
           }}
-          className="mb-10 mt-3"
         >
           Find a service
           <br />
@@ -336,7 +321,6 @@ const HeroSection2 = () => {
             maxWidth: "100%",
             color: "#FFFFFF",
           }}
-          className="mb-10"
         >
           Experience convenience by discovering salons and<br />
           specialists in your area, ready to provide excellent self-care<br />
@@ -345,7 +329,7 @@ const HeroSection2 = () => {
 
         {/* ── Search Bar ─────────────────────────────────────────────────── */}
         <div
-          className="bg-white shadow-2xl flex flex-col md:flex-row items-stretch md:items-center mt-4"
+          className="bg-white shadow-2xl flex flex-col md:flex-row items-stretch md:items-center"
           style={{
             width: "865px",
             maxWidth: "100%",
@@ -530,7 +514,7 @@ const HeroSection2 = () => {
         </div>
 
         {/* Service Categories Marquee */}
-        <div className="max-w-4xl overflow-hidden relative rounded-full py-1 mt-14">
+        <div className="max-w-4xl overflow-hidden relative rounded-full py-1">
           <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
           <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
             {categoriesLoading
