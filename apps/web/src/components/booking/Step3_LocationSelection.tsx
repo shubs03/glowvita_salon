@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { MapPin, Loader2, ChevronRight, Home, Edit2, Info, CheckCircle, Trash2, Briefcase, MoreHorizontal } from 'lucide-react';
+import { MapPin, Loader2, ChevronRight, Home, Edit2, Info, CheckCircle, Trash2, Briefcase, MoreHorizontal, Plus, Pencil } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { toast } from 'sonner';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
@@ -685,89 +685,66 @@ export function Step3_LocationSelection({
 
           {/* Show Registered Address and Saved Addresses (ONLY for non-wedding bookings) */}
           {!isLoading && (registeredAddress || savedAddresses.length > 0) && !selectedWeddingPackage && (
-            <div className="space-y-6 mb-6">
+            <div className="space-y-4 ml-6  mb-6">
+              {/* Section header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Select Service Location</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">Choose where you'd like the service to be provided.</p>
+                </div>
+                <button
+                  onClick={openMapModal}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
+                  style={{ background: '#422A3C' }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New Address
+                </button>
+              </div>
+
               {/* Registered Address */}
               {registeredAddress && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">Your Registered Address</h3>
-                  <Card className={cn(
-                    "border-2 transition-all",
-                    isAddressSelected(registeredAddress)
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
-                      : "border-gray-200 hover:border-primary/30"
-                  )}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className={cn(
-                          "p-3 rounded-lg",
-                          isAddressSelected(registeredAddress) ? "bg-primary/10" : "bg-muted"
-                        )}>
-                          {isAddressSelected(registeredAddress) ? (
-                            <CheckCircle className="h-6 w-6 text-primary" />
-                          ) : (
-                            <Home className="h-6 w-6 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-medium">{registeredAddress.address}</p>
-                            {isAddressSelected(registeredAddress) && (
-                              <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
-                                Selected
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {registeredAddress.city}, {registeredAddress.state} - {registeredAddress.pincode}
-                          </p>
-                          {registeredAddress.landmark && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Landmark: {registeredAddress.landmark}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
+                <div className="bg-[#F0F5FA] rounded-xl p-5 mb-6">
+                  <h3 className="font-semibold text-[17px] mb-4 text-gray-800">Your Registered Address</h3>
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => !isAddressSelected(registeredAddress) && handleUseRegisteredAddress()}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 mt-0.5">
                         {isAddressSelected(registeredAddress) ? (
-                          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
-                            <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
-                              <CheckCircle className="h-4 w-4" />
-                              This address is selected. Use the summary button to proceed.
-                            </p>
+                          <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                            <CheckCircle className="h-4 w-4 text-white" />
                           </div>
                         ) : (
-                          <Button
-                            size="lg"
-                            className="w-full"
-                            onClick={handleUseRegisteredAddress}
-                          >
-                            Use This Address
-                            <ChevronRight className="h-5 w-5 ml-2" />
-                          </Button>
+                          <div className="w-6 h-6 rounded-full border-2 border-gray-300 bg-white" />
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-[15px]">{registeredAddress.address}</p>
+                        <p className="text-[13px] text-gray-500 mt-1">
+                          {registeredAddress.city}, {registeredAddress.state} - {registeredAddress.pincode}
+                        </p>
+                        {registeredAddress.landmark && (
+                          <p className="text-[13px] text-gray-400 mt-0.5">Landmark: {registeredAddress.landmark}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {isAddressSelected(registeredAddress) && (
+                    <div className="mt-5 mx-auto py-2.5 px-4 border border-gray-200 rounded-lg bg-white flex items-center justify-center gap-2 text-[13px] text-gray-700 font-medium shadow-sm w-full max-w-[500px]">
+                      <CheckCircle className="h-4 w-4 text-gray-600" />
+                      This address is selected. Use the summary button to proceed.
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Add New Address Button — placed ABOVE saved addresses so no scrolling needed */}
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full"
-                onClick={openMapModal}
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Add New Address from Map
-              </Button>
 
               {/* Saved Addresses */}
               {savedAddresses.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-lg mb-3">Your Saved Addresses</h3>
-                  <div className="space-y-3">
+                  <h3 className="font-semibold text-[17px] mb-3 text-gray-800 mt-2">Your Saved Address</h3>
+                  <div className="space-y-4">
                     {savedAddresses.map((addr, index) => {
                       const locationData: HomeServiceLocation = {
                         address: addr.address,
@@ -782,59 +759,45 @@ export function Step3_LocationSelection({
                       const isSelected = isAddressSelected(locationData);
 
                       return (
-                        <Card
+                        <div
                           key={index}
                           className={cn(
-                            "border-2 transition-all cursor-pointer",
-                            isSelected
-                              ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
-                              : "border-gray-200 hover:border-primary/30 hover:shadow-sm"
+                            "flex items-center gap-4 px-4 py-4 cursor-pointer transition-all border rounded-xl bg-white shadow-sm",
+                            isSelected ? "border-gray-300" : "border-gray-200 hover:border-gray-300"
                           )}
                           onClick={() => !isSelected && handleUseSavedAddress(addr)}
                         >
-                          <CardContent className="p-5">
-                            <div className="flex items-start gap-4">
-                              <div className={cn(
-                                "p-2 rounded-lg",
-                                isSelected ? "bg-primary/10" : "bg-muted"
-                              )}>
-                                {isSelected ? (
-                                  <CheckCircle className="h-5 w-5 text-primary" />
-                                ) : (
-                                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  {isSelected && (
-                                    <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
-                                      Selected
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm font-medium mb-1">{addr.address}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {addr.city}, {addr.state} - {addr.pincode}
-                                </p>
-                                {addr.landmark && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Landmark: {addr.landmark}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={(e) => handleRemoveAddress((addr as any)._id, addr.address, e)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                          <div className="flex-1 min-w-0 border-l-[1.5px] border-black pl-3 py-0.5 flex items-start justify-between">
+                            <div className="flex-1 min-w-0 pr-4">
+                              <p className="font-semibold text-[15px] text-gray-900 mb-1">
+                                {addr.label || addr.fullName || 'Address'}
+                              </p>
+                              <p className="text-[13px] text-gray-500 leading-snug">
+                                {addr.address}{addr.city ? `, ${addr.city}` : ''}{addr.state ? `, ${addr.state}` : ''} - {addr.pincode}
+                              </p>
+                              {addr.mobileNo && (
+                                <p className="text-[13px] text-gray-400 mt-1">Phone: {addr.mobileNo}</p>
+                              )}
                             </div>
-                          </CardContent>
-                        </Card>
+                            
+                            <div className="flex items-center gap-2 flex-shrink-0 self-end">
+                              <button
+                                className="p-1.5 rounded-md text-blue-500 hover:bg-blue-100 transition-colors bg-blue-50"
+                                onClick={(e) => { e.stopPropagation(); openMapModal(); }}
+                                title="Edit address"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                              </button>
+                              <button
+                                className="p-1.5 rounded-md text-red-400 hover:bg-red-100 transition-colors bg-red-50"
+                                onClick={(e) => handleRemoveAddress((addr as any)._id, addr.address, e)}
+                                title="Delete address"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>

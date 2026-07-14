@@ -3743,6 +3743,7 @@ function BookingPageContent() {
               initialViewMode={selectedWeddingPackage || searchParams?.get('tab') === 'packages' ? 'packages' : 'services'}
               priceBreakdown={priceBreakdown}
               taxFeeSettings={taxFeeSettings}
+              onClearServices={() => setSelectedServices([])}
             />
           );
         case 2:
@@ -4723,370 +4724,369 @@ function BookingPageContent() {
         </DialogContent>
       </Dialog>
 
-{/* Confirmation Modal */}
-<Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-  <DialogContent
-    className="sm:max-w-2xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl
+      {/* Confirmation Modal */}
+      <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
+        <DialogContent
+          className="sm:max-w-2xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl
                [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100 [&>button]:hover:bg-white/10 [&>button]:rounded-full [&>button]:top-5"
-  >
+        >
 
-    {/* Header */}
-    <DialogHeader className="bg-[#422a3c] text-white text-center py-5 px-6 flex-shrink-0 rounded-t-xl">
-      <DialogTitle className="text-xl text-center font-bold flex items-center justify-center gap-2">
-        <img src="/uploads/calendar (2) 2.png" alt="calendar" className="h-5 w-5" />
-        Appointment Confirmation
-      </DialogTitle>
-      <DialogDescription className="text-center mt-1 text-sm text-white/80">
-        Please review and confirm your booking
-      </DialogDescription>
-    </DialogHeader>
+          {/* Header */}
+          <DialogHeader className="bg-[#422a3c] text-white text-center py-5 px-6 flex-shrink-0 rounded-t-xl">
+            <DialogTitle className="text-xl text-center font-bold flex items-center justify-center gap-2">
+              <img src="/uploads/calendar (2) 2.png" alt="calendar" className="h-5 w-5" />
+              Appointment Confirmation
+            </DialogTitle>
+            <DialogDescription className="text-center mt-1 text-sm text-white/80">
+              Please review and confirm your booking
+            </DialogDescription>
+          </DialogHeader>
 
-    <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-5 space-y-4 bg-muted/20">
+          <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-5 space-y-4 bg-muted/20">
 
-      {/* Salon Info */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <img src="/uploads/salon 1.png" alt="salon" className="h-4 w-4" />
-            Salon Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pl-8 space-y-2">
-          <div className="flex items-center gap-1 font-semibold text-sm">
-            <Dot /> {salonInfo?.name}
-          </div>
-          <div className="flex flex-nowrap items-center gap-x-6 text-sm text-muted-foreground overflow-x-auto no-scrollbar">
-            {salonInfo?.phone && (
-              <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
-                <img src="/uploads/telephone (1) 1.png" alt="phone" className="h-3.5 w-3.5" /> {salonInfo.phone}
-              </span>
-            )}
-            {salonInfo?.email && (
-              <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
-                <img src="/uploads/email (7) 1.png" alt="mail" className="h-3.5 w-3.5" /> {salonInfo.email}
-              </span>
-            )}
-            {salonInfo?.address && (
-              <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
-                <img src="/uploads/pin (3) 2.png" alt="location" className="h-3.5 w-3.5" /> {salonInfo.address}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Selected Services */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <img src="/uploads/customer-review (2) 1.png" alt="services" className="h-4 w-4" />
-            {selectedWeddingPackage ? 'Selected Package' : 'Selected Services'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pl-8">
-          <div className="divide-y">
-            {selectedWeddingPackage ? (
-              <>
-                <div className="flex flex-nowrap items-center justify-between py-3 gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">{selectedWeddingPackage.name}</div>
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">
-                      {selectedWeddingPackage.duration || 'Variable duration'}
-                    </div>
-                  </div>
-                  <div className="font-semibold text-primary whitespace-nowrap shrink-0">
-                    ₹{weddingPackageMode === 'customized'
-                      ? Math.round(totalAmount)
-                      : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)}/-
-                  </div>
+            {/* Salon Info */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <img src="/uploads/salon 1.png" alt="salon" className="h-4 w-4" />
+                  Salon Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-1 pl-8 space-y-2">
+                <div className="flex items-center gap-1 font-semibold text-sm">
+                  <Dot /> {salonInfo?.name}
                 </div>
-                {(weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services || []).map((service, idx) => {
-                  const isFullService = 'id' in service;
-                  const key = isFullService ? (service as any).id : (service as any).serviceId;
-                  const displayName = isFullService ? (service as any).name : (service as any).serviceName;
-                  const displayPrice = isFullService ? (service as any).price : undefined;
-                  return (
-                    <div key={key || idx} className="flex flex-nowrap items-center justify-between py-3 pl-2 gap-3">
-                      <span className="text-sm truncate">{displayName}</span>
-                      {displayPrice && <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">₹{displayPrice}/-</span>}
-                    </div>
-                  );
-                })}
-              </>
-            ) : (
-              selectedServices.map((service) => (
-                <div key={service.id}>
-                  <div className="flex flex-nowrap items-center justify-between py-3 gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{service.name}</div>
-                      <div className="text-xs text-muted-foreground whitespace-nowrap">{service.duration}</div>
-                    </div>
-                    <div className="font-semibold text-primary whitespace-nowrap shrink-0">₹{service.discountedPrice || service.price}/-</div>
-                  </div>
-                  {service.selectedAddons && service.selectedAddons.length > 0 && (
-                    service.selectedAddons.map((addon) => (
-                      <div key={addon._id} className="flex flex-nowrap items-center justify-between py-2 pl-4 text-sm text-muted-foreground gap-3">
-                        <span className="flex items-center gap-1.5 truncate">
-                          <img src="/uploads/discount-code 1.png" alt="addon" className="h-3 w-3 shrink-0" /> {addon.name}
-                        </span>
-                        <span className="flex items-center gap-2 whitespace-nowrap shrink-0">
-                          ₹{addon.price}/-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-destructive hover:bg-destructive/10"
-                            onClick={() => handleRemoveAddon(service.id, addon._id)}
-                          >
-                            ×
-                          </Button>
-                        </span>
+                <div className="flex flex-nowrap items-center gap-x-6 text-sm text-muted-foreground overflow-x-auto no-scrollbar">
+                  {salonInfo?.phone && (
+                    <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                      <img src="/uploads/telephone (1) 1.png" alt="phone" className="h-3.5 w-3.5" /> {salonInfo.phone}
+                    </span>
+                  )}
+                  {salonInfo?.email && (
+                    <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                      <img src="/uploads/email (7) 1.png" alt="mail" className="h-3.5 w-3.5" /> {salonInfo.email}
+                    </span>
+                  )}
+                  {salonInfo?.address && (
+                    <span className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                      <img src="/uploads/pin (3) 2.png" alt="location" className="h-3.5 w-3.5" /> {salonInfo.address}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Selected Services */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <img src="/uploads/customer-review (2) 1.png" alt="services" className="h-4 w-4" />
+                  {selectedWeddingPackage ? 'Selected Package' : 'Selected Services'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-1 pl-8">
+                <div className="divide-y">
+                  {selectedWeddingPackage ? (
+                    <>
+                      <div className="flex flex-nowrap items-center justify-between py-3 gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{selectedWeddingPackage.name}</div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">
+                            {selectedWeddingPackage.duration || 'Variable duration'}
+                          </div>
+                        </div>
+                        <div className="font-semibold text-primary whitespace-nowrap shrink-0">
+                          ₹{weddingPackageMode === 'customized'
+                            ? Math.round(totalAmount)
+                            : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)}/-
+                        </div>
+                      </div>
+                      {(weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services || []).map((service, idx) => {
+                        const isFullService = 'id' in service;
+                        const key = isFullService ? (service as any).id : (service as any).serviceId;
+                        const displayName = isFullService ? (service as any).name : (service as any).serviceName;
+                        const displayPrice = isFullService ? (service as any).price : undefined;
+                        return (
+                          <div key={key || idx} className="flex flex-nowrap items-center justify-between py-3 pl-2 gap-3">
+                            <span className="text-sm truncate">{displayName}</span>
+                            {displayPrice && <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">₹{displayPrice}/-</span>}
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    selectedServices.map((service) => (
+                      <div key={service.id}>
+                        <div className="flex flex-nowrap items-center justify-between py-3 gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm truncate">{service.name}</div>
+                            <div className="text-xs text-muted-foreground whitespace-nowrap">{service.duration}</div>
+                          </div>
+                          <div className="font-semibold text-primary whitespace-nowrap shrink-0">₹{service.discountedPrice || service.price}/-</div>
+                        </div>
+                        {service.selectedAddons && service.selectedAddons.length > 0 && (
+                          service.selectedAddons.map((addon) => (
+                            <div key={addon._id} className="flex flex-nowrap items-center justify-between py-2 pl-4 text-sm text-muted-foreground gap-3">
+                              <span className="flex items-center gap-1.5 truncate">
+                                <img src="/uploads/discount-code 1.png" alt="addon" className="h-3 w-3 shrink-0" /> {addon.name}
+                              </span>
+                              <span className="flex items-center gap-2 whitespace-nowrap shrink-0">
+                                ₹{addon.price}/-
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRemoveAddon(service.id, addon._id)}
+                                >
+                                  ×
+                                </Button>
+                              </span>
+                            </div>
+                          ))
+                        )}
                       </div>
                     ))
                   )}
                 </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
 
-      {/* Appointment Details */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <img src="/uploads/calendar (8) 1.png" alt="calendar" className="h-4 w-4" />
-            Appointment Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pl-8">
-          <div className="flex flex-nowrap items-start justify-between gap-6">
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/calendar (2) 2.png" alt="calendar" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm whitespace-nowrap">{format(selectedDate, 'd MMMM yyyy')}</div>
-                <div className="text-xs text-muted-foreground">Date</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/day-and-night 1.png" alt="day" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm whitespace-nowrap">{format(selectedDate, 'EEEE')}</div>
-                <div className="text-xs text-muted-foreground">Day</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/clock (6) 1.png" alt="clock" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm whitespace-nowrap">{selectedTime}</div>
-                <div className="text-xs text-muted-foreground">Time</div>
-              </div>
-            </div>
-          </div>
-          {selectedStaff && (
-            <div className="flex flex-nowrap items-center gap-2 mt-4 pt-3 border-t justify-start text-sm whitespace-nowrap">
-              <User className="h-4 w-4 text-primary shrink-0" />
-              <span className="font-medium">{selectedStaff.name}</span>
-              <span className="text-muted-foreground">— Professional</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Customer Info */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <img src="/uploads/manager 1.png" alt="user" className="h-4 w-4" />
-            Customer Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pl-8">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/user 1.png" alt="user" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate whitespace-nowrap">
-                  {user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Guest')}
-                </div>
-                <div className="text-xs text-muted-foreground">Name</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/email (7) 1.png" alt="mail" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate whitespace-nowrap">{user?.email || customerInfo?.email || 'N/A'}</div>
-                <div className="text-xs text-muted-foreground">Mail</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/telephone (1) 1.png" alt="phone" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate whitespace-nowrap">{user?.mobileNo || user?.phone || customerInfo?.phone || 'N/A'}</div>
-                <div className="text-xs text-muted-foreground">Contact</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 min-w-0">
-              <img src="/uploads/pin (3) 2.png" alt="pin" className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-medium text-sm truncate whitespace-nowrap">{serviceLocation?.address ? serviceLocation.address : 'At Salon'}</div>
-                <div className="text-xs text-muted-foreground">{serviceLocation ? 'Home Service Location' : 'Address'}</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Summary */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <img src="/uploads/secure-payment 1.png" alt="payment" className="h-4 w-4" />
-            Payment Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pl-8 space-y-2">
-          <div className="flex flex-nowrap items-center justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="whitespace-nowrap"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown?.subtotal ? priceBreakdown.subtotal.toFixed(2) : totalAmount.toFixed(2)}/-</span>
-          </div>
-          {priceBreakdown && priceBreakdown.platformFee > 0 && (
-            <div className="flex flex-nowrap items-center justify-between text-sm gap-3">
-              <span className="text-muted-foreground truncate">
-                Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}
-              </span>
-              <span className="whitespace-nowrap shrink-0"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown.platformFee.toFixed(2)}/-</span>
-            </div>
-          )}
-          {priceBreakdown && priceBreakdown.serviceTax > 0 && (
-            <div className="flex flex-nowrap items-center justify-between text-sm gap-3">
-              <span className="text-muted-foreground truncate">
-                GST & Other Taxes {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}
-              </span>
-              <span className="whitespace-nowrap shrink-0"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown.serviceTax.toFixed(2)}/-</span>
-            </div>
-          )}
-          {appliedOffer && (
-            <div className="flex flex-nowrap items-center justify-between text-sm text-green-600 gap-3">
-              <span className="flex items-center gap-1 truncate">
-                <img src="/uploads/discount-code 1.png" alt="discount" className="h-3 w-3 shrink-0" /> Discount ({appliedOffer.code})
-              </span>
-              <span className="whitespace-nowrap shrink-0">-₹{(priceBreakdown?.discountAmount || (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)).toFixed(2)}</span>
-            </div>
-          )}
-          <div className="flex flex-nowrap items-center justify-between pt-3 border-t">
-            <span className="font-semibold text-green-600">Total Amount</span>
-            <span className="font-bold text-lg text-green-600 whitespace-nowrap">
-              <img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-5 w-5 mr-1 align-text-bottom" />{priceBreakdown?.finalTotal
-                ? priceBreakdown.finalTotal.toFixed(2)
-                : (totalAmount + (priceBreakdown?.platformFee || 0) + (priceBreakdown?.serviceTax || 0) - (priceBreakdown?.discountAmount || (appliedOffer ? (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value) : 0))).toFixed(2)}/-
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Discount Code */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <img src="/uploads/discount-code 1.png" alt="star" className="h-4 w-4" />
-            Apply Discount Code
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pl-8 space-y-3">
-          <div className="flex flex-nowrap gap-2 relative">
-            <div className="flex-1 min-w-0">
-              <input
-                id="offer-input"
-                type="text"
-                placeholder="Enter discount code"
-                value={offerCode}
-                onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
-                onFocus={() => filteredOffers && filteredOffers.length > 0 && setShowOfferDropdown(true)}
-                className="w-full px-4 py-2.5 border rounded-md text-sm bg-muted/30 focus:ring-2 focus:ring-primary focus:border-primary"
-              />
-              {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
-                <div id="offer-dropdown" className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
-                  {filteredOffers.map((offer) => {
-                    const isApplicable = isOfferApplicable(offer, selectedServices);
-                    return (
-                      <div
-                        key={offer._id}
-                        className={`px-4 py-2.5 border-b last:border-b-0 flex flex-nowrap justify-between items-center gap-3 ${
-                          isApplicable ? "hover:bg-primary/5 cursor-pointer" : "opacity-60 bg-gray-50/50 cursor-not-allowed"
-                        }`}
-                        onClick={() => { if (isApplicable) { handleSelectOffer(offer); setShowOfferDropdown(false); } }}
-                      >
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{offer.code}</div>
-                          <div className="text-xs text-muted-foreground whitespace-nowrap">
-                            {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium text-primary whitespace-nowrap shrink-0">
-                          {isApplicable ? 'Click to apply' : 'Disabled'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <Button onClick={handleApplyOffer} disabled={!offerCode.trim()} className="bg-primary hover:bg-primary/90 px-6 shrink-0">
-              {isOffersLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-            </Button>
-          </div>
-
-          {appliedOffer && (
-            <div className="bg-primary/10 border border-primary p-3 rounded-md text-sm flex flex-nowrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold text-primary text-sm truncate">{appliedOffer.code}</div>
-                <div className="text-primary text-xs whitespace-nowrap">
-                  {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleClearOffer} className="h-6 w-6 p-0 text-primary hover:bg-primary/20 shrink-0">
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-
-          {!appliedOffer && vendorOffers && vendorOffers.length > 0 && (
-            vendorOffers.slice(0, 1).map((offer) => (
-              <div
-                key={offer._id}
-                className="flex flex-nowrap items-center justify-between px-4 py-2.5 border rounded-md cursor-pointer hover:bg-primary/5 gap-3"
-                onClick={() => handleSelectOffer(offer)}
-              >
-                <div className="min-w-0">
-                  <div className="font-medium text-sm truncate">{offer.code}</div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+            {/* Appointment Details */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <img src="/uploads/calendar (8) 1.png" alt="calendar" className="h-4 w-4" />
+                  Appointment Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-1 pl-8">
+                <div className="flex flex-nowrap items-start justify-between gap-6">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/calendar (2) 2.png" alt="calendar" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm whitespace-nowrap">{format(selectedDate, 'd MMMM yyyy')}</div>
+                      <div className="text-xs text-muted-foreground">Date</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/day-and-night 1.png" alt="day" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm whitespace-nowrap">{format(selectedDate, 'EEEE')}</div>
+                      <div className="text-xs text-muted-foreground">Day</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/clock (6) 1.png" alt="clock" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm whitespace-nowrap">{selectedTime}</div>
+                      <div className="text-xs text-muted-foreground">Time</div>
+                    </div>
                   </div>
                 </div>
-                <span className="text-xs font-medium text-primary whitespace-nowrap shrink-0">Click to apply</span>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                {selectedStaff && (
+                  <div className="flex flex-nowrap items-center gap-2 mt-4 pt-3 border-t justify-start text-sm whitespace-nowrap">
+                    <User className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-medium">{selectedStaff.name}</span>
+                    <span className="text-muted-foreground">— Professional</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-    {/* Footer */}
-    <DialogFooter className="flex-shrink-0 sm:justify-end gap-3 py-4 border-t px-6 bg-white">
-      <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)} className="px-6">
-        <ChevronsLeft className="h-4 w-4 mr-2" />
-        Edit Details
-      </Button>
-      <Button
-        onClick={() => { setIsConfirmationModalOpen(false); setIsPaymentModalOpen(true); }}
-        className="bg-primary hover:bg-primary/90 px-6"
-      >
-        Confirm & Proceed
-        <ChevronsRight className="h-4 w-4 ml-2" />
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+            {/* Customer Info */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <img src="/uploads/manager 1.png" alt="user" className="h-4 w-4" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-1 pl-8">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/user 1.png" alt="user" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate whitespace-nowrap">
+                        {user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Guest')}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Name</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/email (7) 1.png" alt="mail" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate whitespace-nowrap">{user?.email || customerInfo?.email || 'N/A'}</div>
+                      <div className="text-xs text-muted-foreground">Mail</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/telephone (1) 1.png" alt="phone" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate whitespace-nowrap">{user?.mobileNo || user?.phone || customerInfo?.phone || 'N/A'}</div>
+                      <div className="text-xs text-muted-foreground">Contact</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <img src="/uploads/pin (3) 2.png" alt="pin" className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate whitespace-nowrap">{serviceLocation?.address ? serviceLocation.address : 'At Salon'}</div>
+                      <div className="text-xs text-muted-foreground">{serviceLocation ? 'Home Service Location' : 'Address'}</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Summary */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <img src="/uploads/secure-payment 1.png" alt="payment" className="h-4 w-4" />
+                  Payment Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-1 pl-8 space-y-2">
+                <div className="flex flex-nowrap items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="whitespace-nowrap"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown?.subtotal ? priceBreakdown.subtotal.toFixed(2) : totalAmount.toFixed(2)}/-</span>
+                </div>
+                {priceBreakdown && priceBreakdown.platformFee > 0 && (
+                  <div className="flex flex-nowrap items-center justify-between text-sm gap-3">
+                    <span className="text-muted-foreground truncate">
+                      Platform Fee {priceBreakdown.taxFeeSettings?.platformFee ? `(${priceBreakdown.taxFeeSettings.platformFee}%)` : ''}
+                    </span>
+                    <span className="whitespace-nowrap shrink-0"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown.platformFee.toFixed(2)}/-</span>
+                  </div>
+                )}
+                {priceBreakdown && priceBreakdown.serviceTax > 0 && (
+                  <div className="flex flex-nowrap items-center justify-between text-sm gap-3">
+                    <span className="text-muted-foreground truncate">
+                      GST & Other Taxes {priceBreakdown.taxFeeSettings?.serviceTax ? `(${priceBreakdown.taxFeeSettings.serviceTax}%)` : ''}
+                    </span>
+                    <span className="whitespace-nowrap shrink-0"><img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-4 w-4 mr-1 align-text-bottom" />{priceBreakdown.serviceTax.toFixed(2)}/-</span>
+                  </div>
+                )}
+                {appliedOffer && (
+                  <div className="flex flex-nowrap items-center justify-between text-sm text-green-600 gap-3">
+                    <span className="flex items-center gap-1 truncate">
+                      <img src="/uploads/discount-code 1.png" alt="discount" className="h-3 w-3 shrink-0" /> Discount ({appliedOffer.code})
+                    </span>
+                    <span className="whitespace-nowrap shrink-0">-₹{(priceBreakdown?.discountAmount || (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex flex-nowrap items-center justify-between pt-3 border-t">
+                  <span className="font-semibold text-green-600">Total Amount</span>
+                  <span className="font-bold text-lg text-green-600 whitespace-nowrap">
+                    <img src="/uploads/rupee42.png" alt="rupee" className="inline-block h-5 w-5 mr-1 align-text-bottom" />{priceBreakdown?.finalTotal
+                      ? priceBreakdown.finalTotal.toFixed(2)
+                      : (totalAmount + (priceBreakdown?.platformFee || 0) + (priceBreakdown?.serviceTax || 0) - (priceBreakdown?.discountAmount || (appliedOffer ? (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value) : 0))).toFixed(2)}/-
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Discount Code */}
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <img src="/uploads/discount-code 1.png" alt="star" className="h-4 w-4" />
+                  Apply Discount Code
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-1 pl-8 space-y-3">
+                <div className="flex flex-nowrap gap-2 relative">
+                  <div className="flex-1 min-w-0">
+                    <input
+                      id="offer-input"
+                      type="text"
+                      placeholder="Enter discount code"
+                      value={offerCode}
+                      onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
+                      onFocus={() => filteredOffers && filteredOffers.length > 0 && setShowOfferDropdown(true)}
+                      className="w-full px-4 py-2.5 border rounded-md text-sm bg-muted/30 focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                    {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
+                      <div id="offer-dropdown" className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
+                        {filteredOffers.map((offer) => {
+                          const isApplicable = isOfferApplicable(offer, selectedServices);
+                          return (
+                            <div
+                              key={offer._id}
+                              className={`px-4 py-2.5 border-b last:border-b-0 flex flex-nowrap justify-between items-center gap-3 ${isApplicable ? "hover:bg-primary/5 cursor-pointer" : "opacity-60 bg-gray-50/50 cursor-not-allowed"
+                                }`}
+                              onClick={() => { if (isApplicable) { handleSelectOffer(offer); setShowOfferDropdown(false); } }}
+                            >
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm truncate">{offer.code}</div>
+                                <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                </div>
+                              </div>
+                              <span className="text-xs font-medium text-primary whitespace-nowrap shrink-0">
+                                {isApplicable ? 'Click to apply' : 'Disabled'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <Button onClick={handleApplyOffer} disabled={!offerCode.trim()} className="bg-primary hover:bg-primary/90 px-6 shrink-0">
+                    {isOffersLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                  </Button>
+                </div>
+
+                {appliedOffer && (
+                  <div className="bg-primary/10 border border-primary p-3 rounded-md text-sm flex flex-nowrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-primary text-sm truncate">{appliedOffer.code}</div>
+                      <div className="text-primary text-xs whitespace-nowrap">
+                        {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={handleClearOffer} className="h-6 w-6 p-0 text-primary hover:bg-primary/20 shrink-0">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                {!appliedOffer && vendorOffers && vendorOffers.length > 0 && (
+                  vendorOffers.slice(0, 1).map((offer) => (
+                    <div
+                      key={offer._id}
+                      className="flex flex-nowrap items-center justify-between px-4 py-2.5 border rounded-md cursor-pointer hover:bg-primary/5 gap-3"
+                      onClick={() => handleSelectOffer(offer)}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{offer.code}</div>
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">
+                          {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-primary whitespace-nowrap shrink-0">Click to apply</span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Footer */}
+          <DialogFooter className="flex-shrink-0 sm:justify-end gap-3 py-4 border-t px-6 bg-white">
+            <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)} className="px-6">
+              <ChevronsLeft className="h-4 w-4 mr-2" />
+              Edit Details
+            </Button>
+            <Button
+              onClick={() => { setIsConfirmationModalOpen(false); setIsPaymentModalOpen(true); }}
+              className="bg-primary hover:bg-primary/90 px-6"
+            >
+              Confirm & Proceed
+              <ChevronsRight className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Service Schedule Dialog */}
       <Dialog open={isServiceScheduleOpen} onOpenChange={setIsServiceScheduleOpen}>

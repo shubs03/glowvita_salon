@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   useGetPublicVendorServicesQuery,
   useGetPublicVendorStaffQuery,
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorWorkingHoursQuery,
+  useGetPublicVendorByIdQuery,
   useGetPublicVendorsQuery,
   useGetPublicVendorWeddingPackagesQuery
 } from '@repo/store/api';
@@ -504,39 +505,25 @@ export const useSalonWorkingHours = (salonId: string) => {
  * Hook to fetch salon information for booking summary
  */
 export const useSalonInfo = (salonId: string) => {
-  const { data: rawSalonData, isLoading, error } = useGetPublicVendorsQuery({});
+  const { data: rawSalonData, isLoading, error } = useGetPublicVendorByIdQuery(salonId, {
+    skip: !salonId
+  });
 
   const salonInfo = useMemo(() => {
     if (!rawSalonData) return null;
 
-    let vendorsArray = [];
-
-    if (rawSalonData.data && Array.isArray(rawSalonData.data)) {
-      vendorsArray = rawSalonData.data;
-    } else if (rawSalonData.vendors && Array.isArray(rawSalonData.vendors)) {
-      vendorsArray = rawSalonData.vendors;
-    } else if (Array.isArray(rawSalonData)) {
-      vendorsArray = rawSalonData;
-    } else {
-      console.warn('Unexpected salon data structure:', rawSalonData);
-      return null;
-    }
-
-    if (!Array.isArray(vendorsArray)) {
-      return null;
-    }
-
-    const salon = vendorsArray.find((vendor: any) => vendor._id === salonId || vendor.id === salonId);
-    if (!salon) return null;
+    const salon = rawSalonData.vendor || rawSalonData.data || rawSalonData;
+    if (!salon || (typeof salon !== 'object')) return null;
 
     return {
       id: salon._id || salon.id,
       name: salon.businessName || salon.name,
-      address: salon.address || '',
+      email: salon.email || salon.businessEmail || salon.contactEmail || salon.contact?.email || salon.user?.email || '',
+      address: salon.address || salon.businessAddress || salon.location?.address || salon.locationDetails?.address || salon.contact?.address || salon.contactDetails?.address || (salon.city ? `${salon.city}, ${salon.state || ''}` : ''),
       rating: salon.rating || '4.5',
       reviews: salon.reviewCount || salon.reviews || 0,
       image: salon.profileImage || salon.logo || (salon.gallery && salon.gallery.length > 0 ? salon.gallery[0] : (salon.image || "/images/salon-placeholder.png")),
-      phone: salon.phone || salon.contactNumber,
+      phone: salon.phone || salon.contactNumber || salon.mobileNo || salon.contact?.phone || salon.contactDetails?.phone || '',
       regionId: salon.regionId?.toString() || salon.regionId
     } as SalonInfo;
   }, [rawSalonData, salonId]);

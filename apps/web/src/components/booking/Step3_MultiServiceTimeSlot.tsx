@@ -773,22 +773,55 @@ export function Step3_MultiServiceTimeSlot({
             <p className="text-xs text-muted-foreground mt-2">Try selecting a different date or different professional combinations.</p>
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {slots.map((slot: MultiServiceSlot, index: number) => {
-                const isSelected = selectedSlot?.startTime === slot.startTime;
+          <div className="max-h-[600px] overflow-y-auto pr-2 no-scrollbar space-y-5">
+            {(() => {
+              const morningSlots = slots.filter((s: MultiServiceSlot) => {
+                const h = parseInt(s.startTime.split(':')[0], 10);
+                return h < 12;
+              });
+              const afternoonSlots = slots.filter((s: MultiServiceSlot) => {
+                const h = parseInt(s.startTime.split(':')[0], 10);
+                return h >= 12 && h < 16;
+              });
+              const eveningSlots = slots.filter((s: MultiServiceSlot) => {
+                const h = parseInt(s.startTime.split(':')[0], 10);
+                return h >= 16;
+              });
 
+              const renderGroup = (label: string, dotColor: string, groupSlots: MultiServiceSlot[]) => {
+                if (groupSlots.length === 0) return null;
                 return (
-                  <SlotCard
-                    key={`${slot.startTime}-${index}`}
-                    slot={slot}
-                    isSelected={isSelected}
-                    isLocking={isLocking}
-                    onClick={() => !isLocking && handleSlotSelect(slot)}
-                  />
+                  <div key={label}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: dotColor }} />
+                      <span className="text-sm font-medium text-gray-700">{label}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {groupSlots.map((slot: MultiServiceSlot, index: number) => {
+                        const isSelected = selectedSlot?.startTime === slot.startTime;
+                        return (
+                          <SlotCard
+                            key={`${slot.startTime}-${index}`}
+                            slot={slot}
+                            isSelected={isSelected}
+                            isLocking={isLocking}
+                            onClick={() => !isLocking && handleSlotSelect(slot)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
-              })}
-            </div>
+              };
+
+              return (
+                <>
+                  {renderGroup('Morning', '#F5A623', morningSlots)}
+                  {renderGroup('Afternoon', '#E07B39', afternoonSlots)}
+                  {renderGroup('Evening', '#27AE60', eveningSlots)}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

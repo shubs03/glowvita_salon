@@ -209,16 +209,21 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       );
     }
 
+    // Block deletion of approved packages
+    if (existingPackage.status === 'approved') {
+      return Response.json(
+        { message: "Approved wedding packages cannot be deleted" },
+        { status: 403 }
+      );
+    }
+
     // Delete image from VPS if it exists
     if (existingPackage.image) {
       await deleteFile(existingPackage.image);
     }
 
-    // Delete package
-    await WeddingPackageModel.findByIdAndUpdate(packageId, { 
-      isActive: false, 
-      updatedAt: Date.now() 
-    });
+    // Delete package permanently from DB
+    await WeddingPackageModel.findByIdAndDelete(packageId);
 
     return Response.json(
       { message: "Wedding package deleted successfully" },

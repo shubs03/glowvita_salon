@@ -307,7 +307,13 @@ export const GET = async (request) => {
                       $filter: {
                         input: { $ifNull: ["$weddingPackageList", []] },
                         as: "pkg",
-                        cond: { $eq: ["$$pkg.isActive", true] },
+                        cond: {
+                          $and: [
+                            { $eq: ["$$pkg.isActive", true] },
+                            { $ne: ["$$pkg.status", "pending"] },
+                            { $ne: ["$$pkg.status", "rejected"] }
+                          ]
+                        },
                       },
                     },
                   },

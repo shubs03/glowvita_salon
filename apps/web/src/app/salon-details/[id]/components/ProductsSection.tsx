@@ -496,7 +496,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {filteredAndSortedProducts.length > 0 ? (
-          filteredAndSortedProducts.map((product: Product) => (
+          filteredAndSortedProducts.slice(0, 8).map((product: Product) => (
             <ProductCard
               key={product.id}
               product={product}
