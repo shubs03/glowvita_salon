@@ -82,7 +82,7 @@ const DownloadApp = () => {
                   <img
                     src="/icons/Group 1000002487.png"
                     alt="Get it on Google Play"
-                    className="h-13 w-auto sm:h-13 lg:h-14 mt-4"
+                    className="h-10 w-auto sm:h-12 lg:h-14 mt-4"
                   />
                 </a>
               </div>
