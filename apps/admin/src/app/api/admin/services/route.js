@@ -19,7 +19,7 @@ export const GET = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
+  }, 
   "services:view"
 );
 

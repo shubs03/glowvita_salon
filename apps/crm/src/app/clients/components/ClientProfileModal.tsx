@@ -268,6 +268,9 @@ export default function ClientProfileModal({
                   }
                   alt={profileClient.fullName}
                   className="w-12 h-12 rounded-full object-cover border border-gray-200 sm:w-16 sm:h-16"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = `https://placehold.co/80x80.png?text=${encodeURIComponent(profileClient.fullName?.[0] || '?')}`;
+                  }}
                 />
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-bold text-gray-900 truncate sm:text-xl">
