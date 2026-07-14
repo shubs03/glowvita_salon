@@ -45,7 +45,7 @@ const Testimonials2 = () => {
 
   return (
     /* pb-40: gives vertical space for the white card that hangs below the purple box */
-    <section className="pt-5 px-6 lg:px-8 max-w-7xl mx-auto bg-background pb-[5.5rem]">
+    <section className="pt-5 container mx-auto px-4 sm:px-6 lg:px-8 bg-background pb-[5.5rem]">
 
       {/* ── Section Header ── */}
       <div className="mb-6">

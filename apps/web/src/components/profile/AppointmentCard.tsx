@@ -80,7 +80,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
               <p className="text-sm flex items-center gap-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/clock (2) 4.png"
+                  src="/images/clock (20).png"
                   alt="Time"
                   className="h-4 w-4 object-contain flex-shrink-0"
                 />

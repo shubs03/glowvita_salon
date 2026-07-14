@@ -174,6 +174,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  profileImage: {
+    type: String,
+    default: null,
+  },
 });
 
 // Pre-save middleware to auto-assign regionId
@@ -201,6 +205,9 @@ userSchema.pre("validate", async function (next) {
   next();
 });
 
-const UserModel = mongoose.models.User || mongoose.model("User", userSchema);
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+const UserModel = mongoose.model("User", userSchema);
 
 export default UserModel;

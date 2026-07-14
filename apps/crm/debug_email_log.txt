@@ -825,3 +825,13 @@
 [2026-06-27T08:43:17.206Z] Email sent successfully. MessageID: <f27edd70-4ead-c388-efaa-382b28ce8ce8@gmail.com>
 [2026-06-27T08:43:35.536Z] Hard timeout (30s) reached for PDF generation
 >>>>>>> 7b781979fcb67dedab6290af0e0e9df1114eccda
+[2026-07-13T10:59:35.461Z] Attempting to send email to: jayshrikhirari49@gmail.com
+[2026-07-13T10:59:35.630Z] Generating invoice template...
+[2026-07-13T10:59:35.682Z] Invoice template generated successfully from formal invoice.
+[2026-07-13T10:59:35.682Z] Starting PDF generation...
+[2026-07-13T10:59:35.683Z] Calling pdf.create...
+[2026-07-13T10:59:50.722Z] pdf.create success callback
+[2026-07-13T10:59:50.723Z] PDF Generation successful. Size: 33522
+[2026-07-13T10:59:51.709Z] Sending email via transporter...
+[2026-07-13T10:59:56.975Z] Email sent successfully. MessageID: <0eed8e1f-08f4-8c73-5c5b-bcd245daa9f9@gmail.com>
+[2026-07-13T11:00:16.575Z] Hard timeout (30s) reached for PDF generation

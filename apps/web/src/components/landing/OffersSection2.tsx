@@ -221,7 +221,7 @@ const OffersSection2 = () => {
   const marqueeItems = isLoopingRequired ? displayOffersList : offers;
 
   return (
-    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-5 pb-0 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
       <div className="mb-5 flex items-center justify-between">
         <h2
           className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
@@ -239,9 +239,6 @@ const OffersSection2 = () => {
       </div>
 
       <div className="relative">
-        {isLoopingRequired && (
-          <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 lg:w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none"></div>
-        )}
 
         {isLoading ? (
           <div className="flex gap-6 sm:gap-8 lg:gap-10 justify-start pt-1 pb-3">
@@ -282,9 +279,6 @@ const OffersSection2 = () => {
           </div>
         )}
 
-        {isLoopingRequired && (
-          <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 lg:w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none"></div>
-        )}
       </div>
     </section>
   );

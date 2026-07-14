@@ -8,29 +8,15 @@ const HeroSection = () => {
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
-      {/* Right-side panel: hidden on mobile, visible on md+ */}
-      <div className="hidden md:block absolute top-0 right-0 h-full" style={{ width: "55%" }}>
+      {/* Full-width image background */}
+      <div className="absolute inset-0">
         <img
-          src="/images/hero-salon-bg.jpg"
-          alt="Salon"
+          src="/images/hero-salon-bg.png"
+          alt="Products"
           className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "contain", objectPosition: "center right" }}
+          style={{ objectFit: "cover", objectPosition: "center" }}
         />
       </div>
-
-      {/* Gradient — solid maroon left, fades to transparent right (only on md+) */}
-      <div
-        className="absolute inset-0 hidden md:block"
-        style={{
-          background: `linear-gradient(to right,
-            rgba(66, 42, 60, 1)     0%,
-            rgba(66, 42, 60, 1)     49%,
-            rgba(66, 42, 60, 0.85)  60%,
-            rgba(66, 42, 60, 0.80)  73%,
-            rgba(66, 42, 60, 0.31)  78%,
-            rgba(66, 42, 60, 0)     100%)`,
-        }}
-      />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center py-12 sm:py-14 lg:py-16 max-w-7xl">
