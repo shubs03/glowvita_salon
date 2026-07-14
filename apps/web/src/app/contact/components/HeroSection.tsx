@@ -2,7 +2,7 @@ import React from 'react';
 
 const HeroSection = () => {
   return (
-    <div className="relative w-full min-h-[260px] sm:min-h-[360px] md:min-h-[480px] lg:min-h-[700px] overflow-hidden rounded-[24px] sm:rounded-[32px] flex items-center justify-center">
+    <div className="relative w-full min-h-[260px] sm:min-h-[360px] md:min-h-[480px] lg:min-h-[650px] overflow-hidden rounded-[24px] sm:rounded-[32px] flex items-center justify-center">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
