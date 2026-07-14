@@ -112,7 +112,7 @@ export const GET = withSubscriptionCheck(async (req) => {
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
-                    .select('firstName lastName emailAddress mobileNo gender birthdayDate address createdAt')
+                    .select('firstName lastName emailAddress mobileNo gender birthdayDate address createdAt profileImage')
                     .lean();
 
                 const total = await UserModel.countDocuments(query);
@@ -127,7 +127,7 @@ export const GET = withSubscriptionCheck(async (req) => {
                     gender: user.gender || 'Other',
                     country: '',
                     occupation: '',
-                    profilePicture: '',
+                    profilePicture: user.profileImage || '',
                     address: user.address || '',
                     lastVisit: user.createdAt,
                     totalBookings: 0, // Will be calculated in frontend

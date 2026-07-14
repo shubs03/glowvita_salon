@@ -8,7 +8,7 @@ import { hasPermission, forbiddenResponse } from "@repo/lib";
 await _db();
 
 // GET all services
-export const GET = authMiddlewareAdmin(
+export const GET = 
   async (req) => {
     try {
       const services = await ServiceModel.find({}).populate("category", "name");
@@ -19,12 +19,10 @@ export const GET = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
-  "services:view"
-);
+  };
 
 // POST a new service
-export const POST = authMiddlewareAdmin(
+export const POST = 
   async (req) => {
     const body = await req.json();
     const { name, description, category, image } = body;
@@ -65,9 +63,7 @@ export const POST = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
-  "services:edit"
-);
+  }; 
 
 // PUT (update) a service by ID
 export const PUT = authMiddlewareAdmin(

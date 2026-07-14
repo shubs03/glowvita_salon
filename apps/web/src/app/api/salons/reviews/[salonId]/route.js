@@ -1,6 +1,7 @@
 import _db from "@repo/lib/db";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import User from "@repo/lib/models/user";
 
 await _db();
 
@@ -33,7 +34,7 @@ export const GET = async (request, { params }) => {
       entityId: salonId,
       entityType: 'salon',
       isApproved: true,
-    }).sort({ createdAt: -1 });
+    }).populate('userId', 'profileImage').sort({ createdAt: -1 });
 
     const vendorServicesDoc = await VendorServicesModel.findOne({
       vendor: salonId,
@@ -47,7 +48,7 @@ export const GET = async (request, { params }) => {
           entityId: { $in: serviceIds },
           entityType: 'service',
           isApproved: true,
-        }).sort({ createdAt: -1 });
+        }).populate('userId', 'profileImage').sort({ createdAt: -1 });
       }
     }
 
@@ -59,6 +60,11 @@ export const GET = async (request, { params }) => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .map((review) => {
         const reviewObject = review.toObject ? review.toObject() : { ...review };
+
+        if (reviewObject.userId && typeof reviewObject.userId === 'object') {
+          reviewObject.userImage = reviewObject.userId.profileImage || null;
+          reviewObject.userId = reviewObject.userId._id;
+        }
 
         if (review.entityType === 'service') {
           reviewObject.serviceName = serviceNameMap.get(review.entityId?.toString()) || 'Service';
