@@ -19,7 +19,7 @@ export const GET = async (req) => {
 };
 
 // POST a new category
-export const POST = authMiddlewareAdmin(
+export const POST = 
   async (req) => {
     const body = await req.json();
     const { name, description, image } = body;
@@ -56,7 +56,7 @@ export const POST = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"], "categories:edit");
+  }; 
 
 // PUT (update) a category by ID
 export const PUT = authMiddlewareAdmin(

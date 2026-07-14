@@ -22,7 +22,7 @@ export const GET =
   };
 
 // POST a new service
-export const POST = authMiddlewareAdmin(
+export const POST = 
   async (req) => {
     const body = await req.json();
     const { name, description, category, image } = body;
@@ -63,9 +63,7 @@ export const POST = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
-  "services:edit"
-);
+  }; 
 
 // PUT (update) a service by ID
 export const PUT = authMiddlewareAdmin(
