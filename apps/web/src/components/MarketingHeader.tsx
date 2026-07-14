@@ -207,7 +207,7 @@ export function MarketingHeader({
             <img
               src="/images/GlowVita%20Salon%20PNG.png"
               alt="GlowVita Salon"
-              className="h-10 sm:h-12 w-auto object-contain"
+              className="h-14 sm:h-16 w-auto object-contain"
             />
             <span className="hidden sm:inline"></span>
             <span className="hidden sm:hidden">GlowVita</span>

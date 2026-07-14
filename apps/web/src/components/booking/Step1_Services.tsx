@@ -597,7 +597,7 @@ export function Step1_Services({
                   color: bookingMode === 'salon' ? '#ffffff' : '#000000'
                 }}
               >
-                <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={bookingMode === 'salon' ? 'brightness-0 invert' : ''} />
+                <Image src="/images/Mask group (4).png" alt="Salon" width={16} height={16} className={bookingMode === 'salon' ? 'brightness-0 invert' : ''} />
                 Visit Salon
               </button>
               <button
