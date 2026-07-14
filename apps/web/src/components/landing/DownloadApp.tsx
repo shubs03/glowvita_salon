@@ -88,7 +88,7 @@ const DownloadApp = () => {
               </div>
 
               {/* Trust Indicators */}
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-gray-600 w-full">
+              <div className="mt-3  mb-2 flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-gray-600 w-full">
                 <div className="flex items-center gap-1">
                   <span className="  text-sm sm:text-base  font-semibold text-primary">4.9/5</span>
                   <span className="  text-sm sm:text-base  font-semibold">Rating</span>
