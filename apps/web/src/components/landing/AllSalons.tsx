@@ -92,7 +92,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
 
   if (isLoading) {
     return (
-      <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto">
+      <section className="py-10 container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-8 w-48 bg-muted animate-pulse rounded mb-8" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -108,7 +108,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
   }
 
   return (
-    <section className="py-8 px-6 lg:px-8 max-w-7xl mx-auto">
+    <section className="py-8 container mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-5 flex items-center justify-between">
         <h2
           className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"

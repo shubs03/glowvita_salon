@@ -85,7 +85,7 @@ const WhyChooseUs = () => {
   );
 
   return (
-    <section className="pt-5 pb-0 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-5 pb-0 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <img
