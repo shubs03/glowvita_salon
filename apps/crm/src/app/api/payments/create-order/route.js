@@ -41,6 +41,7 @@ export async function POST(req) {
       amount: order.amount,
       currency: order.currency,
       receipt: order.receipt,
+      key_id: keyId,
     });
 
   } catch (error) {

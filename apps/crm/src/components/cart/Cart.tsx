@@ -234,7 +234,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
       // Step 3: Open Razorpay checkout
       await new Promise<void>((resolve, reject) => {
         const rzp = new (window as any).Razorpay({
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          key: razorpayOrder.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: Math.round(subtotal * 100),
           currency: 'INR',
           order_id: razorpayOrder.id,
