@@ -6,15 +6,14 @@ import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 await _db();
 
 // GET all items
-export const GET = authMiddlewareAdmin(async (req) => {
+export const GET = async (req) => {
   try {
     const items = await SuperDataModel.find({}).sort({ orderIndex: 1, createdAt: 1 });
     return Response.json(items, { status: 200 });
   } catch (error) {
     return Response.json({ message: "Error fetching data", error }, { status: 500 });
   }
-},
-  "superdata:view");
+};
 
 // POST a new item
 export const POST = authMiddlewareAdmin(async (req) => {
