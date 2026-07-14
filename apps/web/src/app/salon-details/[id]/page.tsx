@@ -423,7 +423,7 @@ export default function SalonDetailsPage() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isWorkingHoursExpanded, setIsWorkingHoursExpanded] = useState(false);
 
-  const teamSectionRef = useRef<HTMLElement>(null);
+  const aboutSectionRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [sidebarOffset, setSidebarOffset] = useState(0);
 
@@ -433,17 +433,17 @@ export default function SalonDetailsPage() {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
       animationFrameId = requestAnimationFrame(() => {
-        if (!teamSectionRef.current || !sidebarRef.current) return;
+        if (!aboutSectionRef.current || !sidebarRef.current) return;
 
         if (window.innerWidth < 1024) {
           setSidebarOffset(0);
           return;
         }
 
-        const teamRect = teamSectionRef.current.getBoundingClientRect();
+        const aboutRect = aboutSectionRef.current.getBoundingClientRect();
         const sidebarRect = sidebarRef.current.getBoundingClientRect();
 
-        const overlap = sidebarRect.bottom - (teamRect.top - 24);
+        const overlap = sidebarRect.bottom - aboutRect.bottom;
 
         if (overlap > 0) {
           setSidebarOffset(overlap);
@@ -1272,7 +1272,7 @@ export default function SalonDetailsPage() {
               />
 
               {/* About Section - moved after Products */}
-              <section id="about">
+              <section id="about" ref={aboutSectionRef}>
                 <h2
                   className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
                   style={{ color: "#252B42" }}
@@ -1565,7 +1565,7 @@ export default function SalonDetailsPage() {
 
             {/* Full Width Sections (Overlapping right column on scroll) */}
             <div className="lg:col-start-1 lg:col-span-3 lg:row-start-2 space-y-8 pt-0 pb-12 relative">
-              <section id="team" ref={teamSectionRef}>
+              <section id="team">
                 <h2
                   className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3 mb-2"
                   style={{ color: "#252B42" }}

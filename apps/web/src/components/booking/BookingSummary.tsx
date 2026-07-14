@@ -777,7 +777,7 @@ export function BookingSummary({
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 mt-0.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/images/Date (2).png" alt="Date & Time" className="h-7 w-7 object-contain opacity-80" />
+                    <img src="/images/Appointment (10).png" alt="Date & Time" className="h-7 w-7 object-contain opacity-80" />
                   </div>
                   <div className="w-full">
                     <p className="text-sm font-semibold text-black mb-1">Date &amp; Time</p>
