@@ -2257,7 +2257,7 @@ function BookingPageContent() {
           try {
             await new Promise<void>((resolve, reject) => {
               const rzp = new (window as any).Razorpay({
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                key: rzpOrder.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
                 amount: Math.round(paymentAmount * 100),
                 currency: 'INR',
                 order_id: rzpOrderId,
@@ -2283,7 +2283,7 @@ function BookingPageContent() {
                         ],
                       },
                     },
-                    sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                    sequence: ['block.upi', 'card', 'netbanking'],
                   },
                 },
                 modal: {
@@ -2504,7 +2504,7 @@ function BookingPageContent() {
             try {
               await new Promise<void>((resolve, reject) => {
                 const rzp = new (window as any).Razorpay({
-                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                  key: rzpOrder.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
                   amount: Math.round(paymentAmount * 100),
                   currency: 'INR',
                   order_id: rzpOrderId,
@@ -2531,7 +2531,7 @@ function BookingPageContent() {
                           ],
                         },
                       },
-                      sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                      sequence: ['block.upi', 'card', 'netbanking'],
                     },
                   },
                   modal: {
@@ -2739,7 +2739,7 @@ function BookingPageContent() {
               // Open Razorpay checkout
               await new Promise<void>((resolve, reject) => {
                 const rzp = new (window as any).Razorpay({
-                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                  key: razorpayOrder.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                   amount: Math.round(paymentAmount * 100),
                   currency: 'INR',
                   order_id: razorpayOrderId,

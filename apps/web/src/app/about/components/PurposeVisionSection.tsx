@@ -5,18 +5,22 @@ import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const PurposeVisionSection = () => {
   return (
-    <section className="pt-8 md:pt-12 lg:pt-16 pb-4 md:pb-6 lg:pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-8 md:pt-12 lg:pt-16 pb-4 md:pb-6 lg:pb-8 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
       {/* Section Header */}
-      <div className="mb-2 md:mb-4 inline-block">
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-primary whitespace-nowrap pb-2 md:pb-4">
+      <div className="mb-6 md:mb-8">
+        <h2
+          className="relative inline-block text-2xl md:text-3xl font-serif font-bold pb-3"
+          style={{ color: "#252B42" }}
+        >
           Our Purpose & Vision
+          <span
+            className="absolute left-0 bottom-0 h-[3px] w-full rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, #252B42 0%, #252B42 40%, transparent 100%)",
+            }}
+          />
         </h2>
-        <div
-          className="h-[2px] w-full"
-          style={{
-            background: "linear-gradient(90deg, #000000 0%, #FFFFFF 100%)",
-          }}
-        />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center w-full mt-2">
         {/* Left Column - Purpose */}

@@ -145,7 +145,7 @@ function LoginPageContent() {
           </div>
 
           {/* Feature checklist */}
-          <div className="space-y-8 relative z-10">
+          <div className="space-y-7 relative z-10 mt-0">
             <div className="flex items-start gap-2.5">
               <div className="flex-shrink-0 w-5 h-5 rounded-full bg-white flex items-center justify-center mt-0.5 shadow-sm">
                 <svg className="w-3.5 h-3.5 text-[#422A3C]" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
@@ -153,8 +153,8 @@ function LoginPageContent() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-white text-base leading-tight">Select Your Location</h3>
-                <p className="text-white/80 text-xs mt-0.5">Discover nearby salons and beauty services based on your area.</p>
+                <h3 className="font-medium text-white text-base leading-tight">Select Your Location</h3>
+                <p className="text-white/80 text-sm mt-0.5">Discover nearby salons and beauty services based on your area.</p>
               </div>
             </div>
 
@@ -165,8 +165,8 @@ function LoginPageContent() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-white text-base leading-tight">Choose Salon & Services</h3>
-                <p className="text-white/80 text-xs mt-0.5">Explore salon profiles, check services and pick your preferred appointment.</p>
+                <h3 className="font-medium text-white text-base leading-tight">Choose Salon & Services</h3>
+                <p className="text-white/80 text-sm mt-0.5">Explore salon profiles, check services and pick your preferred appointment.</p>
               </div>
             </div>
 
@@ -177,8 +177,8 @@ function LoginPageContent() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-white text-base leading-tight">Book Your Appointment</h3>
-                <p className="text-white/80 text-xs mt-0.5">Confirm your slot instantly and enjoy a smooth salon booking experience.</p>
+                <h3 className="font-medium text-white text-base leading-tight">Book Your Appointment</h3>
+                <p className="text-white/80 text-sm mt-0.5">Confirm your slot instantly and enjoy a smooth salon booking experience.</p>
               </div>
             </div>
           </div>
@@ -196,15 +196,15 @@ function LoginPageContent() {
               />
             </div>
             <p className="text-[#422A3C] text-sm font-semibold tracking-wide">Glowvita Salon for customers</p>
-            <p className="text-gray-500 text-xs mt-0.5">Login to access and manage your appointments anytime.</p>
+            <p className="text-black-500 text-sm mt-2">Login to access and manage your appointments anytime.</p>
           </div>
 
           {/* Form centered in remaining space */}
-          <div className="flex-1 flex flex-col justify-center pb-6">
+          <div className="flex-1 flex flex-col justify-center pb-20 ">
 
             {/* Form fields */}
-            <form onSubmit={handleSubmit} className="space-y-1.5">
-              <div>
+            <form onSubmit={handleSubmit} className="space-y-3 ">
+              <div className="mt-0">
                 <input
                   id="email"
                   type="email"
@@ -249,7 +249,7 @@ function LoginPageContent() {
                   />
                   <span>Remember me</span>
                 </label>
-                <Link href="/forgot-password" className="font-semibold text-gray-700 hover:text-[#422A3C] hover:underline">
+                <Link href="/forgot-password" className="font-medium text-blue-700 hover:text-[#422A3C] hover:underline">
                   Forgot Password?
                 </Link>
               </div>
@@ -273,9 +273,9 @@ function LoginPageContent() {
 
               {/* Divider */}
               <div className="flex items-center py-1">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="px-3 text-sm font-bold text-gray-400">OR</span>
-                <div className="flex-grow border-t border-gray-200"></div>
+                <div className="flex-grow border-t border-gray-700"></div>
+                <span className="px-3 text-sm font-medium text-black-200">OR</span>
+                <div className="flex-grow border-t border-gray-700"></div>
               </div>
 
               {/* Google Login */}
@@ -294,7 +294,7 @@ function LoginPageContent() {
               </button>
 
               {/* Footer Links */}
-              <div className="pt-2 space-y-2 text-center text-base text-black-600">
+              <div className="pt-2 space-y-1 text-center text-base text-black-600">
                 <p>
                   New to GlowVita Salon?{' '}
                   <Link href="/client-register" className="font-bold text-[#422A3C] hover:underline">
