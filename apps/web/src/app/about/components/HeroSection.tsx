@@ -4,7 +4,7 @@ import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const HeroSection = () => {
   return (
-    <div className="relative w-full min-h-[420px] sm:min-h-[500px] lg:h-[700px] overflow-hidden">
+    <div className="relative w-full min-h-[420px] sm:min-h-[500px] lg:h-[650px] overflow-hidden">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 

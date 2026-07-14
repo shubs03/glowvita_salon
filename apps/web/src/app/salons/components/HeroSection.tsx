@@ -16,7 +16,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative w-full min-h-[500px] h-auto lg:h-[700px] overflow-hidden">
+    <section className="relative w-full min-h-[500px] h-auto lg:h-[650px] overflow-hidden">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
@@ -32,9 +32,9 @@ const HeroSection = () => {
 
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl py-10 md:py-0">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-evenly max-w-7xl">
         {/* Logo/Brand Name */}
-        <div className="mb-4 md:mb-8">
+        <div>
           <h3 className="text-amber-100 text-xs sm:text-sm font-light tracking-[0.2em] sm:tracking-[0.3em] uppercase">
             GLOWVITA
           </h3>
@@ -49,7 +49,7 @@ const HeroSection = () => {
             lineHeight: "115%",
             letterSpacing: "-0.01em",
           }}
-          className="text-amber-50 mb-4 md:mb-6 max-w-[510px]"
+          className="text-amber-50 max-w-[510px]"
         >
           Choose the Best
           <br />
@@ -57,13 +57,13 @@ const HeroSection = () => {
         </h1>
 
         {/* Description */}
-        <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-6 md:mb-8 max-w-xl leading-relaxed">
+        <p className="text-gray-200 text-sm sm:text-base md:text-lg max-w-xl leading-relaxed">
           Choose from top-rated salons where experienced artists, modern
           techniques, and exceptional care come together to transform your look.
         </p>
 
         {/* Search Bar */}
-        <div className="mb-6 md:mb-8 w-full max-w-4xl relative z-40">
+        <div className="w-full max-w-4xl relative z-40">
           <GlobalSearchBar variant="compact" className="shadow-2xl !max-w-4xl mx-0" />
         </div>
 
