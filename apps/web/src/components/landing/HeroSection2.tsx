@@ -272,36 +272,34 @@ const HeroSection2 = () => {
   }, [categoriesData]);
 
   return (
-    <div className="relative w-full min-h-[500px] h-auto lg:h-[650px] overflow-hidden">
+    <div className="relative w-full min-h-[420px] sm:min-h-[520px] md:h-auto lg:h-[650px] overflow-hidden">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
       {/* Full-width image background */}
-      <div className="absolute inset-0">
+      {/* Mobile/Desktop: absolute fill. Tablet(md): natural width=100% height=auto, drives section height */}
+      <div className="absolute inset-0 md:relative md:inset-auto lg:absolute lg:inset-0">
         <img
           src="/images/hero-salon-bg.png"
           alt="Products"
-          className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center" }}
+          className="absolute inset-0 h-full w-full pointer-events-none select-none object-cover object-center md:relative md:inset-auto md:h-auto md:object-fill lg:absolute lg:inset-0 lg:h-full lg:object-cover"
         />
       </div>
 
+      {/* Content — relative on mobile/desktop, absolute overlay on tablet */}
+      <div className="relative z-10 md:absolute md:inset-0 lg:relative lg:inset-auto container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 h-full flex flex-col justify-evenly gap-4 sm:gap-3 md:gap-0 py-8 sm:py-10 md:py-6 lg:py-0 max-w-7xl">
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-evenly max-w-7xl">
-        <h3 className="text-amber-100 text-xs sm:text-sm font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase">
+        {/* Welcome tag */}
+        <h3 className="text-amber-100 text-[10px] sm:text-xs md:text-xs lg:text-sm font-medium tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] uppercase">
           WELCOME TO GLOWVITA SALON
         </h3>
 
+        {/* Main heading */}
         <h1
+          className="text-[34px] sm:text-[44px] md:text-[56px] lg:text-[70px] leading-[115%] font-bold max-w-full sm:max-w-[85%] md:max-w-[70%] lg:max-w-[510px]"
           style={{
             fontFamily: "'Playfair Display', serif",
-            fontWeight: 700,
-            fontSize: "70px",
-            lineHeight: "115%",
             letterSpacing: "-0.01em",
-            width: "510px",
-            opacity: 1,
             color: "#F7E5C1",
           }}
         >
@@ -310,49 +308,28 @@ const HeroSection2 = () => {
           close to you
         </h1>
 
+        {/* Sub-description */}
         <p
-          style={{
-            fontFamily: "'Manrope', sans-serif",
-            fontWeight: 400,
-            fontSize: "18px",
-            lineHeight: "170%",
-            letterSpacing: "0%",
-            width: "508px",
-            maxWidth: "100%",
-            color: "#FFFFFF",
-          }}
+          className="text-sm sm:text-[15px] md:text-base lg:text-[18px] leading-[170%] text-white max-w-full sm:max-w-[85%] md:max-w-[65%] lg:max-w-[508px]"
+          style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 400 }}
         >
-          Experience convenience by discovering salons and<br />
-          specialists in your area, ready to provide excellent self-care<br />
+          Experience convenience by discovering salons and
+          specialists in your area, ready to provide excellent self-care
           services.
         </p>
 
         {/* ── Search Bar ─────────────────────────────────────────────────── */}
         <div
-          className="bg-white shadow-2xl flex flex-col md:flex-row items-stretch md:items-center"
-          style={{
-            width: "865px",
-            maxWidth: "100%",
-            height: "72px",
-            gap: "46px",
-            borderRadius: "50px",
-            paddingTop: "12px",
-            paddingRight: "14px",
-            paddingBottom: "12px",
-            paddingLeft: "40px",
-          }}
+          className="bg-white shadow-2xl w-full max-w-[865px] flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-0 rounded-2xl md:rounded-full px-4 md:pl-10 md:pr-3.5 py-3 md:py-3"
         >
-
           {/* Service + Address inputs wrapper */}
-          <div
-            className="flex items-center md:border-r border-gray-200 "
-            style={{ width: "638px", maxWidth: "100%", height: "48px", gap: "24px" }}
-          >
+          <div className="flex flex-col md:flex-row items-stretch md:items-center flex-1 gap-3 md:gap-6 md:border-r md:border-gray-200 md:pr-6">
+
             {/* Service Input */}
             <div className="relative flex-1 flex items-center gap-3">
               <div className="flex flex-col flex-1">
                 {!serviceInput && (
-                  <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
+                  <label className="text-xs font-medium mb-0.5" style={{ color: "#BA7894" }}>
                     Service Name
                   </label>
                 )}
@@ -413,11 +390,14 @@ const HeroSection2 = () => {
               )}
             </div>
 
+            {/* Divider between inputs on mobile/tablet-portrait */}
+            <div className="block md:hidden h-px w-full bg-gray-100" />
+
             {/* Location Input */}
             <div className="relative flex-1 flex items-center gap-3">
               <div className="flex flex-col flex-1">
                 {!locationInput && (
-                  <label className="text-xs font-medium mb-1" style={{ color: "#BA7894" }}>
+                  <label className="text-xs font-medium mb-0.5" style={{ color: "#BA7894" }}>
                     Address
                   </label>
                 )}
@@ -500,13 +480,8 @@ const HeroSection2 = () => {
           <button
             onClick={handleSearch}
             disabled={isSearching}
-            className="text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
-            style={{
-              width: "127px",
-              height: "35px",
-              borderRadius: "21px",
-              backgroundColor: "#BA7894",
-            }}
+            className="text-white font-medium transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70 w-full md:w-[127px] h-11 md:h-[44px] lg:h-[35px] rounded-full md:rounded-[21px] mt-1 md:mt-0 md:ml-3 text-sm md:text-base"
+            style={{ backgroundColor: "#BA7894" }}
           >
             {isSearching ? "Searching…" : "Search"}
             <Sparkles className="w-4 h-4" />
