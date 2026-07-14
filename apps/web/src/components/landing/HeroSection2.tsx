@@ -272,7 +272,7 @@ const HeroSection2 = () => {
   }, [categoriesData]);
 
   return (
-    <div className="relative w-full min-h-[500px] h-auto lg:h-[600px] overflow-hidden">
+    <div className="relative w-full min-h-[550px] h-auto lg:h-[650px] overflow-hidden">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
