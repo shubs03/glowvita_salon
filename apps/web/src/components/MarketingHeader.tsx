@@ -202,15 +202,13 @@ export function MarketingHeader({
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between relative">
           <Link
             href="/"
-            className="flex items-center gap-2 font-bold text-xl sm:text-2xl font-headline text-primary bg-clip-text hover:opacity-80 transition-opacity"
+            className="flex items-center hover:opacity-80 transition-opacity"
           >
             <img
               src="/images/GlowVita%20Salon%20PNG.png"
               alt="GlowVita Salon"
-              className="h-14 sm:h-16 w-auto object-contain"
+              className="h-14 sm:h-16 w-auto object-contain block mt-2"
             />
-            <span className="hidden sm:inline"></span>
-            <span className="hidden sm:hidden">GlowVita</span>
           </Link>
 
           {/* Desktop & Tablet Nav */}
@@ -225,7 +223,7 @@ export function MarketingHeader({
                         className={cn(
                           "hover:bg-primary/10 text-sm px-3 relative",
                           isActiveRoute(item.href) &&
-                          "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-0.5 after:bg-primary after:rounded-full"
+                          "after:absolute after:bottom-1.5 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-0.5 after:bg-primary after:rounded-full"
                         )}
                       >
                         {item.label}
@@ -241,7 +239,7 @@ export function MarketingHeader({
                           className={cn(
                             "hover:bg-primary/10 text-md px-5 relative",
                             isActiveRoute(item.href) &&
-                            "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-1 after:bg-primary after:rounded-full"
+                            "after:absolute after:bottom-1.5 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-0.5 after:bg-primary after:rounded-full"
                           )}
                         >
                           {item.label}

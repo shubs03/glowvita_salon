@@ -421,7 +421,7 @@ export default function AllProductsPage() {
         {/* <RecentlyAddedProducts /> */}
 
         {/* Shared background: Filter + Flash Sale */}
-        <div className="w-full" style={{ background: "linear-gradient(3.99deg, #EBF3FD 46.89%, #FFFFFF 96.85%)" }}>
+        <div className="w-full overflow-hidden" style={{ background: "linear-gradient(3.99deg, #EBF3FD 46.89%, #FFFFFF 96.85%)" }}>
 
           {/* Filters Row */}
           <FilterComponent
@@ -452,7 +452,7 @@ export default function AllProductsPage() {
               .flash-word-gap { display: inline-block; width: 10px; }
               .flash-sale-underline { width: 190px; height: 3px; background: linear-gradient(90deg, #422A3C 0%, #FFFFFF 100%); margin-top: 6px; border: none; }
             `}} />
-              <div className="mx-auto px-4 lg:px-8 max-w-7xl">
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Heading row */}
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -474,7 +474,7 @@ export default function AllProductsPage() {
                 {/* Horizontal scroll row — infinite auto-scroll */}
                 <div
                   ref={flashScrollRef}
-                  className="flash-sale-scroll flex overflow-x-auto gap-4 pb-4"
+                  className="flash-sale-scroll flex w-full overflow-x-auto gap-4 pb-4"
                   style={{ scrollbarWidth: "none", msOverflowStyle: "none", overflowX: "hidden" }}
                   onMouseEnter={() => { flashScrollPaused.current = true; }}
                   onMouseLeave={() => { flashScrollPaused.current = false; }}
@@ -497,7 +497,7 @@ export default function AllProductsPage() {
           )}
         </div>{/* end shared background wrapper */}
 
-        <div className="container mx-auto px-4 pb-8 pt-0">
+        <div className="pb-8 pt-0">
           {/* 5. Product Grid */}
           <ProductsGrid
             products={filteblueProducts}
@@ -513,7 +513,7 @@ export default function AllProductsPage() {
           />
         </div>
 
-        <div className="container mx-auto px-4 pb-8 pt-0">
+        <div className="pb-8 pt-0">
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
             <main className="lg:col-span-12">
               {/* 8. Testimonials Section */}
