@@ -686,7 +686,7 @@ export function Step1_Services({
 
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <Image src="/images/clock (20).png" alt="Time" width={14} height={14} />
-                        <span className="text-xs text-black">{service.duration} mins</span>
+                        <span className="text-xs text-black">{service.duration}</span>
                       </div>
 
                       <div className="flex items-center justify-between mt-auto">
