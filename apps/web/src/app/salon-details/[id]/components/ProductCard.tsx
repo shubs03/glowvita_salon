@@ -170,8 +170,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {product.category}
           </p>
           <div className="flex items-center gap-1" style={{ color: "#BA7894" }}>
-            <img src="/images/Vector (2).png" alt="star" className="w-3 h-3 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
-            <Star className="w-3 h-3 hidden" fill="#BA7894" stroke="#BA7894" />
+            <img src="/images/Vector (2).png" alt="star" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+            <Star className="w-4 h-4 hidden" fill="#BA7894" stroke="#BA7894" />
             <span className="text-xs font-semibold">
               {product.rating || "0.0"}
             </span>
@@ -218,33 +218,33 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {isSubscriptionExpired ? 'Unavailable' : 'Buy Now'}
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
-              className={`flex items-center justify-center w-7 h-7 hover:text-red-500 transition-opacity ${isLoading ? 'opacity-50' : ''}`}
+              className={`flex items-center justify-center w-6 h-6 hover:text-red-500 transition-opacity ${isLoading ? 'opacity-50' : ''}`}
               onClick={handleWishlistToggle}
               disabled={isLoading}
             >
               {isLiked ? (
-                <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                <Heart className="h-full w-full fill-red-500 text-red-500" />
               ) : (
                 <>
-                  <img src="/images/heart.png" alt="heart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
-                  <Heart className="w-4 h-4 hidden text-black" />
+                  <img src="/images/heart.png" alt="heart" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                  <Heart className="w-full h-full hidden text-black" />
                 </>
               )}
             </button>
 
             <button
-              className={`flex items-center justify-center w-7 h-7 hover:opacity-70 transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex items-center justify-center w-6 h-6 hover:opacity-70 transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={handleAddToCart}
               disabled={isSubscriptionExpired}
             >
               {showCartActiveIcon ? (
-                <img src="/images/add-to-cart (6).png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                <img src="/images/add-to-cart (1) 1.png" alt="cart" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
               ) : (
-                <img src="/images/add-to-cart (5).png" alt="add to cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                <img src="/images/add-to-cart (5).png" alt="add to cart" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
               )}
-              <ShoppingCart className="h-4 w-4 hidden text-black" />
+              <ShoppingCart className="h-full w-full hidden text-black" />
             </button>
           </div>
         </div>
