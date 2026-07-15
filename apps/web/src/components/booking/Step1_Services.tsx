@@ -597,7 +597,14 @@ export function Step1_Services({
             <Image src="/images/like (1) 1.png" alt="Wedding" width={14} height={14} className={viewMode === 'packages' ? 'brightness-0 invert' : ''} />
             Wedding Packages
             {displayWeddingPackages.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
+              <span
+                className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={
+                  viewMode === 'packages'
+                    ? { background: '#ffffff', color: '#422A3C' }
+                    : { background: 'rgba(66,42,60,0.1)', color: '#422A3C' }
+                }
+              >
                 {displayWeddingPackages.length}
               </span>
             )}
@@ -847,7 +854,7 @@ export function Step1_Services({
                           {displayServicesCount} Services
                         </span>
                         <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
-                          <img src="/images/clock (10) 4.png" alt="Duration" className="h-3 w-3 mr-1" />
+                          <img src="/images/clock (20).png" alt="Duration" className="h-3 w-3 mr-1" />
                           {displayDuration >= 60
                             ? `${Math.floor(displayDuration / 60)}hr ${displayDuration % 60 > 0 ? (displayDuration % 60) + 'min' : ''}`
                             : `${displayDuration} min`}
@@ -1067,7 +1074,7 @@ export function Step1_Services({
                     {selectedPackageForDetails.services?.length || 0} Services
                   </span>
                   <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
-                    <img src="/images/clock (10) 4.png" alt="Duration" className="h-3 w-3 mr-1" />
+                    <img src="/images/clock (20).png" alt="Duration" className="h-3 w-3 mr-1" />
                     {(() => {
                       const dur = selectedPackageForDetails.duration || 0;
                       return dur >= 60
