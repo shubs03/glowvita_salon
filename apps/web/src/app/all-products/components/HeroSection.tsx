@@ -186,7 +186,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           className="absolute inset-0 h-full w-full pointer-events-none select-none object-cover object-right md:object-right lg:object-center"
         />
         {/* Dark gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#130C11]/90 via-[#130C11]/45 to-transparent" />
+        {/* <div className="absolute inset-0 bg-gradient-to-r from-[#130C11]/90 via-[#130C11]/45 to-transparent" /> */}
       </div>
 
       {/* Content Overlay */}
@@ -210,12 +210,8 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
 
         {/* Description */}
         <p
-          className="text-sm sm:text-[15px] md:text-base lg:text-[18px] leading-[170%] text-gray-200 max-w-full sm:max-w-[85%] md:max-w-[65%] lg:max-w-[508px]"
-          style={{
-            fontFamily: "'Manrope', sans-serif",
-            fontWeight: 400,
-            textAlign: "justify",
-          }}
+          className="text-sm sm:text-[15px] md:text-base lg:text-[18px] leading-[170%] text-white max-w-full sm:max-w-[85%] md:max-w-[65%] lg:max-w-[508px]"
+          style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 400 }}
         >
           Explore high-quality beauty products crafted to elevate your daily self-care with trusted formulas and reliable performance.
         </p>
