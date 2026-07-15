@@ -1518,15 +1518,15 @@ async function handleBookingConfirmation(body) {
     try {
       const appointment = confirmResult.appointment;
       if (appointment.client && appointment.client.toString().length === 24) {
-        await NotificationService.sendAppointmentAlert(appointment.client, 'client', appointment, 'confirmed');
+        await NotificationService.sendAppointmentAlert(appointment.client, 'client', appointment, appointment.status || 'scheduled');
       }
       // Also notify vendor
-      await NotificationService.sendAppointmentAlert(appointment.vendorId, 'vendor', appointment, 'confirmed');
+      await NotificationService.sendAppointmentAlert(appointment.vendorId, 'vendor', appointment, appointment.status || 'scheduled');
 
       // SMS Alerts (Critical)
       const clientPhone = appointment.clientPhone;
       if (clientPhone) {
-        await SmsService.sendAppointmentSms(clientPhone, appointment, 'confirmed');
+        await SmsService.sendAppointmentSms(clientPhone, appointment, appointment.status || 'scheduled');
       }
     } catch (err) {
       console.error('Booking Confirmation Notification Error:', err);

@@ -542,6 +542,34 @@ export const POST = withSubscriptionCheck(async (req) => {
             .populate('service', 'name duration price')
             .populate('serviceItems.service', 'name duration price');
 
+        // Instant Push Notifications for new booking
+        try {
+            const rawClientId = populatedAppointment.client;
+            const newStatus = populatedAppointment.status || 'scheduled';
+            
+            if (rawClientId && rawClientId.toString().length === 24) {
+                await NotificationService.sendAppointmentAlert(rawClientId, 'client', populatedAppointment, newStatus);
+            }
+            if (vendorId) {
+                await NotificationService.sendAppointmentAlert(vendorId, 'vendor', populatedAppointment, newStatus);
+            }
+            
+            // SMS Alerts
+            // Try to extract phone from body or populated client (if available)
+            let clientPhone = body.clientPhone;
+            if (!clientPhone && populatedAppointment.client && populatedAppointment.client.phone) {
+                clientPhone = populatedAppointment.client.phone;
+            }
+            if (clientPhone) {
+                const smsStatusMap = ['confirmed', 'cancelled', 'scheduled'];
+                if (smsStatusMap.includes(newStatus)) {
+                    await SmsService.sendAppointmentSms(clientPhone, populatedAppointment, newStatus);
+                }
+            }
+        } catch (notifErr) {
+            console.error('❌ Error sending push notifications on CRM booking:', notifErr);
+        }
+
         return NextResponse.json(
             { message: "Appointment created successfully", appointment: populatedAppointment },
             { status: 201 }
