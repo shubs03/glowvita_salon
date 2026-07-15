@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import AppointmentModel from "../../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import PaymentCollectionModel from "../../../../../../../../packages/lib/src/models/Payment/PaymentCollection.model";
 import _db from '@repo/lib/db';
+import { chromium } from "playwright";
 import { authMiddlewareCrm } from '@/middlewareCrm';
 import { sendEmail } from "../../../../../../../../packages/lib/src/emailService";
 import { getCompletionTemplate, getInvoiceTemplate } from "../../../../../../../../packages/lib/src/emailTemplates";
@@ -460,53 +461,76 @@ export const POST = authMiddlewareCrm(async (req) => {
               invoiceHtml = null;
             }
 
-            // Generate PDF Buffer with Timeout
-            let pdfBuffer;
-            if (invoiceHtml) {
-              logToFile('Starting PDF generation...');
-              try {
-                const pdfPromise = new Promise((resolve, reject) => {
-                  try {
-                    logToFile('Calling pdf.create...');
+// Generate PDF Buffer with Timeout
+let pdfBuffer;
 
-                    const options = {
-                      format: 'A4',
-                      timeout: 50000
-                    };
+if (invoiceHtml) {
+  logToFile("Starting PDF generation...");
 
-                    pdf.create(invoiceHtml, options).toBuffer((err, buffer) => {
-                      if (err) {
-                        console.error('pdf.create error callback:', err);
-                        logToFile(`pdf.create error callback: ${err.message}`);
-                        reject(err);
-                      } else {
-                        logToFile('pdf.create success callback');
-                        resolve(buffer);
-                      }
-                    });
-                  } catch (err) {
-                    console.error('pdf.create catch block:', err);
-                    logToFile(`pdf.create catch block: ${err.message}`);
-                    reject(err);
-                  }
-                });
+  let browser;
 
-                const timeoutPromise = new Promise((_, reject) =>
-                  setTimeout(() => {
-                    logToFile('Hard timeout (30s) reached for PDF generation');
-                    reject(new Error('PDF generation timed out (30s threshold)'));
-                  }, 30000)
-                );
+  try {
+    const pdfPromise = (async () => {
+      try {
+        logToFile("Launching Chromium...");
 
-                pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
-                logToFile(`PDF Generation successful. Size: ${pdfBuffer.length}`);
-              } catch (pdfError) {
-                console.error('⚠️ PDF Generation failed or timed out:', pdfError.message);
-                logToFile(`PDF Generation overall failed: ${pdfError.message}`);
-              }
-            } else {
-              logToFile('Skipping PDF generation due to template error.');
-            }
+        browser = await chromium.launch({
+          headless: true,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+          ],
+        });
+
+        const page = await browser.newPage();
+
+        logToFile("Setting HTML content...");
+
+        await page.setContent(invoiceHtml, {
+          waitUntil: "networkidle",
+        });
+
+        logToFile("Generating PDF...");
+
+        const buffer = await page.pdf({
+          format: "A4",
+          printBackground: true,
+        });
+
+        logToFile("PDF generated successfully");
+
+        return buffer;
+      } catch (err) {
+        console.error("Playwright PDF Error:", err);
+        logToFile(`Playwright PDF Error: ${err.message}`);
+        throw err;
+      } finally {
+        if (browser) {
+          await browser.close();
+          logToFile("Browser closed.");
+        }
+      }
+    })();
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => {
+        logToFile("Hard timeout (30s) reached for PDF generation");
+        reject(new Error("PDF generation timed out (30s threshold)"));
+      }, 30000)
+    );
+
+    pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
+
+    logToFile(`PDF Generation successful. Size: ${pdfBuffer.length}`);
+
+  } catch (pdfError) {
+    console.error("⚠️ PDF Generation failed:", pdfError.message);
+    logToFile(`PDF Generation overall failed: ${pdfError.message}`);
+  }
+
+} else {
+  logToFile("Skipping PDF generation due to template error.");
+}
 
             // Send completion email with attachment
             const completionHtml = getCompletionTemplate({

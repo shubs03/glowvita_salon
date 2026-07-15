@@ -9,6 +9,7 @@ import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, get
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
 import { checkAndCreditReferralBonus } from "../../../../../../../../packages/lib/src/utils/referralWalletCredit";
 import pdf from 'html-pdf';
+ import { chromium } from "playwright";
 
 await _db();
 
@@ -290,43 +291,59 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                             invoiceHtml = null;
                         }
 
-                        // Generate PDF Buffer
-                        let pdfBuffer;
-                        if (invoiceHtml) {
-                            try {
-                                const pdfPromise = new Promise((resolve, reject) => {
-                                    try {
-                                        const options = {
-                                            format: 'A4',
-                                            timeout: 50000
-                                        };
+// Generate PDF Buffer
+let pdfBuffer;
 
-                                        pdf.create(invoiceHtml, options).toBuffer((err, buffer) => {
-                                            if (err) {
-                                                console.error('pdf.create error callback:', err);
-                                                reject(err);
-                                            } else {
-                                                resolve(buffer);
-                                            }
-                                        });
-                                    } catch (err) {
-                                        console.error('pdf.create catch block:', err);
-                                        reject(err);
-                                    }
-                                });
+if (invoiceHtml) {
+    let browser;
 
-                                const timeoutPromise = new Promise((_, reject) =>
-                                    setTimeout(() => reject(new Error('PDF generation timed out (30s threshold)')), 30000)
-                                );
+    try {
+        const pdfPromise = (async () => {
+            try {
+                browser = await chromium.launch({
+                    headless: true,
+                    args: [
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox"
+                    ]
+                });
 
-                                pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
-                            } catch (pdfError) {
-                                console.error('⚠️ PDF Generation failed or timed out:', pdfError.message);
-                            }
-                        } else {
-                            console.warn('Skipping PDF generation due to template error.');
-                        }
+                const page = await browser.newPage();
 
+                await page.setContent(invoiceHtml, {
+                    waitUntil: "networkidle"
+                });
+
+                return await page.pdf({
+                    format: "A4",
+                    printBackground: true
+                });
+
+            } catch (err) {
+                console.error("Playwright PDF Error:", err);
+                throw err;
+            } finally {
+                if (browser) {
+                    await browser.close();
+                }
+            }
+        })();
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(
+                () => reject(new Error("PDF generation timed out (30s threshold)")),
+                30000
+            )
+        );
+
+        pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
+
+    } catch (pdfError) {
+        console.error("⚠️ PDF Generation failed or timed out:", pdfError.message);
+    }
+} else {
+    console.warn("Skipping PDF generation due to template error.");
+}
                         // Send completion email with attachment
                         const completionHtml = getCompletionTemplate({
                             clientName,
