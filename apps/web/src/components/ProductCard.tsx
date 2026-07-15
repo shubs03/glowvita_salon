@@ -372,7 +372,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </p>
             <div className="flex items-center gap-1 flex-shrink-0" style={{ color: "#BA7894" }}>
               <Star className="w-3 h-3 fill-current" />
-              <span className="text-[12px] font-semibold">{rating > 0 ? rating.toFixed(1) : "0.0"}</span>
+              <span className="text-[12px] font-semibold">{Number(rating) > 0 ? Number(rating).toFixed(1) : "0.0"}</span>
             </div>
           </div>
 
