@@ -5606,8 +5606,9 @@ function BookingPageContent() {
       <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="text-center pb-4">
-            <div className="mx-auto bg-primary/10 p-3 rounded-full mb-3">
-              <Wallet className="h-6 w-6 text-primary" />
+            <div className="mx-auto p-3 rounded-full mb-3" style={{ background: '#EBF3FD' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/secure-payment 1.png" alt="Payment" className="h-6 w-6 object-contain" />
             </div>
             <DialogTitle className="text-2xl text-center font-bold">Select Payment Method</DialogTitle>
             <DialogDescription className="text-center mt-2 text-muted-foreground">
@@ -5617,7 +5618,7 @@ function BookingPageContent() {
 
           <div className="py-4 space-y-4">
             {/* Display Total Amount */}
-            <Card className="border-2 border-primary/20 bg-primary/5">
+            <Card className="border-2 border-primary/20" style={{ background: '#EBF3FD' }}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Total Amount</span>
@@ -5631,12 +5632,14 @@ function BookingPageContent() {
             {/* Payment Method Options */}
             <div className="grid grid-cols-2 gap-4">
               <Card
-                className={`cursor-pointer transition-all ${paymentMethod === 'Pay at Salon' ? 'border-2 border-primary bg-primary/5' : 'border-2 border-muted hover:border-primary/50'}`}
+                className={`cursor-pointer transition-all ${paymentMethod === 'Pay at Salon' ? 'border-2 border-primary' : 'border-2 border-muted hover:border-primary/50'}`}
+                style={paymentMethod === 'Pay at Salon' ? { background: '#EBF3FD' } : {}}
                 onClick={() => setPaymentMethod('Pay at Salon')}
               >
                 <CardContent className="p-6 text-center space-y-3">
-                  <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
-                    <Store className="h-6 w-6 text-primary" />
+                  <div className="mx-auto p-3 rounded-full w-fit" style={{ background: '#EBF3FD' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/images/Group 1000002556 (5).png" alt="Pay at Salon" className="h-6 w-6 object-contain" />
                   </div>
                   <div className="font-semibold text-lg">Pay at Salon</div>
                   <div className="text-muted-foreground text-sm">Pay with cash or card after your service</div>
@@ -5644,12 +5647,14 @@ function BookingPageContent() {
               </Card>
 
               <Card
-                className={`cursor-pointer transition-all ${paymentMethod === 'Pay Online' ? 'border-2 border-primary bg-primary/5' : 'border-2 border-muted hover:border-primary/50'}`}
+                className={`cursor-pointer transition-all ${paymentMethod === 'Pay Online' ? 'border-2 border-primary' : 'border-2 border-muted hover:border-primary/50'}`}
+                style={paymentMethod === 'Pay Online' ? { background: '#EBF3FD' } : {}}
                 onClick={() => setPaymentMethod('Pay Online')}
               >
                 <CardContent className="p-6 text-center space-y-3">
-                  <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
-                    <CreditCard className="h-6 w-6 text-primary" />
+                  <div className="mx-auto p-3 rounded-full w-fit" style={{ background: '#EBF3FD' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/images/credit-card (3).png" alt="Pay Online" className="h-6 w-6 object-contain" />
                   </div>
                   <div className="font-semibold text-lg">Pay Online</div>
                   <div className="text-muted-foreground text-sm">Securely pay now using UPI, Card, or Netbanking</div>
