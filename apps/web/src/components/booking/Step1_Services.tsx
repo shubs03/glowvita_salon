@@ -854,7 +854,7 @@ export function Step1_Services({
                           {displayServicesCount} Services
                         </span>
                         <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
-                          <img src="/images/clock (10) 4.png" alt="Duration" className="h-3 w-3 mr-1" />
+                          <img src="/images/clock (20).png" alt="Duration" className="h-3 w-3 mr-1" />
                           {displayDuration >= 60
                             ? `${Math.floor(displayDuration / 60)}hr ${displayDuration % 60 > 0 ? (displayDuration % 60) + 'min' : ''}`
                             : `${displayDuration} min`}
@@ -1074,7 +1074,7 @@ export function Step1_Services({
                     {selectedPackageForDetails.services?.length || 0} Services
                   </span>
                   <span className="inline-flex items-center px-2 py-1 rounded bg-white text-[11px] font-bold text-gray-900 shadow-sm">
-                    <img src="/images/clock (10) 4.png" alt="Duration" className="h-3 w-3 mr-1" />
+                    <img src="/images/clock (20).png" alt="Duration" className="h-3 w-3 mr-1" />
                     {(() => {
                       const dur = selectedPackageForDetails.duration || 0;
                       return dur >= 60

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
-import { Clock, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Service, WeddingPackage as WeddingPackageType, StaffMember } from '@/hooks/useBookingData';
 
 interface WeddingPackageCustomizerProps {
@@ -274,7 +274,7 @@ export function Step1_WeddingPackageCustomizer({
                         <div>
                             <h2 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">{weddingPackage.name}</h2>
                             <div className="flex items-center gap-1.5 text-xs md:text-sm text-gray-500 font-medium mt-1.5">
-                                <Clock className="h-4 w-4 text-rose-500" />
+                                <img src="/images/clock (20).png" alt="Duration" className="h-4 w-4 object-contain" />
                                 <span>Service Time: {formatDuration(totalDuration)}</span>
                             </div>
                         </div>
