@@ -22,6 +22,7 @@ COPY --from=pruner /app/out/package-lock.json .
 
 # Install dependencies
 RUN npm install --frozen-lockfile
+RUN npx playwright install --with-deps chromium
 
 # Copy pruned source code
 COPY --from=pruner /app/out/full/ .
@@ -79,6 +80,11 @@ COPY --from=builder /app/apps/crm/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/crm/.next/static ./apps/crm/.next/static
 # Copy public folder (IMPORTANT)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/crm/public ./apps/crm/public
+
+RUN apt-get update && apt-get install -y \
+    wget \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 USER nextjs
 
