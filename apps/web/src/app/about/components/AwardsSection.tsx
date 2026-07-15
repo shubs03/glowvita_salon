@@ -51,7 +51,7 @@ const AwardsSection = () => {
             key={index}
             className="bg-card border border-border rounded-3xl p-6 hover:shadow-md transition-all duration-300 group hover:border-primary/50"
           >
-            <div className="flex items-center gap-6">
+            <div className="flex items-start gap-6">
               <div
                 className="p-2 rounded-2xl flex-shrink-0 group-hover:scale-110 transition-all duration-300"
                 style={{ backgroundColor: "#EBF3FD" }}
@@ -62,13 +62,15 @@ const AwardsSection = () => {
                   className="w-7 h-7 object-contain"
                 />
               </div>
-              <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
-                {award.title}
-              </h3>
+              <div>
+                <h3 className="font-bold text-card-foreground text-lg leading-tight">
+                  {award.title}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mt-1">
+                  {award.description}
+                </p>
+              </div>
             </div>
-            <p className="text-muted-foreground text-sm leading-relaxed pl-14">
-              {award.description}
-            </p>
           </div>
         ))}
       </div>
