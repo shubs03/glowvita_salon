@@ -210,8 +210,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
 
         {/* Description */}
         <p
-          className="text-sm sm:text-[15px] md:text-base lg:text-[18px] leading-[170%] text-white max-w-full sm:max-w-[85%] md:max-w-[65%] lg:max-w-[508px]"
-          style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 400 }}
+          className="text-gray-200 text-sm sm:text-base md:text-lg lg:text-xl max-w-xl leading-relaxed"
         >
           Explore high-quality beauty products crafted to elevate your daily self-care with trusted formulas and reliable performance.
         </p>
