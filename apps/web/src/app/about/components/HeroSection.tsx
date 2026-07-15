@@ -13,8 +13,7 @@ const HeroSection = () => {
         <img
           src="/images/hero-salon-bg.png"
           alt="Products"
-          className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center" }}
+          className="h-full w-full pointer-events-none select-none object-cover object-center md:object-[85%_center] lg:object-center"
         />
       </div>
 

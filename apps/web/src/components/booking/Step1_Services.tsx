@@ -9,6 +9,7 @@ import { Plus, Check, Scissors, Loader2, AlertCircle, Heart, Users, X, Clock, Li
 import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 import { Service, WeddingPackage } from '@/hooks/useBookingData';
+import { isOfferApplicable } from '@repo/lib/utils';
 import { useParams } from 'next/navigation';
 import { useGetPublicVendorStaffQuery } from '@repo/store/api';
 import {
@@ -97,6 +98,11 @@ interface Step1ServicesProps {
   priceBreakdown?: any;
   taxFeeSettings?: any;
   onClearServices?: () => void;
+  appliedOffer?: any;
+  /** List of all vendor offers – used to find the matching offer by offerCodeFromUrl instantly */
+  vendorOffers?: any[];
+  /** Offer code from the URL query param (from Special Offer click) */
+  offerCodeFromUrl?: string | null;
 }
 
 export function Step1_Services({
@@ -120,6 +126,9 @@ export function Step1_Services({
   priceBreakdown,
   taxFeeSettings,
   onClearServices,
+  appliedOffer,
+  vendorOffers,
+  offerCodeFromUrl,
 }: Step1ServicesProps) {
   // Get vendor ID from URL params
   const params = useParams();
@@ -331,6 +340,27 @@ export function Step1_Services({
 
   // Use valid wedding packages
   const displayWeddingPackages = validWeddingPackages;
+
+  // Resolve the active offer for per-service eligibility.
+  // Prefer appliedOffer (already validated) — fall back to finding it in vendorOffers by code
+  // so restrictions apply immediately when arriving from a Special Offer link.
+  const activeOffer = useMemo(() => {
+    if (appliedOffer) return appliedOffer;
+    if (offerCodeFromUrl && vendorOffers && vendorOffers.length > 0) {
+      const normalizedTarget = offerCodeFromUrl.toUpperCase().trim();
+      const found = vendorOffers.find((o: any) => {
+        // Support both 'code' and 'offerCode' field names used by different APIs
+        const c = (o?.code || o?.offerCode || '')?.toUpperCase().trim();
+        return c === normalizedTarget;
+      });
+      if (!found) {
+        console.warn('[Step1_Services] No matching offer found for code:', offerCodeFromUrl,
+          '| Available codes:', vendorOffers.map((o: any) => o?.code || o?.offerCode));
+      }
+      return found || null;
+    }
+    return null;
+  }, [appliedOffer, offerCodeFromUrl, vendorOffers]);
 
   // Handle service selection
   const handleSelectService = (service: Service) => {
@@ -597,7 +627,7 @@ export function Step1_Services({
                   color: bookingMode === 'salon' ? '#ffffff' : '#000000'
                 }}
               >
-                <Image src="/images/scissors (1) 1.png" alt="Salon" width={16} height={16} className={bookingMode === 'salon' ? 'brightness-0 invert' : ''} />
+                <Image src="/images/Mask group (4).png" alt="Salon" width={16} height={16} className={bookingMode === 'salon' ? 'brightness-0 invert' : ''} />
                 Visit Salon
               </button>
               <button
@@ -632,6 +662,18 @@ export function Step1_Services({
             </div>
           )}
 
+          {/* Offer-mode banner: shown only when the user arrived via a Special Offer link */}
+          {activeOffer && (
+            <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"
+              style={{ background: '#FFF7ED', border: '1px solid #F59E0B', color: '#92400E' }}>
+              <span>🏷️</span>
+              <span>
+                Offer <strong>{activeOffer.code}</strong> is active.
+                Services not eligible for this offer are disabled.
+              </span>
+            </div>
+          )}
+
           {/* Services List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {servicesToDisplay
@@ -645,16 +687,19 @@ export function Step1_Services({
               })
               .map((service: Service) => {
                 const isSelected = selectedServices.some(s => s.id === service.id);
+                // Use true (checkEligibilityOnly) for accurate per-service eligibility
+                const isApplicable = activeOffer ? isOfferApplicable(activeOffer, [service], true) : true;
 
                 return (
                   <div
                     key={service.id}
                     className={cn(
-                      'flex p-3 rounded-xl transition-shadow relative cursor-pointer hover:shadow-md',
-                      isSelected ? 'ring-2 shadow-md' : ''
+                      'flex p-3 rounded-xl transition-shadow relative hover:shadow-md',
+                      isSelected ? 'ring-2 shadow-md' : '',
+                      isApplicable ? 'cursor-pointer' : 'opacity-75 cursor-not-allowed'
                     )}
                     style={{ border: isSelected ? '1px solid #087326' : '1px solid #00000080', background: 'linear-gradient(90deg, #EBF3FD 0%, #FFFFFF 100%)' }}
-                    onClick={() => handleSelectService(service)}
+                    onClick={() => isApplicable && handleSelectService(service)}
                   >
                     {/* Selected Badge Removed */}
 
@@ -676,7 +721,12 @@ export function Step1_Services({
                     {/* Content Section */}
                     <div className="flex flex-col flex-1 py-1">
                       <div className="flex justify-between items-start mb-2 gap-2">
-                        <h4 className="font-medium text-black text-sm sm:text-base pr-2">{service.name}</h4>
+                        <div className="flex flex-col">
+                          <h4 className="font-medium text-black text-sm sm:text-base pr-2">{service.name}</h4>
+                          {!isApplicable && (
+                            <span className="text-[10px] text-red-500 font-medium">Not eligible for this offer</span>
+                          )}
+                        </div>
                         {service.discountedPrice && parseFloat(String(service.discountedPrice)) < parseFloat(String(service.price)) && (
                           <span className="shrink-0 bg-black text-white text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
                             Save {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}%
@@ -686,7 +736,7 @@ export function Step1_Services({
 
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <Image src="/images/clock (20).png" alt="Time" width={14} height={14} />
-                        <span className="text-xs text-black">{service.duration} mins</span>
+                        <span className="text-xs text-black">{service.duration}</span>
                       </div>
 
                       <div className="flex items-center justify-between mt-auto">
@@ -705,12 +755,14 @@ export function Step1_Services({
                         </div>
 
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleSelectService(service); }}
+                          onClick={(e) => { e.stopPropagation(); if (isApplicable) handleSelectService(service); }}
+                          disabled={!isApplicable}
                           className={cn(
                             'border h-7 md:h-8 px-2.5 md:px-4 text-[11px] md:text-sm font-medium flex justify-center items-center gap-1 transition-colors rounded-none rounded-tr-xl rounded-bl-xl whitespace-nowrap',
-                            isSelected ? 'bg-[#087326]/10 border-[#087326] text-[#087326]' : 'hover:bg-gray-50'
+                            isSelected ? 'bg-[#087326]/10 border-[#087326] text-[#087326]' : (isApplicable ? 'hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed text-gray-400')
                           )}
-                          style={isSelected ? { color: '#087326', borderColor: '#087326', backgroundColor: 'rgba(8, 115, 38, 0.1)' } : { borderColor: '#422A3C', color: '#422A3C' }}
+                          style={isSelected ? { color: '#087326', borderColor: '#087326', backgroundColor: 'rgba(8, 115, 38, 0.1)' } : (isApplicable ? { borderColor: '#422A3C', color: '#422A3C' } : { borderColor: '#9ca3af', color: '#9ca3af' })}
+                          title={!isApplicable ? "This offer is not applicable for this service." : ""}
                         >
                           {isSelected ? <><Image src="/images/check 1.png" alt="Selected" width={14} height={14} /> <span className="hidden sm:inline">Selected</span></> : <><Plus className="w-3 h-3 md:w-4 md:h-4" /> Add</>}
                         </button>
