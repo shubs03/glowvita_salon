@@ -16,7 +16,7 @@ const PRODUCT_PLACEHOLDER = "/images/product-placeholder.png";
 interface ProductCardProps {
   product: any;
   onBuyNow: (product: any) => void;
-  onAddToCart: (product: any) => void;
+  onAddToCart: (product: any) => Promise<boolean>;
   vendorId: string;
   vendorName: string;
   isSubscriptionExpired?: boolean;
@@ -126,8 +126,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
 
     if (!isSubscriptionExpired) {
-      setIsCartAdded(true);
-      onAddToCart(product);
+      const success = await onAddToCart(product);
+      if (success) {
+        setIsCartAdded(true);
+      }
     }
   };
 

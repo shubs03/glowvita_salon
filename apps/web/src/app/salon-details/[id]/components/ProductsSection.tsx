@@ -29,7 +29,7 @@ interface ProductsSectionProps {
   error: any;
   isSubscriptionExpired: boolean;
   onBuyNow: (product: any) => void;
-  onAddToCart: (product: any) => void;
+  onAddToCart: (product: any) => Promise<boolean>;
 }
 
 const FilterDropdown = ({
