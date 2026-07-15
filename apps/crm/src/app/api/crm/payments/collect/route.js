@@ -13,6 +13,7 @@ import ClientModel from "../../../../../../../../packages/lib/src/models/Vendor/
 import pdf from 'html-pdf';
 import fs from 'fs';
 import path from 'path';
+import { NotificationService } from "@repo/lib";
 
 await _db();
 
@@ -577,6 +578,20 @@ if (invoiceHtml) {
           console.error('❌ Error sending completion emails:', emailError);
           console.error('Email error stack:', emailError.stack);
         }
+        
+        // Instant Push Notifications for Payment Completion
+        try {
+            const rawClientId = finalAppointment.client;
+            if (rawClientId && rawClientId.toString().length === 24) {
+                await NotificationService.sendAppointmentAlert(rawClientId, 'client', finalAppointment, appointmentStatus);
+            }
+            if (vendorId) {
+                await NotificationService.sendAppointmentAlert(vendorId, 'vendor', finalAppointment, appointmentStatus);
+            }
+        } catch (notifErr) {
+            console.error('❌ Error sending push notifications:', notifErr);
+        }
+
       } else {
       }
 

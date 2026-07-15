@@ -8,6 +8,7 @@ import { sendEmail } from "../../../../../../../../packages/lib/src/emailService
 import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../../packages/lib/src/emailTemplates";
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
 import { checkAndCreditReferralBonus } from "../../../../../../../../packages/lib/src/utils/referralWalletCredit";
+import { NotificationService, SmsService } from "@repo/lib";
 import pdf from 'html-pdf';
  import { chromium } from "playwright";
 
@@ -390,8 +391,27 @@ if (invoiceHtml) {
                         });
                     }
                 }
+                
+                // 2. Send Push Notification (INSTANT)
+                if (rawClientId && rawClientId.toString().length === 24) {
+                    await NotificationService.sendAppointmentAlert(rawClientId, 'client', updatedAppointment, updateObject.status);
+                }
+
+                // Notify Vendor as well
+                if (vendorId) {
+                    await NotificationService.sendAppointmentAlert(vendorId, 'vendor', updatedAppointment, updateObject.status);
+                }
+                
+                // 3. Send SMS (CRITICAL STATUSES)
+                if (clientPhone) {
+                    const smsStatusMap = ['confirmed', 'cancelled', 'scheduled'];
+                    if (smsStatusMap.includes(updateObject.status)) {
+                        await SmsService.sendAppointmentSms(clientPhone, updatedAppointment, updateObject.status);
+                    }
+                }
+                
             } catch (emailError) {
-                console.error('Error sending appointment status email:', emailError);
+                console.error('Error sending appointment status email or notification:', emailError);
                 // We don't want to fail the whole request if email fails
             }
         }

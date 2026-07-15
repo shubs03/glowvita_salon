@@ -264,6 +264,10 @@ class NotificationService {
         };
 
         const vendorCopyMap = {
+             'sheduled': {
+                title: 'New Booking! 📅',
+                body: `New appointment from ${appointment.clientName || 'a customer'} for ${appointment.serviceName} at ${appointment.startTime}.`
+            },
             'confirmed': {
                 title: 'New Booking! 📅',
                 body: `New appointment from ${appointment.clientName || 'a customer'} for ${appointment.serviceName} at ${appointment.startTime}.`
@@ -279,7 +283,8 @@ class NotificationService {
         };
 
         const copyMap = isVendor ? vendorCopyMap : clientCopyMap;
-        const copy = copyMap[status] || { title: 'Update', body: `Appointment  ${status}: ${appointment.serviceName}` };
+        const normalizedStatus = status === 'completed without payment' ? 'completed' : status;
+        const copy = copyMap[normalizedStatus] || { title: 'Update', body: `Appointment ${status}: ${appointment.serviceName}` };
 
         await this.sendToUser(userId, recipientRole, {
             ...copy,
