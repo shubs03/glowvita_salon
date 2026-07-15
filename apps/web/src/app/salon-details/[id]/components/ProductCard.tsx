@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
@@ -6,7 +6,7 @@ import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useAppDispatch } from "@repo/store/hooks";
+import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
 import { cn } from "@repo/ui/cn";
 import { useAddToClientCartMutation } from "@repo/store/services/api";
@@ -32,6 +32,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCartAdded, setIsCartAdded] = useState(false);
   const [imgSrc, setImgSrc] = useState<string>(
     (product.image && product.image.trim()) ? product.image : PRODUCT_PLACEHOLDER
   );
@@ -39,6 +40,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { user, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const [addToCartAPI] = useAddToClientCartMutation();
+  const localCartItems = useAppSelector((state: any) => state.cart.items);
+
+  const isProductInCart = useMemo(() => {
+    if (!localCartItems?.length) return false;
+    return localCartItems.some((item: any) => {
+      const itemId = item?.productId || item?._id || item?.id;
+      return String(itemId) === String(product.id);
+    });
+  }, [localCartItems, product.id]);
+
+  const showCartActiveIcon = isCartAdded || isProductInCart;
 
   // Check if product is in wishlist on component mount
   useEffect(() => {
@@ -114,6 +126,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
 
     if (!isSubscriptionExpired) {
+      setIsCartAdded(true);
       onAddToCart(product);
     }
   };
@@ -226,7 +239,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
               onClick={handleAddToCart}
               disabled={isSubscriptionExpired}
             >
-              <img src="/images/add-to-cart (1) 1.png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+              {showCartActiveIcon ? (
+                <img src="/images/add-to-cart (1) 1.png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+              ) : (
+                <img src="/images/add-to-cart (6).png" alt="add to cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+              )}
               <ShoppingCart className="h-4 w-4 hidden text-black" />
             </button>
           </div>

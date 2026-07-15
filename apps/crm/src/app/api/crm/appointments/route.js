@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import AppointmentModel from "../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import _db from '@repo/lib/db';
+import { chromium } from "playwright";
 import ClientModel from '@repo/lib/models/Vendor/Client.model';
 import UserModel from "../../../../../../../packages/lib/src/models/user/User.model";
 import { withSubscriptionCheck } from '@/middlewareCrm';
@@ -133,17 +134,39 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                         console.error('Error fetching invoice for email:', tplError);
                     }
                     // Generate PDF Buffer
-                    let pdfBuffer;
-                    if (invoiceHtml) {
-                        try {
-                            const pdf = (await import('html-pdf')).default;
-                            pdfBuffer = await new Promise((resolve, reject) => {
-                                pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
-                                    if (err) reject(err); else resolve(buffer);
-                                });
-                            });
-                        } catch (pdfError) { console.error('PDF generation failed:', pdfError); }
-                    }
+                let pdfBuffer;
+
+if (invoiceHtml) {
+    let browser;
+
+    try {
+        browser = await chromium.launch({
+            headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox"
+            ]
+        });
+
+        const page = await browser.newPage();
+
+        await page.setContent(invoiceHtml, {
+            waitUntil: "networkidle"
+        });
+
+        pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true
+        });
+
+    } catch (pdfError) {
+        console.error("PDF generation failed:", pdfError);
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
 
                     await sendEmail({
                         to: clientEmail,
