@@ -630,8 +630,7 @@ export function BookingSummary({
                 <div className="flex items-start gap-3">
                   {/* Scissors image instead of icon */}
                   <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 mt-0.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/images/customer-review (10).png" alt="Service" className="h-10 w-10 object-contain" />
+                    <Image src="/images/customer-review (10).png" alt="Service" width={24} height={24} className="object-contain" />
                   </div>
                   <div className="w-full">
                     <p className="text-sm font-semibold text-black mb-1">Service</p>
