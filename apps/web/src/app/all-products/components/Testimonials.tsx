@@ -62,11 +62,11 @@ const Testimonials = () => {
   const allTestimonials = [...testimonials, ...testimonials];
 
   return (
-    <section className="pt-0 pb-12 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-0 pb-12 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
       {/* Section Header */}
       <div className="mb-12">
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');`}</style>
-        <div style={{ display: 'inline-block' }}>
+        <div style={{ display: 'inline-block', maxWidth: '100%' }}>
           <h2
             style={{
               fontFamily: "'Poppins', sans-serif",
@@ -74,18 +74,20 @@ const Testimonials = () => {
               fontSize: '28px',
               lineHeight: '38px',
               color: '#000000',
-              width: '390px',
+              maxWidth: '390px',
               height: '38px',
               margin: 0,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             What Our Customers Say
           </h2>
           <div
             style={{
-              width: '390px',
+              width: '100%',
+              maxWidth: '390px',
               height: '3px',
               marginTop: '6px',
               background: 'linear-gradient(90deg, #422A3C 0%, #FFFFFF 100%)',

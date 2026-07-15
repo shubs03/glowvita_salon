@@ -174,7 +174,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
   }, [categoriesData]);
 
   return (
-    <section className="relative w-full min-h-[500px] h-auto lg:h-[700px] overflow-hidden bg-background">
+    <section className="relative w-full min-h-[420px] sm:min-h-[520px] md:h-[620px] lg:h-[650px] overflow-hidden bg-background">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#130C11" }} />
 
@@ -183,68 +183,45 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
         <img
           src="/images/product-hero-bg.png"
           alt="Products"
-          className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center" }}
+          className="absolute inset-0 h-full w-full pointer-events-none select-none object-cover object-right md:object-right lg:object-center"
         />
+        {/* Dark gradient overlay for text readability */}
+        {/* <div className="absolute inset-0 bg-gradient-to-r from-[#130C11]/90 via-[#130C11]/45 to-transparent" /> */}
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl py-12 md:py-20 lg:py-0">
+      {/* Content Overlay */}
+      <div className="relative z-10 md:absolute md:inset-0 lg:relative lg:inset-auto container mx-auto px-4 sm:px-6 md:px-8 lg:px-8 h-full flex flex-col justify-evenly gap-4 sm:gap-3 md:gap-0 py-8 sm:py-10 md:py-6 lg:py-0 max-w-7xl">
         {/* Logo/Brand Name */}
-        <div className="mb-4 md:mb-8">
-          <h3 className="text-amber-100 text-xs sm:text-sm font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase">
-            GLOWVITA SHOP
-          </h3>
-        </div>
+        <h3 className="text-amber-100 text-[10px] sm:text-xs md:text-xs lg:text-sm font-medium tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] uppercase">
+          GLOWVITA SHOP
+        </h3>
 
         {/* Main Heading */}
         <h1
+          className="text-[34px] sm:text-[44px] md:text-[56px] lg:text-[70px] leading-[115%] font-bold max-w-full sm:max-w-[85%] md:max-w-[70%] lg:max-w-[510px]"
           style={{
             fontFamily: "'Playfair Display', serif",
-            fontWeight: 700,
-            fontSize: "clamp(32px, 6vw, 70px)",
-            lineHeight: "115%",
             letterSpacing: "-0.01em",
             color: "#F7E5C1",
           }}
-          className="mb-4 md:mb-6"
         >
           Choose the Best<br />for Your Routine
         </h1>
 
         {/* Description */}
         <p
-          style={{
-            fontFamily: "'Manrope', sans-serif",
-            fontWeight: 400,
-            fontSize: "clamp(14px, 2vw, 18px)",
-            lineHeight: "170%",
-            letterSpacing: "0%",
-            textAlign: "justify",
-          }}
-          className="text-gray-200 mb-8 md:mb-10 max-w-xl"
+          className="text-gray-200 text-sm sm:text-base md:text-lg lg:text-xl max-w-xl leading-relaxed"
         >
           Explore high-quality beauty products crafted to elevate your daily self-care with trusted formulas and reliable performance.
         </p>
 
         {/* ── Search Bar ─────────────────────────────────────────────────── */}
         <div
-          className="bg-white shadow-2xl flex flex-col md:flex-row items-stretch md:items-center mb-6 md:mb-8"
-          style={{
-            width: "865px",
-            maxWidth: "100%",
-            height: "auto",
-            gap: "46px",
-            borderRadius: "50px",
-            paddingTop: "12px",
-            paddingRight: "14px",
-            paddingBottom: "12px",
-            paddingLeft: "40px",
-          }}
+          className="bg-white shadow-2xl w-full max-w-[865px] flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-0 rounded-2xl md:rounded-full px-4 md:pl-10 md:pr-3.5 py-3 md:py-3"
         >
 
           {/* Product Input */}
-          <div className="relative flex-1 flex items-center gap-3 px-4 md:border-r border-gray-200 py-2 md:py-0">
+          <div className="relative flex-1 flex items-center gap-3 px-2 md:px-0 md:border-r border-gray-200 py-2 md:py-0 md:pr-6">
             <div className="flex flex-col flex-1">
               {!productInput && (
                 <label
@@ -278,8 +255,11 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
             <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
           </div>
 
+          {/* Divider between inputs on mobile */}
+          <div className="block md:hidden h-px w-full bg-gray-100 mx-2" />
+
           {/* Location Input */}
-          <div className="relative flex-1 flex items-center gap-3 px-4 py-2 md:py-0">
+          <div className="relative flex-1 flex items-center gap-3 px-2 md:px-0 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!locationInput && (
                 <label
@@ -408,11 +388,8 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <button
             onClick={handleSearchClick}
             disabled={isSearching}
-            className="text-white transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70"
+            className="text-white transition-all duration-300 flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-70 w-full md:w-[127px] h-11 md:h-[44px] lg:h-[35px] rounded-full md:rounded-[21px] mt-1 md:mt-0 md:ml-3"
             style={{
-              width: "127px",
-              height: "35px",
-              borderRadius: "21px",
               backgroundColor: "#BA7894",
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 500,
@@ -426,7 +403,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
         </div>
 
         {/* Product Categories Marquee */}
-        <div className="max-w-4xl overflow-hidden relative mb-12">
+        <div className="w-full max-w-4xl overflow-hidden relative rounded-full py-1">
           <div className="rounded-full absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
           <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
             {categoriesLoading
@@ -459,8 +436,8 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
         </div>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 max-w-4xl">
-          <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 max-w-3xl">
+          <div className="text-center py-2 px-3 sm:py-3 sm:px-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
             <p
               style={{
                 fontFamily: "'Playfair Display', serif",
@@ -478,14 +455,14 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 fontWeight: 500,
                 fontSize: "clamp(11px, 1.2vw, 13px)",
                 lineHeight: "160%",
-                color: "#AF9A9A",
+                color: "#ffff",
               }}
               className="uppercase tracking-wider mt-2"
             >
               Vendors
             </p>
           </div>
-          <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
+          <div className="text-center py-2 px-3 sm:py-3 sm:px-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
             <p
               style={{
                 fontFamily: "'Playfair Display', serif",
@@ -503,14 +480,14 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 fontWeight: 500,
                 fontSize: "clamp(11px, 1.2vw, 13px)",
                 lineHeight: "160%",
-                color: "#AF9A9A",
+                color: "#ffff",
               }}
               className="uppercase tracking-wider mt-2"
             >
               Products
             </p>
           </div>
-          <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
+          <div className="text-center py-2 px-3 sm:py-3 sm:px-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
             <p
               style={{
                 fontFamily: "'Playfair Display', serif",
@@ -528,14 +505,14 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 fontWeight: 500,
                 fontSize: "clamp(11px, 1.2vw, 13px)",
                 lineHeight: "160%",
-                color: "#AF9A9A",
+                color: "#ffff",
               }}
               className="uppercase tracking-wider mt-2"
             >
               Avg Rating
             </p>
           </div>
-          <div className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
+          <div className="text-center py-2 px-3 sm:py-3 sm:px-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
             <p
               style={{
                 fontFamily: "'Playfair Display', serif",
@@ -553,7 +530,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 fontWeight: 500,
                 fontSize: "clamp(11px, 1.2vw, 13px)",
                 lineHeight: "160%",
-                color: "#AF9A9A",
+                color: "#ffff",
               }}
               className="uppercase tracking-wider mt-2"
             >

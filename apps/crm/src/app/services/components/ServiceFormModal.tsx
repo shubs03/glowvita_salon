@@ -396,7 +396,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
               <SelectTrigger>
                 <SelectValue placeholder="Select Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto">
                 {categoriesLoading ? (
                   <SelectItem value="loading" disabled>
                     Loading...
@@ -437,7 +437,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto">
                 {servicesLoading ? (
                   <SelectItem value="loading" disabled>
                     Loading...

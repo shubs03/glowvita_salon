@@ -216,7 +216,7 @@ const ProductFormFields = ({
               <SelectTrigger className="rounded-xl border-border/40">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent className="max-h-60 overflow-y-auto rounded-xl">
                 {categories?.map((cat: Category) => (
                   <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>
                 ))}
@@ -243,7 +243,7 @@ const ProductFormFields = ({
               <SelectTrigger className="rounded-xl border-border/40">
                 <SelectValue placeholder={formData.category ? "Select Product" : "Select Category First"} />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent className="max-h-60 overflow-y-auto rounded-xl">
                 {productMastersLoading ? (
                   <SelectItem value="loading" disabled>
                     Loading products...

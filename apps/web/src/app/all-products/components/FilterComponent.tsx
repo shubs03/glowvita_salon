@@ -218,9 +218,6 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
           padding: 20px 0 16px;
         }
         .gf-inner {
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 0 24px;
           display: flex;
           align-items: center;
           gap: 12px;
@@ -430,7 +427,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({
       `}</style>
 
       <div className="gf-bar">
-        <div className="gf-inner">
+        <div className="gf-inner container mx-auto px-4 sm:px-6 lg:px-8">
           {/* Filter icon label */}
           {/* <span className="gf-label">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

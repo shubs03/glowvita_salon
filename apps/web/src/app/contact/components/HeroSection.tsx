@@ -2,7 +2,7 @@ import React from 'react';
 
 const HeroSection = () => {
   return (
-    <div className="relative w-full min-h-[260px] sm:min-h-[360px] md:min-h-[480px] lg:min-h-[700px] overflow-hidden rounded-[24px] sm:rounded-[32px] flex items-center justify-center">
+    <div className="relative w-full min-h-[260px] sm:min-h-[360px] md:min-h-[480px] lg:min-h-[650px] overflow-hidden rounded-[24px] sm:rounded-[32px] flex items-center justify-center">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
@@ -29,8 +29,7 @@ const HeroSection = () => {
         </h1>
 
         <p
-          className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-white leading-relaxed max-w-xs sm:max-w-xl md:max-w-3xl lg:max-w-5xl mx-auto font-light"
-          style={{ textWrap: 'balance' }}
+          className="text-gray-200 text-sm sm:text-base md:text-lg lg:text-xl max-w-xl leading-relaxed"
         >
           If you need help, want to share feedback, or simply have a question, we&apos;re here to listen and respond with care so your journey with GlowVita remains smooth and enjoyable.
         </p>

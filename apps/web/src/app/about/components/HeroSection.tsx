@@ -4,7 +4,7 @@ import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const HeroSection = () => {
   return (
-    <div className="relative w-full min-h-[420px] sm:min-h-[500px] lg:h-[700px] overflow-hidden">
+    <div className="relative w-full min-h-[420px] sm:min-h-[500px] lg:h-[650px] overflow-hidden">
       {/* Solid dark maroon base */}
       <div className="absolute inset-0" style={{ backgroundColor: "#422A3C" }} />
 
@@ -13,8 +13,7 @@ const HeroSection = () => {
         <img
           src="/images/hero-salon-bg.png"
           alt="Products"
-          className="h-full w-full pointer-events-none select-none"
-          style={{ objectFit: "cover", objectPosition: "center" }}
+          className="h-full w-full pointer-events-none select-none object-cover object-center md:object-[85%_center] lg:object-center"
         />
       </div>
 
@@ -34,21 +33,13 @@ const HeroSection = () => {
               letterSpacing: "-0.01em",
               color: "#F7E5C1",
             }}
-            className="mb-6 sm:mb-8 lg:mb-10"
+            className="mb-4 sm:mb-8 lg:mb-10"
           >
             Discover Your Perfect<br />Salon Experience
           </h1>
 
           <p
-            style={{
-              fontFamily: "'Manrope', sans-serif",
-              fontWeight: 400,
-              fontSize: "clamp(14px, 2vw, 18px)",
-              lineHeight: "170%",
-              letterSpacing: "0%",
-              textAlign: "justify",
-            }}
-            className="text-gray-200 mb-6 sm:mb-8 lg:mb-10 max-w-[679px]"
+            className="text-gray-200 mb-8 text-sm sm:text-base md:text-lg lg:text-xl max-w-xl leading-relaxed"
           >
             GlowVita is your trusted online platform for discovering and booking
             exceptional salon services. Explore verified salons near you or across
@@ -56,19 +47,7 @@ const HeroSection = () => {
             appointments effortlessly—all in one elegant experience.
           </p>
 
-          <p
-            style={{
-              fontFamily: "'Poppins', sans-serif",
-              fontWeight: 500,
-              fontSize: "clamp(13px, 1.5vw, 16px)",
-              lineHeight: "160%",
-              letterSpacing: "0%",
-              color: "#AF9A9A",
-            }}
-            className="mb-8 sm:mb-12 lg:mb-16 max-w-full"
-          >
-            From haircuts to spa treatments, finding quality and wellness services has never been easier.
-          </p>
+
 
           <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             <Link

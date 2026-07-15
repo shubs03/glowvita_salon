@@ -532,39 +532,52 @@ function BookingPageContent() {
     }
   }, [selectedWeddingPackage]);
 
-  // Auto-apply offer code from URL search params
+  // Keep a ref to vendorOffers so the auto-apply effect can read them without re-triggering
+  const vendorOffersRef = React.useRef<any[]>([]);
+  useEffect(() => { vendorOffersRef.current = vendorOffers; }, [vendorOffers]);
+
+  // Auto-apply offer code from URL search params (runs once when salonId + offers are ready)
+  const autoApplyRanRef = React.useRef(false);
   useEffect(() => {
     const codeFromUrl = searchParams.get('offerCode');
-    if (codeFromUrl && !appliedOffer && !isOffersLoading) {
-      console.log('Detected offerCode in URL:', codeFromUrl);
-      setOfferCode(codeFromUrl);
-
-      // We need to wait for salonId to be available for validation
-      if (salonId) {
-        const validateAndApply = async () => {
-          try {
-            const response = await fetch('/api/validate-offer', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                offerCode: codeFromUrl.toUpperCase().trim(),
-                vendorId: salonId
-              }),
-            });
-            const result = await response.json();
-            if (result.success) {
-              setOffer(result.data);
-              setAppliedOffer(result.data);
-              toast.success(`Offer ${result.data.code} applied automatically!`);
-            }
-          } catch (err) {
-            console.error('Error auto-applying offer:', err);
-          }
-        };
-        validateAndApply();
+    // Guard: only run once and only when the offer code exists in URL
+    if (!codeFromUrl || autoApplyRanRef.current || isOffersLoading || !salonId) return;
+    autoApplyRanRef.current = true;
+    console.log('Detected offerCode in URL:', codeFromUrl);
+    setOfferCode(codeFromUrl);
+    const validateAndApply = async () => {
+      try {
+        const response = await fetch('/api/validate-offer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            offerCode: codeFromUrl.toUpperCase().trim(),
+            vendorId: salonId
+          }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          // Prefer the full offer from vendorOffers (has applicableServices/Categories restriction
+          // fields). The validate-offer API often returns a stripped-down object without them,
+          // which causes isOfferApplicable to return true for ALL services (no restrictions seen).
+          const codeNorm = codeFromUrl.toUpperCase().trim();
+          const vendorOffer = vendorOffersRef.current?.find(
+            (o: any) => (o?.code || o?.offerCode || '')?.toUpperCase().trim() === codeNorm
+          );
+          const offerToApply = vendorOffer
+            ? { ...result.data, ...vendorOffer } // merge: validate data + full restriction fields
+            : result.data;
+          setOffer(offerToApply);
+          setAppliedOffer(offerToApply);
+          // No toast — the offer-mode banner in Step1_Services already informs the user
+        }
+      } catch (err) {
+        console.error('Error auto-applying offer:', err);
       }
-    }
-  }, [searchParams, salonId, isOffersLoading, appliedOffer]);
+    };
+    validateAndApply();
+  }, [searchParams, salonId, isOffersLoading]);
+
 
   // Handle map click to select location
   const handleMapClick = () => {
@@ -3744,6 +3757,9 @@ function BookingPageContent() {
               priceBreakdown={priceBreakdown}
               taxFeeSettings={taxFeeSettings}
               onClearServices={() => setSelectedServices([])}
+              appliedOffer={appliedOffer}
+              vendorOffers={vendorOffers}
+              offerCodeFromUrl={searchParams?.get('offerCode')}
             />
           );
         case 2:
