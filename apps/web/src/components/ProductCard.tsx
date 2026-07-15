@@ -336,7 +336,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`}</style>
       <Card
         className={cn(
-          "group overflow-hidden hover:shadow-lg w-[260px] h-[372px] rounded-none rounded-tr-[11px] rounded-bl-[11px] transition-shadow flex flex-col text-left relative",
+          "group overflow-hidden hover:shadow-lg w-full max-w-[280px] sm:max-w-none mx-auto h-[372px] rounded-none rounded-tr-[11px] rounded-bl-[11px] transition-shadow flex flex-col text-left relative",
           isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
         )}
         style={{ fontFamily: "'Poppins', sans-serif" }}

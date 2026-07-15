@@ -53,11 +53,11 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
   noServiceArea,
 }) => {
   return (
-    <section className="pt-8 pb-4 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-8 pb-4 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
       {/* Section Header */}
       <div className="mb-2">
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');`}</style>
-        <div style={{ display: 'inline-block' }}>
+        <div style={{ display: 'inline-block', maxWidth: '100%' }}>
           <h2
             style={{
               fontFamily: "'Poppins', sans-serif",
@@ -65,18 +65,20 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
               fontSize: '28px',
               lineHeight: '38px',
               color: '#000000',
-              width: '237px',
+              maxWidth: '237px',
               height: '38px',
               margin: 0,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             All Products
           </h2>
           <div
             style={{
-              width: '237px',
+              width: '100%',
+              maxWidth: '237px',
               height: '3px',
               marginTop: '6px',
               background: 'linear-gradient(90deg, #422A3C 0%, #FFFFFF 100%)',
@@ -100,7 +102,8 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
       </div>
 
       {/* Results count */}
-      <div className="mb-6">
+
+      <div className="mb-6 px-8">
         <p className="text-muted-foreground">
           Showing {filteblueProducts.length} products
           {searchTerm && ` for "${searchTerm}"`}
@@ -149,7 +152,7 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {filteblueProducts.map((product) => (
             <ProductCard key={product.id} {...product} />
           ))}
