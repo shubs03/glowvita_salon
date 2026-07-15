@@ -109,7 +109,7 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
   const productMastersForCategory = useMemo(() => {
     if (!formData.category) return [];
     const filtered = productMasters.filter((pm: ProductMaster) => {
-      const categoryName = typeof pm.category === 'object' ? pm.category.name : '';
+      const categoryName = (typeof pm.category === 'object' && pm.category !== null) ? pm.category.name : '';
       return categoryName === formData.category;
     });
     return filtered;
