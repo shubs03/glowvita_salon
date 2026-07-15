@@ -597,7 +597,14 @@ export function Step1_Services({
             <Image src="/images/like (1) 1.png" alt="Wedding" width={14} height={14} className={viewMode === 'packages' ? 'brightness-0 invert' : ''} />
             Wedding Packages
             {displayWeddingPackages.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
+              <span
+                className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={
+                  viewMode === 'packages'
+                    ? { background: '#ffffff', color: '#422A3C' }
+                    : { background: 'rgba(66,42,60,0.1)', color: '#422A3C' }
+                }
+              >
                 {displayWeddingPackages.length}
               </span>
             )}
