@@ -181,11 +181,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <h4 className="text-sm font-semibold flex-grow mb-2">
           {product.name}
         </h4>
-        
+
         <p className="text-xs text-black line-clamp-2 mb-2">
           {product.description}
         </p>
-        
+
         <div className="flex flex-col gap-0.5 mt-auto mb-2">
           {product.salePrice > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -228,7 +228,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <Heart className="h-4 w-4 fill-red-500 text-red-500" />
               ) : (
                 <>
-                  <img src="/images/heart 3 (1).png" alt="heart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                  <img src="/images/heart.png" alt="heart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
                   <Heart className="w-4 h-4 hidden text-black" />
                 </>
               )}
@@ -240,9 +240,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
               disabled={isSubscriptionExpired}
             >
               {showCartActiveIcon ? (
-                <img src="/images/add-to-cart (1) 1.png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                <img src="/images/add-to-cart (6).png" alt="cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
               ) : (
-                <img src="/images/add-to-cart (6).png" alt="add to cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+                <img src="/images/add-to-cart (5).png" alt="add to cart" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
               )}
               <ShoppingCart className="h-4 w-4 hidden text-black" />
             </button>
