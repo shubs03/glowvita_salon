@@ -14,10 +14,10 @@ import { useMemo } from "react";
 import { AlertCircle } from "lucide-react";
 
 const PRODUCT_PLACEHOLDER = "/images/product-placeholder.png";
-const WISHLIST_ICON = "/images/wishlist.png";
-const WISHLIST_ACTIVE_ICON = "/images/filedheart.png";
-const CART_ICON = "/images/emptycart.png";
-const CART_ACTIVE_ICON = "/images/cart.png";
+const WISHLIST_ICON = "/images/heart.png";
+const WISHLIST_ACTIVE_ICON = "/images/fill_heart.png";
+const CART_ICON = "/images/add-to-cart (6).png";
+const CART_ACTIVE_ICON = "/images/fill_add-to-cart.png";
 
 interface ProductCardProps {
   id: string;
@@ -437,7 +437,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <img
                   src={isLiked ? WISHLIST_ACTIVE_ICON : WISHLIST_ICON}
                   alt="Wishlist"
-                  className={cn("h-5 w-5 object-contain transition-transform", isLiked && "scale-110")}
+                  className={cn("h-5  w-5  mt-1.5 left-5 object-contain transition-transform", isLiked && "scale-110")}
                 />
               </Button>
 
@@ -454,7 +454,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <img
                   src={showCartActiveIcon ? CART_ACTIVE_ICON : CART_ICON}
                   alt="Add to cart"
-                  className="h-6 w-6 object-contain"
+                  className="h-7 w-7 object-contain"
                 />
               </Button>
             </div>
