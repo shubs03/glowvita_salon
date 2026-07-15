@@ -262,15 +262,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
           <div className="relative flex-1 flex items-center gap-3 px-2 md:px-0 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!locationInput && (
-                <label
-                  className="font-medium mb-1"
-                  style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontWeight: 500,
-                    fontSize: "clamp(11px, 1.2vw, 13px)",
-                    color: "#BA7894",
-                  }}
-                >
+                <label className="text-xs font-medium mb-0.5" style={{ color: "#BA7894" }}>
                   Location
                 </label>
               )}
@@ -281,13 +273,7 @@ const HeroSection = ({ onSearch }: HeroSectionProps) => {
                 onChange={(e) => handleLocationInputChange(e.target.value)}
                 onFocus={() => setIsLocationFocused(true)}
                 onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 w-full bg-transparent"
-                style={{
-                  fontFamily: "'Poppins', sans-serif",
-                  fontWeight: 400,
-                  fontSize: "clamp(13px, 1.5vw, 15px)",
-                  lineHeight: "160%",
-                }}
+                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
               />
             </div>
 
