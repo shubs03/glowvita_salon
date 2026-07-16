@@ -2399,6 +2399,9 @@ function BookingPageContent() {
           setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
           await persistServiceLocation(weddingVenueType === 'venue' ? serviceLocation : null);
+          if (typeof window !== 'undefined' && confirmResult.appointment?.id) {
+            sessionStorage.setItem('newlyBookedAppointmentId', confirmResult.appointment.id);
+          }
           router.push('/profile/appointments');
         } else {
           throw new Error(confirmResult.message || "Failed to confirm booking");
