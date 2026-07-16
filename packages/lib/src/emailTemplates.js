@@ -125,7 +125,8 @@ export const getCompletionTemplate = ({
                     Thank you for your recent service Appointment of <strong>${serviceName}</strong> at <strong>${businessName}</strong>. 
                     We hope you had a professional and relaxing experience. 
                     You can now leave a review of your experience using the "Leave Service Feedback" link below. 
-                    You >
+                    You can view your order history in Your Orders.
+                </div>
 
                 <div class="order-summary">
                     <div class="summary-header">Appointment details</div>
