@@ -141,7 +141,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     (async () => {
       try {
         const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
-        await NotificationService.sendDocumentAlert(updatedVendorService.vendor.toString(), 'vendor', `Service "${updatedService.name}"`, status, rejectionReason);
+        await NotificationService.sendDocumentAlert(updatedVendorService.vendor.toString(), 'vendor', `Service "${updatedService.name}"`, status, rejectionReason, 'Service');
       } catch (err) {
         console.error('Service Approval Notification Error:', err);
       }

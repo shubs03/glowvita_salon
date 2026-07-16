@@ -264,7 +264,7 @@ class NotificationService {
         };
 
         const vendorCopyMap = {
-             'sheduled': {
+             'scheduled': {
                 title: 'New Booking! 📅',
                 body: `New appointment from ${appointment.clientName || 'a customer'} for ${appointment.serviceName} at ${appointment.startTime}.`
             },
@@ -507,9 +507,9 @@ class NotificationService {
     /**
      * Send document approval alert
      */
-    async sendDocumentAlert(userId, role, documentName, status, reason = '') {
+    async sendDocumentAlert(userId, role, documentName, status, reason = '', titlePrefix = 'Document') {
         const isApproved = status.toLowerCase() === 'approved';
-        const title = isApproved ? 'Document Approved! ✅' : 'Document Rejected! ❌';
+        const title = isApproved ? `${titlePrefix} Approved! ✅` : `${titlePrefix} Rejected! ❌`;
         let body = `Your ${documentName} has been ${status}.`;
         if (!isApproved && reason) body += ` Reason: ${reason}`;
 
