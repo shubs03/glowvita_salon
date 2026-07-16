@@ -1972,7 +1972,7 @@ function BookingPageContent() {
 
         // Add wedding package price if applicable
         if (selectedWeddingPackage) {
-          return servicesSubtotal + Number(primaryService.price || 0);
+          return servicesSubtotal + Number(selectedWeddingPackage.totalPrice || primaryService.price || 0);
         }
 
         return servicesSubtotal;
@@ -2017,11 +2017,7 @@ function BookingPageContent() {
           startTime: selectedTime,
           endTime: endTime,
           duration: convertDurationToMinutes(pkgService.duration || selectedWeddingPackage.duration),
-          amount: customizedPackageServices.length > 0
-            ? Number(pkgService.price || 0)
-            : (pkgService.discountedPrice !== null && pkgService.discountedPrice !== undefined ?
-              Number(pkgService.discountedPrice) :
-              Number(pkgService.price || 0))
+          amount: Number(pkgService.price || 0)
         }))
         : // For regular services (including single service)
         (() => {
@@ -2382,11 +2378,7 @@ function BookingPageContent() {
 
               let svcAmount = svc.amount;
               if (svcAmount === undefined && fullServiceInfo) {
-                svcAmount = (customizedPackageServices && customizedPackageServices.length > 0)
-                  ? (fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0)
-                  : (fullServiceInfo.discountedPrice !== null && fullServiceInfo.discountedPrice !== undefined
-                    ? parseFloat(fullServiceInfo.discountedPrice as any)
-                    : (fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0));
+                svcAmount = fullServiceInfo.price ? parseFloat(fullServiceInfo.price as any) : 0;
               }
 
               return {
@@ -2407,6 +2399,9 @@ function BookingPageContent() {
           setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
           await persistServiceLocation(weddingVenueType === 'venue' ? serviceLocation : null);
+          if (typeof window !== 'undefined' && confirmResult.appointment?.id) {
+            sessionStorage.setItem('newlyBookedAppointmentId', confirmResult.appointment.id);
+          }
           router.push('/profile/appointments');
         } else {
           throw new Error(confirmResult.message || "Failed to confirm booking");

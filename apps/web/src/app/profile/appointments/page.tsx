@@ -744,7 +744,9 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                                     let itemAmount = item.amount ?? (item as any).price ?? originalPrice ?? 0;
 
                                                     // Fix for old appointments where amounts were equally distributed
-                                                    if (appointment.serviceItems!.length > 1) {
+                                                    if (appointment.isWeddingService) {
+                                                        itemAmount = originalPrice !== null ? Number(originalPrice) : itemAmount;
+                                                    } else if (appointment.serviceItems!.length > 1) {
                                                         const firstAmount = appointment.serviceItems![0].amount;
                                                         const isEquallyDistributed = appointment.serviceItems!.every(si => si.amount === firstAmount);
                                                         const totalAmount = appointment.amount ?? appointment.price ?? 0;
@@ -761,7 +763,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                                         itemAmount = appointment.amount ?? appointment.price ?? itemAmount;
                                                     }
 
-                                                    const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(itemAmount);
+                                                    const hasDiscount = !appointment.isWeddingService && originalPrice !== null && Number(originalPrice) > Number(itemAmount);
                                                     return (
                                                         <>
                                                             {hasDiscount && (
@@ -833,7 +835,9 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         {(() => {
                             const currentDiscount = appointment.discountAmount || 0;
                             const subtotal = appointment.amount || appointment.price || 0;
-                            const derivedDiscount = currentDiscount > 0 ? currentDiscount : (originalSubtotal > subtotal ? originalSubtotal - subtotal : 0);
+                            const derivedDiscount = appointment.isWeddingService 
+                                ? (originalSubtotal > subtotal ? originalSubtotal - subtotal : 0)
+                                : (currentDiscount > 0 ? currentDiscount : (originalSubtotal > subtotal ? originalSubtotal - subtotal : 0));
 
                             return derivedDiscount > 0 ? (
                                 <div className="flex justify-between text-sm text-green-600">

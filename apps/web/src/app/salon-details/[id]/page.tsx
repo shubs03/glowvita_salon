@@ -70,9 +70,11 @@ import {
   useGetSalonWishlistQuery,
   useAddToSalonWishlistMutation,
   useRemoveFromSalonWishlistMutation,
+  useGetClientCartQuery,
   SALON_FAVORITES_VERSION,
 } from "@repo/store/services/api";
-import { useAppDispatch } from "@repo/store/hooks";
+import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
+import { useSelector } from "react-redux";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartSync } from "@/hooks/useCartSync";
@@ -597,6 +599,11 @@ export default function SalonDetailsPage() {
 
   // Cart mutation for authenticated users
   const [addToCartAPI] = useAddToClientCartMutation();
+  const localCartItems = useSelector((state: any) => state.cart?.items || []);
+  const { data: cartData } = useGetClientCartQuery(undefined, {
+    skip: !isAuthenticated || !user?._id,
+  });
+  const cartItems = isAuthenticated && user?._id ? (cartData?.data?.items || []) : localCartItems;
 
   // Initialize cart sync
   useCartSync();
@@ -829,6 +836,21 @@ export default function SalonDetailsPage() {
       return;
     }
 
+    // Check if cart already has items from a different vendor
+    if (cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const currentVendorId = firstItem.vendorId;
+      const currentVendorName = firstItem.vendorName || firstItem.supplierName || "another vendor";
+
+      if (id && currentVendorId && id !== currentVendorId) {
+        toast.error("Cannot proceed with mixed vendors", {
+          description: `Your cart already contains products from ${currentVendorName}. Please checkout or remove existing items first.`,
+          duration: 5000,
+        });
+        return;
+      }
+    }
+
     // Store product details in local storage
     try {
       const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
@@ -853,13 +875,28 @@ export default function SalonDetailsPage() {
     }
   };
 
-  const handleAddToCart = async (product: any) => {
+  const handleAddToCart = async (product: any): Promise<boolean> => {
     // Check if subscription is expired
     if (isSubscriptionExpired) {
       toast.error('Cart Unavailable', {
         description: 'This salon is currently not available for product purchases. Please check back later.',
       });
-      return;
+      return false;
+    }
+
+    // Check if cart already has items from a different vendor
+    if (cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const currentVendorId = firstItem.vendorId;
+      const currentVendorName = firstItem.vendorName || firstItem.supplierName || "another vendor";
+
+      if (id && currentVendorId && id !== currentVendorId) {
+        toast.error("Cannot add products from different vendors", {
+          description: `Your cart already contains products from ${currentVendorName}. Please checkout or remove existing items first.`,
+          duration: 5000,
+        });
+        return false;
+      }
     }
 
     try {
@@ -888,6 +925,7 @@ export default function SalonDetailsPage() {
             onClick: () => router.push("/cart"),
           },
         });
+        return true;
       } else {
         // User is not authenticated - use local storage
         const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
@@ -918,10 +956,12 @@ export default function SalonDetailsPage() {
             onClick: () => router.push("/cart"),
           },
         });
+        return true;
       }
     } catch (error) {
       console.error("Failed to add item to cart:", error);
       toast.error("Failed to add item to cart. Please try again.");
+      return false;
     }
   };
 

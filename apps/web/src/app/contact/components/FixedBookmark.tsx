@@ -14,33 +14,33 @@ const FixedBookmark = () => {
       <div className="flex flex-col items-end space-y-2">
         {/* Social Media Links */}
         <div
-          className="flex flex-col space-y-2 border border-border rounded-tl-2xl rounded-bl-2xl shadow-lg p-2 w-12"
+          className="flex flex-col gap-3 border border-border rounded-tl-2xl rounded-bl-2xl shadow-lg py-5 px-2 w-14"
           style={{ backgroundColor: "#E5CEE9" }}
         >
           <a
-            href="https://www.instagram.com/glowvitasalon?igsh=ZDRhaW82dXdmaml2"
+            href="https://www.instagram.com/glowvitasalon?igsh=MXNneTdjMHo4dzNwdA=="
             target="_blank"
             rel="noopener noreferrer"
-            className="w-8 h-8 flex items-center justify-center transition-all duration-300"
+            className="w-10 h-10 flex items-center justify-center transition-all duration-300 hover:scale-110"
             aria-label="Instagram"
           >
             <img
               src="/images/Frame 2.png"
               alt="Instagram"
-              className="w-8 h-8 object-contain"
+              className="w-10 h-10 object-contain"
             />
           </a>
           <a
             href="https://www.linkedin.com/company/glowvitasalon/"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-8 h-8 flex items-center justify-center transition-all duration-300"
+            className="w-10 h-10 flex items-center justify-center transition-all duration-300 hover:scale-110"
             aria-label="LinkedIn"
           >
             <img
               src="/images/Frame 3.png"
               alt="LinkedIn"
-              className="w-6 h-6 object-contain"
+              className="w-10 h-10 object-contain"
             />
           </a>
         </div>

@@ -120,15 +120,16 @@ export const getCompletionTemplate = ({
 
             <div class="content">
                 <div class="greeting">Hi ${clientName},</div>
-                <div class="main-text">
-                    Thank you for your recent service order of <strong>${serviceName}</strong> at <strong>${businessName}</strong>. 
+               can view your service history in Your Appointments.
+                </div <div class="main-text">
+                    Thank you for your recent service Appointment of <strong>${serviceName}</strong> at <strong>${businessName}</strong>. 
                     We hope you had a professional and relaxing experience. 
                     You can now leave a review of your experience using the "Leave Service Feedback" link below. 
-                    You can view your order history in Your Orders.
+                    You can view your service history in Your Appointments.
                 </div>
 
                 <div class="order-summary">
-                    <div class="summary-header">Order details</div>
+                    <div class="summary-header">Appointment details</div>
                     
                     <div class="order-row">
                         <div class="order-col-left">Invoice #:</div>

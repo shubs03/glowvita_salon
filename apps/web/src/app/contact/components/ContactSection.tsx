@@ -91,7 +91,7 @@ const ContactSection = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
         {/* Left - Contact Form */}
         <div className="order-2 lg:order-1">
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 lg:p-8">
+          <div className="bg-white border-2 border-gray-200 focus-within:border-[#A86B99] focus-within:ring-4 focus-within:ring-[#A86B99]/20 transition-all duration-300 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* First Name and Last Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -102,11 +102,7 @@ const ContactSection = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   required
-                  style={{
-                    backgroundColor: formData.firstName ? "#FFFFFF" : "#F9F9F9",
-                    borderColor: formData.firstName ? "#000000" : "#F9F9F9",
-                  }}
-                  className="w-full px-4 py-3 sm:py-3.5 border rounded-lg text-sm text-foreground placeholder-gray-400 transition-all"
+                  className="w-full px-4 py-3 sm:py-3.5 border border-black rounded-lg text-sm text-foreground placeholder-black transition-all focus:outline-none bg-[#F9F9F9] focus:bg-white"
                 />
                 <input
                   type="text"
@@ -115,11 +111,7 @@ const ContactSection = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   required
-                  style={{
-                    backgroundColor: formData.lastName ? "#FFFFFF" : "#F9F9F9",
-                    borderColor: formData.lastName ? "#000000" : "#F9F9F9",
-                  }}
-                  className="w-full px-4 py-3 sm:py-3.5 border rounded-lg text-sm text-foreground placeholder-gray-400 transition-all"
+                  className="w-full px-4 py-3 sm:py-3.5 border border-black rounded-lg text-sm text-foreground placeholder-black transition-all focus:outline-none bg-[#F9F9F9] focus:bg-white"
                 />
               </div>
 
@@ -131,11 +123,7 @@ const ContactSection = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                style={{
-                  backgroundColor: formData.email ? "#FFFFFF" : "#F9F9F9",
-                  borderColor: formData.email ? "#000000" : "#F9F9F9",
-                }}
-                className="w-full px-4 py-3 sm:py-3.5 border rounded-lg text-sm text-foreground placeholder-gray-400 transition-all"
+                className="w-full px-4 py-3 sm:py-3.5 border border-black rounded-lg text-sm text-foreground placeholder-black transition-all focus:outline-none bg-[#F9F9F9] focus:bg-white"
               />
 
               {/* Phone */}
@@ -147,11 +135,7 @@ const ContactSection = () => {
                 onChange={handleChange}
                 required
                 maxLength={10}
-                style={{
-                  backgroundColor: formData.phone ? "#FFFFFF" : "#F9F9F9",
-                  borderColor: formData.phone ? "#000000" : "#F9F9F9",
-                }}
-                className="w-full px-4 py-3 sm:py-3.5 border rounded-lg text-sm text-foreground placeholder-gray-400 transition-all"
+                className="w-full px-4 py-3 sm:py-3.5 border border-black rounded-lg text-sm text-foreground placeholder-black transition-all focus:outline-none bg-[#F9F9F9] focus:bg-white"
               />
 
               {/* Message */}
@@ -161,11 +145,7 @@ const ContactSection = () => {
                 value={formData.message}
                 onChange={handleChange}
                 rows={4}
-                style={{
-                  backgroundColor: formData.message ? "#FFFFFF" : "#F9F9F9",
-                  borderColor: formData.message ? "#000000" : "#F9F9F9",
-                }}
-                className="w-full px-4 py-3 sm:py-3.5 border rounded-lg text-sm text-foreground placeholder-gray-400 transition-all resize-none"
+                className="w-full px-4 py-3 sm:py-3.5 border border-black rounded-lg text-sm text-foreground placeholder-black transition-all focus:outline-none bg-[#F9F9F9] focus:bg-white resize-none"
               />
 
               {/* Status messages */}
@@ -190,7 +170,7 @@ const ContactSection = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full text-white px-6 py-3 sm:py-3.5 rounded-full font-semibold text-sm transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-[90%] mx-auto text-white px-6 py-3 sm:py-3.5 rounded-full font-semibold text-sm transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ background: "linear-gradient(360deg, #422A3C 0%, #A86B99 100%)" }}
               >
                 {isSubmitting ? (
@@ -210,11 +190,11 @@ const ContactSection = () => {
         </div>
 
         {/* Right - Illustration */}
-        <div className="order-1 lg:order-2 flex items-center justify-center">
+        <div className="order-1 lg:order-2 flex items-center justify-center h-full">
           <img
             src="/images/Contact us 1.png"
             alt="Contact Us"
-            className="w-full max-w-[260px] sm:max-w-sm md:max-w-md lg:max-w-full h-auto object-contain"
+            className="w-full max-w-[260px] sm:max-w-sm md:max-w-sm lg:max-w-md h-auto max-h-[400px] lg:max-h-[450px] object-contain"
           />
         </div>
       </div>

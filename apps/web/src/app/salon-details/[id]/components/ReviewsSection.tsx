@@ -11,9 +11,10 @@ interface Review {
   rating: number;
   comment: string;
   createdAt: string;
-  entityType?: "salon" | "service";
+  entityType?: "salon" | "service" | "product";
   entityLabel?: string;
   serviceName?: string;
+  productName?: string;
   userImage?: string;
 }
 
@@ -183,9 +184,14 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               </div>
 
               <div className="w-full pl-[60px]">
-                {(review.entityLabel || review.entityType === "service") && (
+                {(review.entityLabel || review.entityType === "service" || review.entityType === "product") && (
                   <p className="text-xs text-primary font-medium mb-1">
-                    {review.entityLabel || (review.serviceName ? `Service review • ${review.serviceName}` : "Service review")}
+                    {review.entityLabel || 
+                      (review.entityType === "product" 
+                        ? (review.productName ? `Product review • ${review.productName}` : "Product review")
+                        : (review.serviceName ? `Service review • ${review.serviceName}` : "Service review")
+                      )
+                    }
                   </p>
                 )}
                 <p className="text-sm text-black leading-relaxed">

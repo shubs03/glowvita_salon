@@ -336,7 +336,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');`}</style>
       <Card
         className={cn(
-          "group overflow-hidden hover:shadow-lg w-full max-w-[280px] sm:max-w-none mx-auto h-[372px] rounded-none rounded-tr-[11px] rounded-bl-[11px] transition-shadow flex flex-col text-left relative",
+          "group overflow-hidden hover:shadow-lg w-full max-w-[280px] sm:max-w-none mx-auto h-[372px] rounded-none rounded-tr-[15px] rounded-bl-[15px] transition-shadow flex flex-col text-left relative",
           isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
         )}
         style={{ fontFamily: "'Poppins', sans-serif" }}
@@ -348,7 +348,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           router.push(`/product-details/${id}`);
         }}
       >
-        <div className="relative h-[185px] w-full overflow-hidden flex-shrink-0">
+        <div className="relative h-[195px] w-full overflow-hidden flex-shrink-0">
           <img
             src={imgSrc}
             alt={name}
@@ -358,9 +358,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
           />
 
           {salePrice && salePrice > 0 && price > salePrice && (
-            <div className="absolute top-0 right-0 bg-[#422A3C] text-white text-[10px] font-bold px-2 py-1 rounded-bl-[11px] flex flex-col items-center justify-center leading-tight">
-              <span>{Math.round(((price - salePrice) / price) * 100)}%</span>
-              <span>OFF</span>
+            <div className="absolute top-0 right-0 bg-[#422A3C] text-white text-[10px] font-bold px-2 py-2 rounded-bl-[11px] flex flex-col items-center justify-center leading-tight">
+              <span className="text-center">{Math.round(((price - salePrice) / price) * 100)}%</span>
+              <span className='text-center'>OFF</span>
             </div>
           )}
         </div>
@@ -372,7 +372,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </p>
             <div className="flex items-center gap-1 flex-shrink-0" style={{ color: "#BA7894" }}>
               <Star className="w-3 h-3 fill-current" />
-              <span className="text-[12px] font-semibold">{rating > 0 ? rating.toFixed(1) : "0.0"}</span>
+              <span className="text-[12px] font-semibold">{Number(rating) > 0 ? Number(rating).toFixed(1) : "0.0"}</span>
             </div>
           </div>
 
