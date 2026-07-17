@@ -32,6 +32,7 @@ import {
   Edit,
   Trash2,
   Eye,
+  User,
   Users,
   UserPlus,
   TrendingUp,
@@ -176,17 +177,23 @@ const StaffDisplay = ({
       >
         {staffData.map((member: any, index: number) => (
           <div key={member.id || index} className="text-center group flex-shrink-0 min-w-[140px] snap-center">
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto rounded-full overflow-hidden shadow-md mb-3 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20 border-2 border-gray-100">
-              <Image
-                src={
-                  member.image ||
-                  `https://placehold.co/128x128/png?text=${(member.name || "Staff").charAt(0)}`
-                }
-                alt={member.name || "Staff Member"}
-                fill
-                className="object-cover"
-                data-ai-hint={`${member.name || "staff member"} portrait`}
-              />
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto rounded-full overflow-hidden shadow-md mb-3 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20 border-2 border-gray-100 bg-gray-50 flex items-center justify-center">
+              {member.image ? (
+                <Image
+                  src={member.image}
+                  alt={member.name || "Staff Member"}
+                  fill
+                  className="object-cover"
+                  data-ai-hint={`${member.name || "staff member"} portrait`}
+                />
+              ) : (
+                <Image
+                  src="/images/admin.png"
+                  alt="Staff Placeholder"
+                  fill
+                  className="object-cover"
+                />
+              )}
             </div>
             <h4 className="font-bold text-sm md:text-base mb-0.5 text-black">
               {member.name || "Staff Member"}
