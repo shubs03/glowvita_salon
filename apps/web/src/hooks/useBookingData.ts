@@ -69,6 +69,8 @@ export interface StaffMember {
   image?: string;
   specialties?: string[];
   rating?: number;
+  yearOfExperience?: number;
+  clientsServed?: number;
   mondayAvailable?: boolean;
   tuesdayAvailable?: boolean;
   wednesdayAvailable?: boolean;
@@ -409,11 +411,13 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
 
     return staffArray.map((member: any): StaffMember => ({
       id: member._id || member.id,
-      name: member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
-      role: member.role || member.position || 'Staff Member',
-      image: member.image || member.profileImage || `https://picsum.photos/seed/${member.name}/400/400`,
-      specialties: member.specialties || [],
-      rating: member.rating || 4.5,
+      name: member.fullName || member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
+      role: member.position || member.role || 'Staff Member',
+      image: member.photo || member.image || member.profileImage || null,
+      specialties: member.specialties || member.tags || [],
+      rating: member.rating,
+      yearOfExperience: member.yearOfExperience,
+      clientsServed: member.clientsServed,
       mondayAvailable: member.mondayAvailable,
       tuesdayAvailable: member.tuesdayAvailable,
       wednesdayAvailable: member.wednesdayAvailable,

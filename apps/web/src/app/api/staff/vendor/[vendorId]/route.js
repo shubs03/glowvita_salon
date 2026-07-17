@@ -38,7 +38,7 @@ export const GET = async (request, { params }) => {
     const staffMembers = await StaffModel.find({ 
       vendorId: vendorId, 
       status: 'Active' 
-    }).select('fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes mondaySlots tuesdaySlots wednesdaySlots thursdaySlots fridaySlots saturdaySlots sundaySlots');
+    }).select('fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes mondaySlots tuesdaySlots wednesdaySlots thursdaySlots fridaySlots saturdaySlots sundaySlots yearOfExperience clientsServed');
 
     // Transform staff data for public consumption (hide sensitive info)
     const publicStaffData = staffMembers.map(staff => ({
@@ -46,6 +46,8 @@ export const GET = async (request, { params }) => {
       name: staff.fullName,
       role: staff.position,
       image: staff.photo || null,
+      yearOfExperience: staff.yearOfExperience,
+      clientsServed: staff.clientsServed,
       mondayAvailable: staff.mondayAvailable,
       tuesdayAvailable: staff.tuesdayAvailable,
       wednesdayAvailable: staff.wednesdayAvailable,
