@@ -68,7 +68,10 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   // Calculate review metrics
-  const salonReviews = reviewsData?.reviews || [];
+  const salonReviews = React.useMemo(() => {
+    const rawReviews = reviewsData?.reviews || [];
+    return rawReviews.filter((review: any) => review.entityType !== "product");
+  }, [reviewsData]);
 
   const reviewMetrics = React.useMemo(() => {
     if (salonReviews.length === 0) {

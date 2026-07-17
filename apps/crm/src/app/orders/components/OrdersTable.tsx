@@ -211,24 +211,31 @@ const OrdersTable = ({
                                   }
                                   return true;
                                 })
-                                .map((status) => (
-                                  <DropdownMenuItem
-                                    key={status}
-                                    onClick={() => {
-                                      if (status === 'Cancelled') {
-                                        handleCancelOrder(order);
-                                      } else {
-                                        handleUpdateStatus(order._id, status);
-                                      }
-                                    }}
-                                    className="cursor-pointer"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      {getStatusIcon(status)}
-                                      <span>{status}</span>
-                                    </div>
-                                  </DropdownMenuItem>
-                                ))}
+                                .map((status) => {
+                                  const isPackedDisabled = status === 'Packed' && order.status === 'Shipped';
+                                  return (
+                                    <DropdownMenuItem
+                                      key={status}
+                                      onClick={() => {
+                                        if (status === 'Cancelled') {
+                                          handleCancelOrder(order);
+                                        } else {
+                                          handleUpdateStatus(order._id, status);
+                                        }
+                                      }}
+                                      disabled={isPackedDisabled}
+                                      className={cn(
+                                        "cursor-pointer",
+                                        isPackedDisabled && "opacity-50 pointer-events-none"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {getStatusIcon(status)}
+                                        <span>{status}</span>
+                                      </div>
+                                    </DropdownMenuItem>
+                                  );
+                                })}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}

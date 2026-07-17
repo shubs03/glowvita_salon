@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Star } from 'lucide-react';
 
 interface Testimonial {
   id: string;
@@ -7,36 +6,87 @@ interface Testimonial {
   name: string;
   location: string;
   rating: number;
+  productName?: string;
+  profileImage?: string | null;
 }
+
+// Static fallback reviews shown when no approved reviews exist yet
+const STATIC_TESTIMONIALS: Testimonial[] = [
+  {
+    id: 'static-1',
+    quote: 'Absolutely love the curated selection! Every product I\'ve tried has exceeded my expectations. Fast shipping and great prices too.',
+    name: 'Manish Sonawane',
+    location: 'Navi Mumbai, Maharashtra',
+    rating: 5,
+    productName: 'Rose Hair Conditioner',
+    profileImage: null,
+  },
+  {
+    id: 'static-2',
+    quote: 'The customer support is fantastic! They helped me with a return quickly and professionally. Highly recommend this marketplace.',
+    name: 'Shubham Vanarse',
+    location: 'Nashik, Maharashtra',
+    rating: 5,
+    productName: 'Acne Cleanser',
+    profileImage: null,
+  },
+  {
+    id: 'static-3',
+    quote: 'I love the eco-friendly packaging and the variety of brands. The site is easy to use and the deals are unbeatable!',
+    name: 'Siddhi Shinde',
+    location: 'Nashik, Maharashtra',
+    rating: 5,
+    productName: 'Hydrating Face Cream',
+    profileImage: null,
+  },
+];
 
 const Testimonials = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [position, setPosition] = useState(0);
-  
-  const testimonials: Testimonial[] = [
-    {
-      id: '1',
-      quote: 'Absolutely love the curated selection! Every product I\'ve tried has exceeded my expectations. Fast shipping and great prices too.',
-      name: 'Manish Sonawane',
-      location: 'Navi Mumbai, Maharashtra',
-      rating: 5,
-    },
-    {
-      id: '2',
-      quote: 'The customer support is fantastic! They helped me with a return quickly and professionally. Highly recommend this marketplace.',
-      name: 'Shubham Vanarse',
-      location: 'Nashik, Maharashtra',
-      rating: 5,
-    },
-    {
-      id: '3',
-      quote: 'I love the eco-friendly packaging and the variety of brands. The site is easy to use and the deals are unbeatable!',
-      name: 'Siddhi Shinde',
-      location: 'Nashik, Maharashtra',
-      rating: 5,
-    },
-  ];
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(STATIC_TESTIMONIALS);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch approved reviews from the public API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch('/api/reviews/public?limit=30');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.reviews && data.reviews.length > 0) {
+            const mapped: Testimonial[] = data.reviews.map((r: {
+              id: string;
+              quote: string;
+              name: string;
+              location: string;
+              rating: number;
+              productName?: string;
+              profileImage?: string | null;
+            }) => ({
+              id: r.id,
+              quote: r.quote,
+              name: r.name,
+              location: r.location,
+              rating: r.rating,
+              productName: r.productName,
+              profileImage: r.profileImage,
+            }));
+            setTestimonials(mapped);
+          }
+          // If no approved reviews, keep the static fallback (already set)
+        }
+      } catch (err) {
+        // Network error – keep static fallback silently
+        console.error('Failed to fetch testimonials:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
 
   const totalWidth = testimonials.length * 384; // 384px per testimonial
   
@@ -45,21 +95,39 @@ const Testimonials = () => {
     
     const interval = setInterval(() => {
       setPosition(prev => {
-        // Move left continuously
-        let newPosition = prev - 1;
-        // When we've moved past the first set of testimonials, reset
+        const newPosition = prev - 1;
         if (newPosition <= -totalWidth) {
           return 0;
         }
         return newPosition;
       });
-    }, 50); // Adjust speed as needed
+    }, 50);
     
     return () => clearInterval(interval);
   }, [isHovered, totalWidth, testimonials.length]);
 
   // Duplicate testimonials for seamless loop
   const allTestimonials = [...testimonials, ...testimonials];
+
+  if (loading) {
+    return (
+      <section className="pt-0 pb-12 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
+        <div className="mb-12">
+          <div style={{ display: 'inline-block', maxWidth: '100%' }}>
+            <div className="h-9 w-64 bg-muted animate-pulse rounded-md" />
+            <div className="w-full max-w-[390px] h-[3px] mt-[6px] bg-muted animate-pulse" />
+          </div>
+        </div>
+        <div className="flex gap-4 overflow-hidden">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex-shrink-0 w-[384px] px-3">
+              <div className="bg-card border border-border rounded-3xl p-6 h-44 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="pt-0 pb-12 container mx-auto px-4 sm:px-6 lg:px-8 bg-background">
@@ -121,24 +189,36 @@ const Testimonials = () => {
                 className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50 flex flex-col h-full"
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
-                    <Star className="w-6 h-6" strokeWidth={2.5} fill="currentColor" />
+                  <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border border-gray-100 group-hover:scale-110 transition-all duration-300 bg-[#EBF3FD] flex items-center justify-center">
+                    <img 
+                      src={testimonial.profileImage || "/images/user-profile.png"} 
+                      alt={testimonial.name} 
+                      className={testimonial.profileImage ? "w-full h-full object-cover" : "w-8 h-8 object-contain"} 
+                    />
                   </div>
-                  <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
-                    {testimonial.name}
-                  </h3>
+                  <div>
+                    <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
+                      {testimonial.name}
+                    </h3>
+                    {testimonial.productName && (
+                      <p className="text-xs text-muted-foreground font-semibold mt-0.5">
+                        {testimonial.productName}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex mb-3">
+                <div className="flex gap-0.5 mb-3">
                   {[...Array(5)].map((_, starIndex) => (
-                    <Star
+                    <img
                       key={starIndex}
-                      className={`w-4 h-4 ${starIndex < testimonial.rating ? 'text-primary fill-primary' : 'text-muted-foreground fill-muted-foreground'}`}
-                      strokeWidth={1.5}
+                      src="/images/star 6.png"
+                      alt="star"
+                      className={`w-4 h-4 object-contain ${starIndex < testimonial.rating ? '' : 'opacity-20 grayscale'}`}
                     />
                   ))}
                 </div>
                 <p className="text-muted-foreground text-sm leading-relaxed flex-grow">
-                  "{testimonial.quote}"
+                  &ldquo;{testimonial.quote}&rdquo;
                 </p>
                 <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
                   {testimonial.location}
