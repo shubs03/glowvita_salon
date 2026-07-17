@@ -17,6 +17,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
   const [currentX, setCurrentX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Fetch dynamic offers for the specific vendor
@@ -67,13 +68,13 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
   // Auto-scroll every 3 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isDragging && offersToUse.length > 0) {
+      if (!isDragging && !isHovered && offersToUse.length > 0) {
         setCurrentIndex((prev) => (prev + 1) % offersToUse.length);
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [offersToUse.length, isDragging]);
+  }, [offersToUse.length, isDragging, isHovered]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -235,6 +236,8 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
         className="relative"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         <div className="flex flex-col md:flex-row items-center gap-6">
           {/* Image */}

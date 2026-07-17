@@ -14,7 +14,7 @@ const AwardsSection = () => {
       description: "Winner of the Customer's Choice Award in Beauty Tech Reviews 2026.",
     },
     {
-      image: "/images/monthly Spend.png",
+      image: "/images/MonthlySpend.png",
       title: "Fastest Growing Platform",
       description: "Winner of the Fastest Growing Platform award in Startup Weekly 2026.",
     },
