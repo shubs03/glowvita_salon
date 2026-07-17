@@ -238,7 +238,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           description: `You can view all items in your cart.`,
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
       } else {
@@ -268,7 +268,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           description: `You can view all items in your cart.`,
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
       }

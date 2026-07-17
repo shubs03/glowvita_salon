@@ -637,9 +637,11 @@ export const Step3_TimeSlot = memo(({
                         "flex flex-col items-center justify-center gap-1.5 h-[91px] w-[85px] rounded-lg border bg-transparent transition-colors",
                         isDisabled
                           ? "border-black/35 text-black/35 cursor-not-allowed"
-                          : isHighlighted
-                            ? "border-[#422A3C] text-[#422A3C]"
-                            : "border-black text-black"
+                          : isSelected
+                            ? "border-[#422A3C] border-2 bg-[#EBF3FD] text-[#422A3C]"
+                            : isToday
+                              ? "border-[#422A3C] text-[#422A3C]"
+                              : "border-black text-black hover:border-[#422A3C]/50"
                       )}
                     >
                       <span className="text-sm font-medium leading-none">

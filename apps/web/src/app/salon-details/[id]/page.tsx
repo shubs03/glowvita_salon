@@ -922,7 +922,7 @@ export default function SalonDetailsPage() {
           description: `You can view all items in your cart.`,
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
         return true;
@@ -953,7 +953,7 @@ export default function SalonDetailsPage() {
           description: `You can view all items in your cart.`,
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
         return true;

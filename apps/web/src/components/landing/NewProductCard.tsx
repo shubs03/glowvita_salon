@@ -104,7 +104,7 @@ export function NewProductCard({
           description: "Your cart contains products from another supplier. Please clear your cart first.",
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
         return;
@@ -150,7 +150,7 @@ export function NewProductCard({
           description: "Your cart contains products from another supplier. Please clear your cart first.",
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
         return;
@@ -177,7 +177,7 @@ export function NewProductCard({
           description: `You can view all items in your cart.`,
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
       } else {
@@ -206,7 +206,7 @@ export function NewProductCard({
           description: `You can view all items in your cart.`,
           action: {
             label: "View Cart",
-            onClick: () => router.push("/cart"),
+            onClick: () => router.push("/profile/cart"),
           },
         });
       }
@@ -244,7 +244,7 @@ export function NewProductCard({
         toast.success(isLiked ? "Removed from Wishlist" : "Added to Wishlist", {
           description: isLiked ? "Product removed from your wishlist" : "Product added to your wishlist"
         });
-        
+
         if (isLiked && onWishlistRemove) {
           onWishlistRemove(id);
         }

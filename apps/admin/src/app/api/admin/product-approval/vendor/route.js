@@ -93,7 +93,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     (async () => {
       try {
         const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
-        await NotificationService.sendDocumentAlert(updatedProduct.vendorId._id.toString(), 'vendor', `Product "${updatedProduct.name}"`, status, rejectionReason);
+        await NotificationService.sendDocumentAlert(updatedProduct.vendorId._id.toString(), 'vendor', `Product "${updatedProduct.productName}"`, status, rejectionReason, 'Product');
       } catch (err) {
         console.error('Product Approval Notification Error:', err);
       }
