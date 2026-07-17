@@ -15,9 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, Droplets, Leaf, FlaskConical, Loader2, PackageCheck, AlertCircle, Store, ChevronDown, ChevronLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Textarea } from '@repo/ui/textarea';
 import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation, useGetPublicVendorProductsQuery, useGetClientCartQuery, useGetPublicVendorByIdQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
@@ -85,11 +82,7 @@ export default function ProductDetailsPage() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(true);
 
-  // Review states
-  const [reviewRating, setReviewRating] = useState(0);
-  const [hoveredRating, setHoveredRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState('');
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
 
   // Timer state for deal
   const [timeLeft, setTimeLeft] = useState({ hours: 1, minutes: 21, seconds: 42 });
@@ -546,60 +539,7 @@ export default function ProductDetailsPage() {
     }
   };
 
-  // Handle review submission
-  const handleSubmitReview = async () => {
-    // Check if user is logged in
-    if (!isAuthenticated || !user) {
-      toast.error("Please log in to write a review", {
-        action: {
-          label: "Log In",
-          onClick: () => router.push("/client-login"),
-        },
-      });
-      return;
-    }
 
-    // Validate rating
-    if (!reviewRating || reviewRating < 1) {
-      toast.error("Please select a rating");
-      return;
-    }
-
-    // Validate comment
-    if (!reviewComment.trim()) {
-      toast.error("Please write a review");
-      return;
-    }
-
-    if (reviewComment.trim().length < 10) {
-      toast.error("Review must be at least 10 characters long");
-      return;
-    }
-
-    setIsSubmittingReview(true);
-    try {
-      await submitReview({
-        productId: id as string,
-        rating: reviewRating,
-        comment: reviewComment.trim(),
-      }).unwrap();
-
-      toast.success("Review submitted successfully!", {
-        description: "Your review will be visible in your profile after approval by the product owner.",
-      });
-
-      // Reset form
-      setReviewRating(0);
-      setHoveredRating(0);
-      setReviewComment('');
-      refetchReviews();
-    } catch (error: any) {
-      console.error("Failed to submit review:", error);
-      toast.error(error?.data?.message || "Failed to submit review. Please try again.");
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
 
   // Fetch other products from the same vendor
   const { data: vendorProductsResponse, isLoading: vendorProductsLoading } = useGetPublicVendorProductsQuery(product?.vendorId || '', {

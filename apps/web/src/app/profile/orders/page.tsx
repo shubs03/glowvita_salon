@@ -38,6 +38,8 @@ import {
   AlertCircle,
   MapPin,
   ShoppingCart,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 import { StatCard } from "../../../components/profile/StatCard";
 import { Pagination } from "@repo/ui/pagination";
@@ -338,10 +340,19 @@ export default function OrdersPage() {
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+  // Review form state: one entry per product item
+  const [reviewRatings, setReviewRatings] = useState<Record<string, number>>({});
+  const [reviewComments, setReviewComments] = useState<Record<string, string>>({});
+  const [reviewHover, setReviewHover] = useState<Record<string, number>>({});
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  // Track which productIds this user has already reviewed
+  const [reviewedProductIds, setReviewedProductIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -386,6 +397,84 @@ export default function OrdersPage() {
   const handleCancelClick = (order: Order) => {
     setOrderToCancel(order);
     setIsCancelModalOpen(true);
+  };
+
+  const handleReviewClick = (order: Order) => {
+    setReviewOrder(order);
+    // Initialize ratings & comments for each product
+    const initRatings: Record<string, number> = {};
+    const initComments: Record<string, string> = {};
+    order.items.forEach((item) => {
+      initRatings[item.productId] = 0;
+      initComments[item.productId] = "";
+    });
+    setReviewRatings(initRatings);
+    setReviewComments(initComments);
+    setReviewHover({});
+    setIsReviewModalOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewOrder) return;
+    // Validate: at least one product has rating > 0
+    const itemsToReview = reviewOrder.items.filter(
+      (item) => !reviewedProductIds.has(item.productId)
+    );
+    const hasValidReview = itemsToReview.some(
+      (item) =>
+        (reviewRatings[item.productId] || 0) > 0 &&
+        (reviewComments[item.productId] || "").trim().length > 0
+    );
+    if (!hasValidReview) {
+      toast.error("Please add a rating and comment for at least one product.");
+      return;
+    }
+    setIsSubmittingReview(true);
+    const toastId = toast.loading("Submitting your review...");
+    let successCount = 0;
+    let alreadyCount = 0;
+    for (const item of itemsToReview) {
+      const rating = reviewRatings[item.productId] || 0;
+      const comment = (reviewComments[item.productId] || "").trim();
+      if (!rating || !comment) continue;
+      try {
+        const res = await fetch("/api/reviews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            entityId: item.productId,
+            entityType: "product",
+            rating,
+            comment,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          successCount++;
+          setReviewedProductIds((prev) => new Set([...prev, item.productId]));
+        } else if (data.message?.includes("already")) {
+          alreadyCount++;
+        } else {
+          toast.error(`${item.name}: ${data.message}`, { id: toastId });
+        }
+      } catch {
+        toast.error(`Failed to submit review for ${item.name}`);
+      }
+    }
+    setIsSubmittingReview(false);
+    if (successCount > 0) {
+      toast.success(
+        `Thank you! ${successCount} review${successCount > 1 ? "s" : ""} submitted. It will appear after approval.`,
+        { id: toastId }
+      );
+      setIsReviewModalOpen(false);
+    } else if (alreadyCount > 0) {
+      toast.info("You have already reviewed all items in this order.", { id: toastId });
+      setIsReviewModalOpen(false);
+    } else {
+      toast.dismiss(toastId);
+    }
   };
 
   const handleConfirmCancel = async () => {
@@ -541,20 +630,34 @@ export default function OrdersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => handleViewClick(order)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {order.status !== "Cancelled" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={`${!isOrderCancellable(order.status) ? "opacity-40 cursor-not-allowed" : "hover:bg-red-50"}`}
-                              disabled={!isOrderCancellable(order.status)}
-                              onClick={() => handleCancelClick(order)}
-                            >
-                              <Image src="/images/trash.png" alt="Cancel" width={18} height={18} className="object-contain" />
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" title="View Order" onClick={() => handleViewClick(order)}>
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          )}
+                            {order.status === "Delivered" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Write a Review"
+                                className="text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                                onClick={() => handleReviewClick(order)}
+                              >
+                                <Star className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {order.status !== "Cancelled" && order.status !== "Delivered" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Cancel Order"
+                                className={`${!isOrderCancellable(order.status) ? "opacity-40 cursor-not-allowed" : "hover:bg-red-50"}`}
+                                disabled={!isOrderCancellable(order.status)}
+                                onClick={() => handleCancelClick(order)}
+                              >
+                                <Image src="/images/trash.png" alt="Cancel" width={18} height={18} className="object-contain" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -764,6 +867,118 @@ export default function OrdersPage() {
 
           <DialogFooter className="p-6 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Write Review Modal ────────────────────────────────────────────────── */}
+      <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Write a Review
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Order #{reviewOrder?._id.slice(-8).toUpperCase()} · Share your experience with the products.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {reviewOrder?.items.map((item) => {
+              const alreadyReviewed = reviewedProductIds.has(item.productId);
+              return (
+                <div key={item.productId} className={`rounded-xl border p-4 space-y-4 ${
+                  alreadyReviewed ? "opacity-50 pointer-events-none bg-muted/30" : "bg-card"
+                }`}>
+                  {/* Product info */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border">
+                      <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                    {alreadyReviewed && (
+                      <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" /> Reviewed
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Star Rating */}
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground mb-2 block">Your Rating *</Label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className="focus:outline-none transition-transform hover:scale-110"
+                          onMouseEnter={() => setReviewHover((prev) => ({ ...prev, [item.productId]: star }))}
+                          onMouseLeave={() => setReviewHover((prev) => ({ ...prev, [item.productId]: 0 }))}
+                          onClick={() => setReviewRatings((prev) => ({ ...prev, [item.productId]: star }))}
+                        >
+                          <Star
+                            className={`h-7 w-7 transition-colors ${
+                              star <= (reviewHover[item.productId] || reviewRatings[item.productId] || 0)
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-gray-300 fill-gray-100"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {(() => {
+                          const r = reviewHover[item.productId] || reviewRatings[item.productId] || 0;
+                          return r === 1 ? "Poor" : r === 2 ? "Fair" : r === 3 ? "Good" : r === 4 ? "Very Good" : r === 5 ? "Excellent" : "";
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Comment */}
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Your Review *</Label>
+                    <Textarea
+                      placeholder={`Share your experience with ${item.name}...`}
+                      className="min-h-[80px] text-sm resize-none"
+                      value={reviewComments[item.productId] || ""}
+                      onChange={(e) =>
+                        setReviewComments((prev) => ({ ...prev, [item.productId]: e.target.value }))
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {(reviewComments[item.productId] || "").length} characters
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="p-6 pt-4 border-t gap-2">
+            <Button variant="outline" onClick={() => setIsReviewModalOpen(false)} disabled={isSubmittingReview}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitReview}
+              disabled={isSubmittingReview}
+              className="gap-2"
+            >
+              {isSubmittingReview ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Star className="h-4 w-4" />
+                  Submit Review
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,9 +1,8 @@
 import React from "react";
-import { Star, Loader2, ThumbsUp, ChevronRight, User } from "lucide-react";
+import { Star, Loader2, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Label } from "@repo/ui/label";
-import { Textarea } from "@repo/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -86,77 +85,12 @@ const ProductRatingsReviews: React.FC<ProductRatingsReviewsProps> = ({
     breakdown: calculateBreakdown(),
   };
 
-  // Review states
-  const [reviewRating, setReviewRating] = React.useState(0);
-  const [hoveredRating, setHoveredRating] = React.useState(0);
-  const [reviewComment, setReviewComment] = React.useState("");
-  const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
-
   // Question states
   const [questionText, setQuestionText] = React.useState("");
   const [isSubmittingQuestion, setIsSubmittingQuestion] = React.useState(false);
 
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-
-  // Handle review submission
-  const handleSubmitReview = async () => {
-    if (!isAuthenticated || !user) {
-      toast.error("Please log in to write a review", {
-        action: {
-          label: "Log In",
-          onClick: () => router.push("/client-login"),
-        },
-      });
-      return;
-    }
-
-    // Validate rating
-    if (!reviewRating || reviewRating < 1) {
-      toast.error("Please select a rating");
-      return;
-    }
-
-    // Validate comment
-    if (!reviewComment.trim()) {
-      toast.error("Please write a review");
-      return;
-    }
-
-    if (reviewComment.trim().length < 10) {
-      toast.error("Review must be at least 10 characters long");
-      return;
-    }
-
-    setIsSubmittingReview(true);
-    try {
-      if (onSubmitReview) {
-        await onSubmitReview({
-          productId: Array.isArray(productId) ? productId[0] : productId,
-          rating: reviewRating,
-          comment: reviewComment.trim(),
-        });
-      }
-
-      toast.success("Review submitted successfully!", {
-        description:
-          "Your review will be visible in your profile after approval by the product owner.",
-      });
-
-      // Reset form
-      setReviewRating(0);
-      setHoveredRating(0);
-      setReviewComment("");
-      if (onRefetchReviews) onRefetchReviews();
-    } catch (error: any) {
-      console.error("Failed to submit review:", error);
-      toast.error(
-        error?.data?.message || "Failed to submit review. Please try again."
-      );
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
 
   // Handle question submission
   const handleSubmitQuestion = async () => {
@@ -254,56 +188,69 @@ const ProductRatingsReviews: React.FC<ProductRatingsReviewsProps> = ({
           <div className="border-t border-gray-200"></div>
 
           {/* Reviews List */}
-          <div className="mt-8 space-y-8">
+          <div className="mt-8 space-y-4">
             {productReviews.length > 0 ? (
               productReviews.map((review: any) => (
-                <div key={review._id} className="border-b border-gray-100 pb-8 last:border-b-0">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                       {review.userImage ? (
-                         <img src={review.userImage} alt={review.userName} className="w-full h-full object-cover" />
-                       ) : (
-                         <User className="h-5 w-5 text-gray-400" />
-                       )}
-                    </div>
-                    <div className="font-semibold text-[13px] text-gray-800">{review.userName || "User"}</div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="bg-green-700 text-white px-1.5 py-0.5 rounded-sm flex items-center gap-1 text-[10px] font-bold">
-                      {review.rating.toFixed(1)} <Star className="h-2.5 w-2.5 fill-white text-white" />
-                    </div>
-                    <span className="text-[11px] text-gray-500 font-medium">
-                      - Posted on {new Date(review.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                  </div>
-
-                  <p className="text-[13px] text-gray-800 font-medium mb-4 leading-relaxed">
-                    {review.comment}
-                  </p>
-
-                  {/* Review Images (if any) */}
-                  {review.images && review.images.length > 0 && (
-                    <div className="flex gap-2 mb-4">
-                      {review.images.map((img: string, i: number) => (
-                        <div key={i} className="w-16 h-16 rounded-md overflow-hidden border border-gray-200">
-                          <img src={img} className="w-full h-full object-cover" alt="Review photo" />
+                <div key={review._id} className="border border-gray-200 border-t-[3px] border-t-[#422A3C] rounded-2xl p-4 shadow-sm bg-white flex flex-col gap-2">
+                  <div className="flex w-full justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center text-primary font-bold shadow-inner">
+                        {review.userImage ? (
+                          <img src={review.userImage} alt={review.userName} className="w-full h-full object-cover" />
+                        ) : review.userName ? (
+                          <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(review.userName)}&background=random`} alt={review.userName} className="w-full h-full object-cover" />
+                        ) : (
+                          "U"
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-black text-sm">
+                          {review.userName || "Anonymous"}
+                        </p>
+                        <div className="bg-gray-100 rounded text-[10px] text-black px-2 py-0.5 mt-0.5 inline-block">
+                          {new Date(review.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          )}
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  )}
 
-                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium cursor-pointer hover:text-gray-800">
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                    Helpful ({review.helpfulCount || Math.floor(Math.random() * 50)})
+                    <div className="flex items-center pt-1">
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${i < (review.rating || 0) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full pl-[60px]">
+                    <p className="text-sm text-black leading-relaxed">
+                      {review.comment || "No review text available"}
+                    </p>
+
+                    {/* Review Images (if any) */}
+                    {review.images && review.images.length > 0 && (
+                      <div className="flex gap-2 mt-3">
+                        {review.images.map((img: string, i: number) => (
+                          <div key={i} className="w-16 h-16 rounded-md overflow-hidden border border-gray-200">
+                            <img src={img} className="w-full h-full object-cover" alt="Review photo" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No reviews yet. Be the first to review!
-              </p>
-            )}
+            ) : null}
           </div>
 
           {productReviews.length > 0 && (
@@ -313,89 +260,6 @@ const ProductRatingsReviews: React.FC<ProductRatingsReviewsProps> = ({
                 </button>
              </div>
           )}
-
-          {/* Write a Review Section */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <Label
-              htmlFor="write-review"
-              className="font-semibold mb-2 block"
-            >
-              Write a Review
-            </Label>
-
-            {/* Star Rating Input */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-muted-foreground">
-                Your Rating:
-              </span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setReviewRating(star)}
-                    onMouseEnter={() => setHoveredRating(star)}
-                    onMouseLeave={() => setHoveredRating(0)}
-                    className="focus:outline-none transition-transform hover:scale-110"
-                  >
-                    <Star
-                      className={`h-6 w-6 ${star <= (hoveredRating || reviewRating)
-                        ? "text-yellow-400 fill-current"
-                        : "text-gray-300"
-                        }`}
-                    />
-                  </button>
-                ))}
-              </div>
-              {reviewRating > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  ({reviewRating} {reviewRating === 1 ? "star" : "stars"})
-                </span>
-              )}
-            </div>
-
-            {/* Review Text Input */}
-            <Textarea
-              id="write-review"
-              placeholder="Share your experience with this product..."
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
-              rows={4}
-              className="mb-2"
-            />
-
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSubmitReview}
-                disabled={
-                  isSubmittingReview || !reviewComment.trim() || !reviewRating
-                }
-                className="flex-1"
-              >
-                {isSubmittingReview ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Review"
-                )}
-              </Button>
-            </div>
-
-            {!isAuthenticated && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Please{" "}
-                <button
-                  onClick={() => router.push("/client-login")}
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  log in
-                </button>{" "}
-                to write a review
-              </p>
-            )}
-          </div>
         </CardContent>
       </Card>
 
