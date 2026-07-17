@@ -597,6 +597,15 @@ export default function ProductDetailsPage() {
     // ...(product.size && product.sizeMetric ? { 'Volume': `${product.size} ${product.sizeMetric}` } : {}),
   };
 
+  const isSupplier = 
+    String(vendorData?.type).toLowerCase() === 'supplier' || 
+    String(vendorData?.vendorType).toLowerCase() === 'supplier' || 
+    String(vendorData?.role).toLowerCase() === 'supplier' ||
+    Boolean(vendorData?.supplierType) ||
+    String(product?.vendorType).toLowerCase() === 'supplier' ||
+    String(product?.type).toLowerCase() === 'supplier' ||
+    String(vendorData?.name || product?.vendorName).toLowerCase().includes('cosmetics'); // Fallback heuristic
+
   return (
     <PageContainer className={`max-w-7xl ${poppins.className}`}>
 
@@ -817,10 +826,14 @@ export default function ProductDetailsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded bg-gray-100 flex flex-shrink-0 items-center justify-center border border-gray-200 overflow-hidden">
-                    <Store className="h-4 w-4 text-gray-600" />
+                    {isSupplier ? (
+                      <Truck className="h-4 w-4 text-gray-600" />
+                    ) : (
+                      <Store className="h-4 w-4 text-gray-600" />
+                    )}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mt-1 mb-3">{vendorData?.name || product.vendorName || "GlowVita Partner"}</h4>
+                    <h4 className="text-sm font-semibold text-gray-900 mt-1 mb-3">{vendorData?.name || product?.vendorName || "GlowVita Partner"}</h4>
                     <div className="flex items-center gap-6">
                       <div className="flex flex-col items-center">
                         <div className="flex items-center bg-green-700 text-white px-1.5 py-0.5 rounded text-[10px] font-bold gap-1 mb-1">
@@ -835,13 +848,15 @@ export default function ProductDetailsPage() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  className="border-[#6a4c6a] text-[#6a4c6a] hover:bg-[#fcf8fc] text-xs px-3 h-8 rounded-md"
-                  onClick={() => product.vendorId && router.push(`/salon-details/${product.vendorId}`)}
-                >
-                  View Salon
-                </Button>
+                {!isSupplier && (
+                  <Button
+                    variant="outline"
+                    className="border-[#6a4c6a] text-[#6a4c6a] hover:bg-[#fcf8fc] text-xs px-3 h-8 rounded-md"
+                    onClick={() => product.vendorId && router.push(`/salon-details/${product.vendorId}`)}
+                  >
+                    View Salon
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
