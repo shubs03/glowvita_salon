@@ -39,6 +39,33 @@ interface TemplateEditorModalProps {
   onClose: () => void;
 }
 
+/** Compress a data-URL to a small JPEG thumbnail (≤320 px wide, quality 0.6).
+ *  Returns the original src unchanged if canvas is unavailable or src is empty. */
+async function compressThumbnail(src: string): Promise<string> {
+  if (!src || typeof document === 'undefined') return src;
+  return new Promise(resolve => {
+    const img = new window.Image();
+    img.onload = () => {
+      try {
+        const MAX_W = 320;
+        const scale = img.width > MAX_W ? MAX_W / img.width : 1;
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        if (!ctx) { resolve(src); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.6));
+      } catch {
+        resolve(src);
+      }
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+}
+
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
   const { user } = useCrmAuth();
   const [isSaving, setIsSaving] = useState(false);
@@ -51,11 +78,18 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     // locate and upsert the correct vendor copy without touching the original.
     const targetTemplateId = template.originalTemplateId || template._id || template.id;
 
+    // Compress the canvas snapshot to a small thumbnail before storing in DB.
+    // This keeps MongoDB documents small and card loads fast.
+    const thumbnail = data.previewImage
+      ? await compressThumbnail(data.previewImage)
+      : null;
+
     setIsSaving(true);
     try {
       await saveCustomizedTemplate({
         templateId: targetTemplateId,
         jsonData: data.jsonData,
+        previewImage: thumbnail || null,
         title: `${template.title}${template.isCustomized ? '' : ' - Edited'}`,
         customizations: {
           lastModified: new Date().toISOString(),

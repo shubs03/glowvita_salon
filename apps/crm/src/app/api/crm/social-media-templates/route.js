@@ -194,7 +194,7 @@ export const POST = authMiddlewareCrm(async (req) => {
     }
 
     const body = await req.json();
-    const { templateId, jsonData, title, customizations } = body;
+    const { templateId, jsonData, title, customizations, previewImage } = body;
 
     if (!templateId || !jsonData) {
       return NextResponse.json(
@@ -245,6 +245,10 @@ export const POST = authMiddlewareCrm(async (req) => {
       existingCopy.jsonData = jsonData;
       existingCopy.title = title || existingCopy.title;
       existingCopy.updatedBy = vendorId;
+      // Update the preview thumbnail with the newly-rendered canvas snapshot
+      if (previewImage && previewImage.trim() !== '') {
+        existingCopy.imageUrl = previewImage;
+      }
       if (customizations) existingCopy.customizations = customizations;
       savedCopy = await existingCopy.save();
       return NextResponse.json({
@@ -260,7 +264,8 @@ export const POST = authMiddlewareCrm(async (req) => {
         status: 'Draft',
         isActive: true,
         jsonData,
-        imageUrl: originalTemplate.imageUrl,
+        // Use the canvas-rendered snapshot as the preview; fall back to the original
+        imageUrl: (previewImage && previewImage.trim() !== '') ? previewImage : originalTemplate.imageUrl,
         createdBy: vendorId,
         createdByModel: 'Vendor',
         updatedBy: vendorId,

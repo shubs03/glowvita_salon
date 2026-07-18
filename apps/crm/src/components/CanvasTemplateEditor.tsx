@@ -161,6 +161,9 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
   // Track the original (server) URL of the background image so we can
   // restore it in toJSON() after converting to data URL for rendering
   const bgOriginalUrlRef = useRef<string>('');
+  // Store the actual data URL of the background image as a preview fallback
+  // in case canvas.toDataURL() fails due to CORS taint
+  const bgDataUrlRef = useRef<string>('');
 
   // Safely parse initialJsonData if it is a string
   const parsedJsonData = useMemo(() => {
@@ -389,6 +392,10 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
       };
 
       const applyDataUrl = (dataUrl: string) => {
+        // Store data URL for use as preview fallback if toDataURL() fails later
+        if (dataUrl.startsWith('data:')) {
+          bgDataUrlRef.current = dataUrl;
+        }
         const img = new window.Image();
         img.onload = () => {
           const iw = img.naturalWidth || 1;
@@ -634,14 +641,26 @@ const CanvasTemplateEditor = forwardRef<CanvasTemplateEditorRef, CanvasTemplateE
 
     if (!jsonData) return null;
 
-    // Step 3: generate preview thumbnail (may fail on CORS-tainted canvas — that is fine)
+    // Step 3: generate preview thumbnail
+    // Try at decreasing quality levels so CORS-tainted canvas issues are less likely.
+    // Fall back to the stored background data URL if everything fails.
     let previewImage: string | null = null;
-    try {
-      let multiplier = 1;
-      if (c.width && c.width > 800) multiplier = 800 / c.width;
-      previewImage = c.toDataURL({ format: "jpeg", quality: 0.85, multiplier });
-    } catch (e) {
-      console.warn("toDataURL failed:", e);
+    const qualityAttempts = [0.75, 0.5, 0.3];
+    for (const quality of qualityAttempts) {
+      try {
+        let multiplier = 1;
+        if (c.width && c.width > 800) multiplier = 800 / c.width;
+        previewImage = c.toDataURL({ format: 'jpeg', quality, multiplier });
+        if (previewImage && previewImage.length > 100) break; // valid result
+      } catch (e) {
+        console.warn(`toDataURL failed at quality ${quality}:`, e);
+      }
+    }
+
+    // Last resort: use the stored background data URL so the thumbnail
+    // at least shows the template background (better than the original admin image)
+    if (!previewImage && bgDataUrlRef.current) {
+      previewImage = bgDataUrlRef.current;
     }
 
     return { jsonData, previewImage };
