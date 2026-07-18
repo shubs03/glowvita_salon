@@ -18,42 +18,114 @@ const getCompletionTemplate = ({
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: 'Amazon Ember', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.5; color: #111; margin: 0; padding: 0; background-color: #f3f3f3; }
-        .wrapper { width: 100%; table-layout: fixed; background-color: #f3f3f3; padding-bottom: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #2D3748; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #FAF6F8; 
+        }
+        .wrapper { 
+            width: 100%; 
+            table-layout: fixed; 
+            background-color: #FAF6F8; 
+            padding: 40px 0; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background-color: #ffffff; 
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(186, 120, 148, 0.08);
+            border: 1px solid #F1E5EC;
+            overflow: hidden;
+        }
         
         /* Header */
-        .header { padding: 15px 25px; background-color: #232f3e; display: flex; align-items: center; justify-content: space-between; }
-        .logo { color: #ffffff; font-size: 24px; font-weight: bold; text-decoration: none; letter-spacing: -0.5px; }
-        .logo span { color: #ff9900; }
+        .header { 
+            padding: 30px 20px; 
+            background-color: #ffffff; 
+            text-align: center; 
+            border-bottom: 2px solid #F1E5EC; 
+        }
         
         /* Content */
-        .content { padding: 40px 25px; }
-        .greeting { font-size: 22px; font-weight: 500; margin-bottom: 20px; }
-        .main-text { font-size: 14px; margin-bottom: 25px; }
+        .content { padding: 40px 35px; }
+        .greeting { 
+            font-size: 20px; 
+            font-weight: 700; 
+            color: #1A202C;
+            margin-bottom: 16px; 
+        }
+        .main-text { 
+            font-size: 15px; 
+            color: #4A5568;
+            margin-bottom: 30px; 
+            line-height: 1.6;
+        }
         
-        /* Order Review Box */
-        .order-summary { border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 20px 0; margin-bottom: 25px; }
-        .summary-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+        /* Order Summary Box */
+        .order-summary { 
+            background-color: #FAF6F8;
+            border: 1px solid #F1E5EC;
+            border-radius: 8px;
+            padding: 24px; 
+            margin-bottom: 30px; 
+        }
+        .summary-header { 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: #BA7894;
+            margin-bottom: 20px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
         
-        .order-row { display: table; width: 100%; margin-bottom: 10px; }
-        .order-col-left { display: table-cell; width: 33%; font-weight: bold; font-size: 13px; color: #555; vertical-align: top; }
-        .order-col-right { display: table-cell; width: 67%; font-size: 13px; vertical-align: top; }
+        .order-row { display: table; width: 100%; margin-bottom: 12px; }
+        .order-col-left { 
+            display: table-cell; 
+            width: 35%; 
+            font-weight: 600; 
+            font-size: 14px; 
+            color: #718096; 
+            vertical-align: top; 
+        }
+        .order-col-right { 
+            display: table-cell; 
+            width: 65%; 
+            font-size: 14px; 
+            color: #2D3748;
+            vertical-align: top; 
+        }
         
-        .divider { border-bottom: 1px solid #eee; margin: 15px 0; }
+        .divider { border-bottom: 1px solid #F1E5EC; margin: 16px 0; }
         
         /* Buttons */
-        .btn-container { text-align: left; margin: 30px 0; }
-        .button { display: inline-block; padding: 12px 30px; background-color: #ffd814; color: #111; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500; border: 1px solid #fcd200; box-shadow: 0 2px 5px rgba(213,217,217,.5); }
-        .button:hover { background-color: #f7ca00; }
-        .link-btn { color: #007185; text-decoration: none; font-size: 14px; margin-right: 20px; }
-        .link-btn:hover { text-decoration: underline; color: #c45500; }
+        .btn-container { text-align: center; margin: 30px 0 10px 0; }
+        .button { 
+            display: inline-block; 
+            padding: 14px 36px; 
+            background-color: #BA7894; 
+            color: #ffffff !important; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: 600; 
+            box-shadow: 0 4px 14px rgba(186, 120, 148, 0.3); 
+            border: none;
+        }
         
         /* Footer */
-        .footer { padding: 25px; border-top: 1px solid #eee; background-color: #ffffff; }
-        .footer-text { font-size: 12px; color: #565959; margin-bottom: 10px; }
-        .branding-footer { margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
-        .branding-name { font-weight: bold; color: #232f3e; font-size: 14px; }
+        .footer { 
+            padding: 30px 35px; 
+            border-top: 1px solid #F1E5EC; 
+            background-color: #FAF6F8; 
+            text-align: center;
+        }
+        .footer-text { font-size: 12px; color: #718096; margin-bottom: 8px; line-height: 1.5; }
+        .branding-footer { margin-top: 20px; border-top: 1px solid #EAE0E5; padding-top: 20px; }
+        .branding-name { font-weight: 700; color: #BA7894; font-size: 14px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -61,23 +133,25 @@ const getCompletionTemplate = ({
         <div class="container">
             <!-- GlowVita Logo Header -->
             <div class="header">
-                <a href="#" class="logo">Glow<span>Vita</span></a>
+                <div style="text-align: center;">
+                    <img src="https://glowvitasalon.com/images/GlowVitaSalonFinal_Logo.png" alt="GlowVita Salon" style="max-width: 180px; height: auto; vertical-align: middle;">
+                </div>
             </div>
 
             <div class="content">
                 <div class="greeting">Hi ${clientName},</div>
                 <div class="main-text">
-                    Thank you for your recent service order of <strong>${serviceName}</strong> at <strong>${businessName}</strong>. 
+                    Thank you for your recent service Appointment of <strong>${serviceName}</strong> at <strong>${businessName}</strong>. 
                     We hope you had a professional and relaxing experience. 
                     You can now leave a review of your experience using the "Leave Service Feedback" link below. 
-                    You can view your order history in Your Orders.
+                    You can view your service history in Your Appointments.
                 </div>
 
                 <div class="order-summary">
-                    <div class="summary-header">Order details</div>
+                    <div class="summary-header">Appointment details</div>
                     
                     <div class="order-row">
-                        <div class="order-col-left">Order #:</div>
+                        <div class="order-col-left">Invoice #:</div>
                         <div class="order-col-right">${appointmentId}</div>
                     </div>
                     <div class="order-row">
@@ -88,8 +162,8 @@ const getCompletionTemplate = ({
                     <div class="divider"></div>
                     
                     <div class="order-row">
-                        <div class="order-col-left">Order total:</div>
-                        <div class="order-col-right" style="font-weight: bold; font-size: 15px;">₹${(Number(orderTotal) || 0).toFixed(2)}</div>
+                        <div class="order-col-left">Total Amount:</div>
+                        <div class="order-col-right" style="font-weight: 700; font-size: 16px; color: #BA7894;">₹${(Number(orderTotal) || 0).toFixed(2)}</div>
                     </div>
                     
                     <div class="divider"></div>
@@ -97,19 +171,14 @@ const getCompletionTemplate = ({
                     <div class="order-row">
                         <div class="order-col-left">Service location:</div>
                         <div class="order-col-right">
-                            ${location || businessName}<br/>
-                            ${businessAddress ? `<span style="color: #555; font-size: 12px;">${businessAddress}</span>` : ''}
+                            <strong>${location || businessName}</strong><br/>
+                            ${businessAddress ? `<span style="color: #718096; font-size: 12px; display: inline-block; margin-top: 4px;">${businessAddress}</span>` : ''}
                         </div>
                     </div>
                 </div>
 
                 <div class="btn-container">
-                    <a href="#" class="button">Leave Service Feedback</a>
-                </div>
-                
-                <div style="margin-top: 20px;">
-                    <a href="#" class="link-btn">Your Orders</a>
-                    <a href="#" class="link-btn">Contact Salon</a>
+                    <a href="#" class="button" style="color: #ffffff !important;">Leave Service Feedback</a>
                 </div>
             </div>
 
@@ -121,7 +190,7 @@ const getCompletionTemplate = ({
                 <div class="branding-footer">
                     <div class="branding-name">GlowVita Salon</div>
                     <div class="footer-text" style="font-size: 11px;">Professional Salon Management Platform</div>
-                    <div class="footer-text" style="font-size: 11px; margin-top: 5px; color: #999;">&copy; 2026 GlowVita. All rights reserved.</div>
+                    <div class="footer-text" style="font-size: 11px; margin-top: 5px; color: #a0aec0;">&copy; 2026 GlowVita. All rights reserved.</div>
                 </div>
             </div>
         </div>
