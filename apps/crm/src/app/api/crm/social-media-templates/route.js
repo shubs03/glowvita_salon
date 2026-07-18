@@ -28,14 +28,30 @@ export const GET = authMiddlewareCrm(async (req) => {
     const SocialMediaTemplate = getModel();
 
     const vendorId = req.user?.userId;
-
-
+    let targetRole = req.user?.role;
+    if (targetRole === 'staff') {
+      targetRole = 'vendor';
+    }
 
     // 1. All active admin originals (pristine templates with no parent and not created by this vendor)
     const originalsQuery = {
       isActive: true,
       parentTemplateId: null,
     };
+
+    if (targetRole === 'supplier') {
+      originalsQuery.availableFor = 'supplier';
+    } else if (targetRole === 'doctor') {
+      originalsQuery.availableFor = 'doctor';
+    } else {
+      // Default to vendor role, also allow null/undefined for backward compatibility
+      originalsQuery.$or = [
+        { availableFor: 'vendor' },
+        { availableFor: { $exists: false } },
+        { availableFor: null }
+      ];
+    }
+
     if (vendorId) {
       originalsQuery.createdBy = { $ne: new mongoose.Types.ObjectId(vendorId) };
     }
@@ -187,11 +203,30 @@ export const POST = authMiddlewareCrm(async (req) => {
       );
     }
 
-    // Must reference a valid admin original
-    const originalTemplate = await SocialMediaTemplate.findOne({
+    let targetRole = req.user?.role;
+    if (targetRole === 'staff') {
+      targetRole = 'vendor';
+    }
+
+    const originalQuery = {
       _id: templateId,
       vendorId: null,
-    }).lean();
+    };
+
+    if (targetRole === 'supplier') {
+      originalQuery.availableFor = 'supplier';
+    } else if (targetRole === 'doctor') {
+      originalQuery.availableFor = 'doctor';
+    } else {
+      originalQuery.$or = [
+        { availableFor: 'vendor' },
+        { availableFor: { $exists: false } },
+        { availableFor: null }
+      ];
+    }
+
+    // Must reference a valid admin original
+    const originalTemplate = await SocialMediaTemplate.findOne(originalQuery).lean();
 
     if (!originalTemplate) {
       return NextResponse.json(
