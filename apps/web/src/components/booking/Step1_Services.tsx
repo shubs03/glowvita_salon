@@ -920,7 +920,7 @@ export function Step1_Services({
                           className="flex-[1] min-w-0 rounded-md border-gray-300 font-bold hover:bg-gray-50 text-xs py-1.5 whitespace-nowrap"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedPackageForDetails(pkg);
+                            setSelectedPackageForDetails(isCustomized ? selectedWeddingPackage : pkg);
                           }}
                         >
                           Details

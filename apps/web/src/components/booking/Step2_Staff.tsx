@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
-import { User, Users, CheckCircle, Loader2, AlertCircle, Star, Info } from 'lucide-react';
+import { User, Users, CheckCircle, Loader2, AlertCircle, Star, Info, Clock, Users2 } from 'lucide-react';
 import { StaffMember, Service } from '@/hooks/useBookingData';
 
 interface Step2StaffProps {
@@ -223,12 +223,26 @@ export function Step2_Staff({
                         </div>
                         <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
                         <p className="text-xs text-black">{staffMember.role}</p>
-                        {staffMember.rating && (
-                            <div className="flex items-center gap-1 mt-1">
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs text-black">{staffMember.rating}</span>
-                            </div>
-                        )}
+                        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 mt-1">
+                            {staffMember.rating ? (
+                                <div className="flex items-center gap-1">
+                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-xs text-black">{staffMember.rating}</span>
+                                </div>
+                            ) : null}
+                            {staffMember.yearOfExperience ? (
+                                <div className="flex items-center gap-1">
+                                    <img src="/images/suitcase.png" alt="experience" className="h-3 w-3 object-contain" />
+                                    <span className="text-sm text-black">({staffMember.yearOfExperience}) Years of experience</span>
+                                </div>
+                            ) : null}
+                            {staffMember.clientsServed ? (
+                                <div className="flex items-center gap-1">
+                                    <img src="/images/customer 11.png" alt="customer" className="h-3 w-3 object-contain" />
+                                    <span className="text-sm text-black">{staffMember.clientsServed} Clients</span>
+                                </div>
+                            ) : null}
+                        </div>
                         {staffMember.specialties && staffMember.specialties.length > 0 && (
                             <div className="mt-1">
                                 <p className="text-xs text-black truncate">

@@ -165,6 +165,8 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
     </div>
   );
 
+  const hasWeddingPackages = useMemo(() => services.some((s: any) => s.isWeddingPackage), [services]);
+
   return (
     <section id="services" className="space-y-6">
       <div>
@@ -197,14 +199,16 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
           <Image src="/images/Mask group (3).png" alt="Individual" width={16} height={16} className={serviceType === "Individual Services" ? "brightness-0 invert" : ""} />
           Individual Services
         </button>
-        <button
-          onClick={() => { router.push(`/book/${vendorId}?tab=packages`); }}
-          className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors bg-white text-black hover:bg-gray-50`}
-          style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
-        >
-          <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} />
-          Wedding Packages
-        </button>
+        {hasWeddingPackages && (
+          <button
+            onClick={() => { router.push(`/book/${vendorId}?tab=packages`); }}
+            className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 text-[11px] md:text-sm font-medium whitespace-nowrap transition-colors bg-white text-black hover:bg-gray-50`}
+            style={{ border: '1px solid #00000082', borderRadius: '0.375rem' }}
+          >
+            <Image src="/images/like (1) 1.png" alt="Wedding" width={16} height={16} />
+            Wedding Packages
+          </button>
+        )}
       </div>
 
       {/* Location Selection */}

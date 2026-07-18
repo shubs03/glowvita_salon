@@ -8,7 +8,7 @@ import { StaffMember, Service, ServiceStaffAssignment, isStaffCompatibleWithServ
 
 // Default profile image shown when a staff member has no photo (or the photo fails to load).
 // Place your actual asset at this path in /public, e.g. public/images/default-profile.png
-const DEFAULT_PROFILE_IMAGE = '/images/default-profile.png';
+const DEFAULT_PROFILE_IMAGE = '/images/admin.png';
 
 // Renders a 5-star rating, filling full/half/empty stars based on a numeric rating (e.g. 4.5 -> 4 full + 1 half)
 const StarRating = ({ rating }: { rating: number }) => {
@@ -296,9 +296,9 @@ export function Step2_MultiService({
                 {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => {
                     // Check if this staff member is selected for the current service
                     const isCurrentStaffSelected = serviceStaffAssignments[currentAssignmentIndex]?.staff?.id === staffMember.id;
-                    // Optional fields — safe to omit if not present on StaffMember yet
-                    const experience = (staffMember as any).experience;
-                    const clients = (staffMember as any).clients;
+                    // Optional fields
+                    const experience = staffMember.yearOfExperience;
+                    const clients = staffMember.clientsServed;
                     const imageSrc = brokenImages[staffMember.id] || !staffMember.image
                         ? DEFAULT_PROFILE_IMAGE
                         : staffMember.image;
@@ -346,18 +346,18 @@ export function Step2_MultiService({
                                             </span>
                                         </div>
                                     )}
-                                    {experience && (
+                                    {experience ? (
                                         <div className="flex items-center gap-1">
-                                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span className="text-xs text-black">{experience}</span>
+                                            <img src="/images/suitcase.png" alt="experience" className="h-3.5 w-3.5 object-contain" />
+                                            <span className="text-sm text-black">({experience}) Years of experience</span>
                                         </div>
-                                    )}
-                                    {clients && (
+                                    ) : null}
+                                    {clients ? (
                                         <div className="flex items-center gap-1">
-                                            <Users2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span className="text-xs text-black">{clients}</span>
+                                            <img src="/images/customer 11.png" alt="customer" className="h-3.5 w-3.5 object-contain" />
+                                            <span className="text-sm text-black">{clients} Clients</span>
                                         </div>
-                                    )}
+                                    ) : null}
                                 </div>
                                 {staffMember.specialties && staffMember.specialties.length > 0 && (
                                     <p className="text-xs text-black truncate mt-1">
