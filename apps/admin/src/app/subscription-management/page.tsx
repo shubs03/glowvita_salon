@@ -522,62 +522,54 @@ export default function SubscriptionManagementPage() {
       setIsRenewModalOpen(false);
 
       await new Promise<void>((resolve, reject) => {
-        const rzp = new (window as any).Razorpay({
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
-          amount: Math.round(planAmount * 100),
-          currency: 'INR',
-          order_id: orderData.id,
-          name: 'GlowVita Admin',
-          description: `${selectedRenewalPlan.name} – ${selectedRenewalPlan.duration} ${selectedRenewalPlan.durationType} for ${selectedSubscription.subscriberName}`,
-          image: 'https://glowvita.com/logo.png',
-          theme: { color: '#7c3aed' },
-          retry: { enabled: true, max_count: 3 },
-          config: {
-            display: {
-              blocks: {
-                upi: {
-                  name: 'UPI / QR',
-                  instruments: [
-                    { method: 'upi', vpa: true },
-                    { method: 'upi', qr: true }
-                  ],
-                },
+        let rzp: any;
+        try {
+          rzp = new (window as any).Razorpay({
+            key: orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+            amount: Math.round(planAmount * 100),
+            currency: 'INR',
+            order_id: orderData.id,
+            name: 'GlowVita Admin',
+            description: `${selectedRenewalPlan.name} – ${selectedRenewalPlan.duration} ${selectedRenewalPlan.durationType} for ${selectedSubscription.subscriberName}`,
+            image: 'https://glowvita.com/logo.png',
+            theme: { color: '#7c3aed' },
+            retry: { enabled: true, max_count: 3 },
+            modal: {
+              ondismiss: () => {
+                // Re-open renew dialog on cancel
+                setIsRenewModalOpen(true);
+                reject(new Error('Payment cancelled by user'));
               },
-              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+              escape: true,
+              backdropClose: false,
             },
-          },
-          modal: {
-            ondismiss: () => {
-              // Re-open renew dialog on cancel
-              setIsRenewModalOpen(true);
-              reject(new Error('Payment cancelled by user'));
-            },
-            escape: true,
-            backdropClose: false,
-          },
-          handler: async (response: any) => {
-            try {
-              // Step 4 — verify signature
-              const verifyRes = await fetch('/api/admin/payments/verify', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token || ''}`
-                },
-                body: JSON.stringify(response),
-              });
-              const verifyData = await verifyRes.json();
-              if (!verifyData.success) throw new Error('Payment verification failed.');
+            handler: async (response: any) => {
+              try {
+                // Step 4 — verify signature
+                const verifyRes = await fetch('/api/admin/payments/verify', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token || ''}`
+                  },
+                  body: JSON.stringify(response),
+                });
+                const verifyData = await verifyRes.json();
+                if (!verifyData.success) throw new Error('Payment verification failed.');
 
-              // Step 5 — activate subscription
-              await activateRenewal(response.razorpay_payment_id, response.razorpay_order_id);
-              resolve();
-            } catch (err: any) {
-              setIsRenewModalOpen(true); // Re-open on error
-              reject(err);
-            }
-          },
-        });
+                // Step 5 — activate subscription
+                await activateRenewal(response.razorpay_payment_id, response.razorpay_order_id);
+                resolve();
+              } catch (err: any) {
+                setIsRenewModalOpen(true); // Re-open on error
+                reject(err);
+              }
+            },
+          });
+        } catch (initErr: any) {
+          reject(new Error('Payment gateway initialization failed: ' + (initErr?.message || 'Unknown error')));
+          return;
+        }
         rzp.open();
       });
     } catch (error: any) {
