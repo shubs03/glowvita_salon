@@ -21,68 +21,68 @@ export const OPTIONS = async () => {
 };
 
 // GET all product categories
-export const GET = authMiddlewareAdmin(async (req) => {
+export const GET = async (req) => {
   try {
     const categories = await ProductCategoryModel.find({}).sort({ createdAt: -1 });
     return Response.json({
       success: true,
       data: categories,
       count: categories.length,
-    }, { 
+    }, {
       status: 200,
       headers: corsHeaders
     });
   } catch (error) {
     console.error("Error fetching product categories:", error);
     return Response.json(
-      { 
+      {
         success: false,
-        message: "Error fetching product categories", 
-        error: error.message 
+        message: "Error fetching product categories",
+        error: error.message
       },
-      { 
+      {
         status: 500,
         headers: corsHeaders
       }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-categories:view");
+};
 
 // POST a new product category
-export const POST = authMiddlewareAdmin(async (req) => {
+export const POST = async (req) => {
   try {
     const body = await req.json();
     const { name, description, gstType, gstValue } = body;
 
     // Validation
     if (!name || name.trim() === '') {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Category name is required" 
-      }, { 
+        message: "Category name is required"
+      }, {
         status: 400,
         headers: corsHeaders
       });
     }
 
     // Check if category already exists
-    const existingCategory = await ProductCategoryModel.findOne({ 
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } 
+    const existingCategory = await ProductCategoryModel.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
     });
 
     if (existingCategory) {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Category with this name already exists" 
-      }, { 
+        message: "Category with this name already exists"
+      }, {
         status: 409,
         headers: corsHeaders
       });
     }
 
     // Create new category
-    const newCategory = await ProductCategoryModel.create({ 
-      name: name.trim(), 
+    const newCategory = await ProductCategoryModel.create({
+      name: name.trim(),
       description: description?.trim() || '',
       gstType: gstType || 'none',
       gstValue: gstValue ? Number(gstValue) : 0
@@ -92,14 +92,14 @@ export const POST = authMiddlewareAdmin(async (req) => {
       success: true,
       data: newCategory,
       message: "Product category created successfully"
-    }, { 
+    }, {
       status: 201,
       headers: corsHeaders
     });
 
   } catch (error) {
     console.error("Error creating product category:", error);
-    
+
     // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => err.message);
@@ -107,7 +107,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         success: false,
         message: "Validation error",
         errors: validationErrors
-      }, { 
+      }, {
         status: 400,
         headers: corsHeaders
       });
@@ -118,25 +118,25 @@ export const POST = authMiddlewareAdmin(async (req) => {
       return Response.json({
         success: false,
         message: "Category with this name already exists"
-      }, { 
+      }, {
         status: 409,
         headers: corsHeaders
       });
     }
 
     return Response.json(
-      { 
+      {
         success: false,
-        message: "Error creating product category", 
-        error: error.message 
+        message: "Error creating product category",
+        error: error.message
       },
-      { 
+      {
         status: 500,
         headers: corsHeaders
       }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-categories:edit");
+};
 
 // PUT update a product category
 export const PUT = authMiddlewareAdmin(async (req) => {
@@ -145,36 +145,36 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     const { id, name, description, gstType, gstValue } = body;
 
     if (!id) {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Category ID is required" 
-      }, { 
+        message: "Category ID is required"
+      }, {
         status: 400,
         headers: corsHeaders
       });
     }
 
     if (!name || name.trim() === '') {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Category name is required" 
-      }, { 
+        message: "Category name is required"
+      }, {
         status: 400,
         headers: corsHeaders
       });
     }
 
     // Check if another category with the same name exists (excluding current one)
-    const existingCategory = await ProductCategoryModel.findOne({ 
+    const existingCategory = await ProductCategoryModel.findOne({
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
       _id: { $ne: id }
     });
 
     if (existingCategory) {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Another category with this name already exists" 
-      }, { 
+        message: "Another category with this name already exists"
+      }, {
         status: 409,
         headers: corsHeaders
       });
@@ -183,8 +183,8 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     // Update category
     const updatedCategory = await ProductCategoryModel.findByIdAndUpdate(
       id,
-      { 
-        name: name.trim(), 
+      {
+        name: name.trim(),
         description: description?.trim() || '',
         gstType: gstType || 'none',
         gstValue: gstValue ? Number(gstValue) : 0,
@@ -194,10 +194,10 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     );
 
     if (!updatedCategory) {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Product category not found" 
-      }, { 
+        message: "Product category not found"
+      }, {
         status: 404,
         headers: corsHeaders
       });
@@ -207,33 +207,33 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       success: true,
       data: updatedCategory,
       message: "Product category updated successfully"
-    }, { 
+    }, {
       status: 200,
       headers: corsHeaders
     });
 
   } catch (error) {
     console.error("Error updating product category:", error);
-    
+
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => err.message);
       return Response.json({
         success: false,
         message: "Validation error",
         errors: validationErrors
-      }, { 
+      }, {
         status: 400,
         headers: corsHeaders
       });
     }
 
     return Response.json(
-      { 
+      {
         success: false,
-        message: "Error updating product category", 
-        error: error.message 
+        message: "Error updating product category",
+        error: error.message
       },
-      { 
+      {
         status: 500,
         headers: corsHeaders
       }
@@ -248,10 +248,10 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     const { id } = body;
 
     if (!id) {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Category ID is required" 
-      }, { 
+        message: "Category ID is required"
+      }, {
         status: 400,
         headers: corsHeaders
       });
@@ -260,10 +260,10 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     // Check if category exists
     const category = await ProductCategoryModel.findById(id);
     if (!category) {
-      return Response.json({ 
+      return Response.json({
         success: false,
-        message: "Product category not found" 
-      }, { 
+        message: "Product category not found"
+      }, {
         status: 404,
         headers: corsHeaders
       });
@@ -275,7 +275,7 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     return Response.json({
       success: true,
       message: "Product category deleted successfully"
-    }, { 
+    }, {
       status: 200,
       headers: corsHeaders
     });
@@ -283,12 +283,12 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
   } catch (error) {
     console.error("Error deleting product category:", error);
     return Response.json(
-      { 
+      {
         success: false,
-        message: "Error deleting product category", 
-        error: error.message 
+        message: "Error deleting product category",
+        error: error.message
       },
-      { 
+      {
         status: 500,
         headers: corsHeaders
       }
