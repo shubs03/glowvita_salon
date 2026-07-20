@@ -332,15 +332,6 @@ export default function PushNotificationsPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="sms"
-                      checked={channels.includes("SMS")}
-                      onCheckedChange={(checked: boolean) => handleChannelChange("SMS", checked)}
-                      disabled={modalType === "view"}
-                    />
-                    <Label htmlFor="sms">SMS</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
                       id="email"
                       checked={channels.includes("Email")}
                       onCheckedChange={(checked: boolean) => handleChannelChange("Email", checked)}
