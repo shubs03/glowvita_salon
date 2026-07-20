@@ -303,17 +303,24 @@ export default function MarketingPage() {
         </Card>
 
         {/* Message Blast */}
-        <Link href="/marketing/message-blast">
-          <Card className="cursor-pointer hover:shadow-md transition-colors hover:border-slate-400 h-full">
-            <CardContent className="flex flex-col items-center justify-center p-8 text-center h-full">
-              <div className="bg-slate-100 p-4 rounded-full mb-4">
-                <MessageCircle className="h-8 w-8 text-slate-700" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Message Blast</h3>
-              <p className="text-sm text-muted-foreground">Send bulk SMS to your customers</p>
-            </CardContent>
-          </Card>
-        </Link>
+        <div className="relative h-full">
+          <Link href="/marketing/message-blast" className="h-full block pointer-events-none">
+            <Card className="cursor-pointer hover:shadow-md transition-colors hover:border-slate-400 h-full">
+              <CardContent className="flex flex-col items-center justify-center p-8 text-center h-full">
+                <div className="bg-slate-100 p-4 rounded-full mb-4">
+                  <MessageCircle className="h-8 w-8 text-slate-700" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Message Blast</h3>
+                <p className="text-sm text-muted-foreground">Send bulk SMS to your customers</p>
+              </CardContent>
+            </Card>
+          </Link>
+          {/* Coming Soon badge */}
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-amber-100 text-amber-700 border border-amber-300 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm pointer-events-none">
+            <Clock className="h-3 w-3" />
+            Coming Soon
+          </span>
+        </div>
       </div>
 
       {/* Ticket History Section */}
