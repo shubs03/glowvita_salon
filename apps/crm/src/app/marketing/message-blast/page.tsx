@@ -206,7 +206,7 @@ export default function MessageBlastPage() {
       // Step 3: Open Razorpay checkout
       await new Promise<void>((resolve, reject) => {
         const rzp = new (window as any).Razorpay({
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          key: orderData.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: Math.round(packagePrice * 100),
           currency: 'INR',
           order_id: orderData.id,
